@@ -24,6 +24,14 @@ export class Input {
       this.mouseDX += e.movementX;
       this.mouseDY += e.movementY;
     });
+    // Mouse buttons are reported as 'Mouse0' (left), 'Mouse2' (right), etc.
+    document.addEventListener('mousedown', (e) => {
+      if (!this.locked) return;
+      const code = `Mouse${e.button}`;
+      this.pressed.add(code);
+      this.keys.add(code);
+    });
+    document.addEventListener('mouseup', (e) => this.keys.delete(`Mouse${e.button}`));
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
       if (!this.locked) this.keys.clear();

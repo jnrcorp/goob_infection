@@ -5,6 +5,7 @@ import { rectMinus, inRect } from './rects.js';
 import { Door } from './door.js';
 import { Elevator } from './elevator.js';
 import { furnish } from './furnish.js';
+import { reportOverlappingFaces } from './debugOverlaps.js';
 
 const WALL_T = 0.2;
 const FIXTURE_SPACING = 3.5;
@@ -21,12 +22,19 @@ export function buildBuilding(baseCtx) {
 
   scene.add(new THREE.AmbientLight(0xd8dcff, 1.6));
 
-  // Outside ground and structural slabs
-  b.plane(-60, -60, 96, 84, -0.02, 'asphalt');
-  b.box(fp.x0, -0.3, fp.z0, fp.x1, 0, fp.z1, 'concrete');
+  // Outside ground, with the building's footprint cut out so it never sits
+  // just under the floors (near-coplanar surfaces flicker).
+  for (const r of rectMinus({ x0: -60, z0: -60, x1: 96, z1: 84 }, [fp])) b.plane(r.x0, r.z0, r.x1, r.z1, -0.02, 'asphalt');
+
+  // Structural slabs: colliders only, since every room draws its own floor.
+  // Upper slabs get a visible underside for where you can see them from below.
+  b.box(fp.x0, -0.3, fp.z0, fp.x1, 0, fp.z1, null);
   for (const floor of BUILDING.floors) {
     if (!floor.slab) continue;
-    for (const r of rectMinus(floor.slab, floor.voids)) b.box(r.x0, floor.y - 0.3, r.z0, r.x1, floor.y, r.z1, 'concrete');
+    for (const r of rectMinus(floor.slab, floor.voids)) {
+      b.box(r.x0, floor.y - 0.3, r.z0, r.x1, floor.y, r.z1, null);
+      b.plane(r.x0, r.z0, r.x1, r.z1, floor.y - 0.3, 'concrete', true);
+    }
   }
   b.box(fp.x0 - 0.1, BUILDING.roofY, fp.z0 - 0.1, fp.x1 + 0.1, BUILDING.roofY + 0.3, fp.z1 + 0.1, 'concrete');
 
@@ -46,9 +54,10 @@ export function buildBuilding(baseCtx) {
       rooms.push({ ...room, floorIndex: index, floorId: floor.id, rects });
       const lightY = floor.y + (room.lightY ?? (room.ceiling ? room.ceiling - 0.02 : floor.wallHeight - 0.3));
       for (const r of rects) {
-        b.plane(r.x0, r.z0, r.x1, r.z1, floor.y + 0.01, room.floor);
+        b.plane(r.x0, r.z0, r.x1, r.z1, floor.y, room.floor);
         if (room.ceiling) b.plane(r.x0, r.z0, r.x1, r.z1, floor.y + room.ceiling, 'ceiling', true);
-        addFixtures(b, r, lightY, room.fixture ?? 'light');
+        const fixture = 'fixture' in room ? room.fixture : 'light';
+        if (fixture) addFixtures(b, r, lightY, fixture);
       }
       addLights(scene, room, rects, lightY);
     }
@@ -57,6 +66,8 @@ export function buildBuilding(baseCtx) {
   buildStairs(b, collision, BUILDING.stairs);
   const elevator = new Elevator(ctx, BUILDING.elevator);
   const props = furnish(ctx);
+  const check = new URLSearchParams(location.search).get('checkfaces');
+  if (check !== null) reportOverlappingFaces(b.records, check);
   b.finish(scene);
 
   const elevatorRect = { x0: BUILDING.elevator.x0, z0: BUILDING.elevator.z0, x1: BUILDING.elevator.x1, z1: BUILDING.elevator.z1 };
@@ -68,8 +79,27 @@ export function buildBuilding(baseCtx) {
     elevator,
     props,
 
+    // Put everything back the way it was at the start of the chapter.
+    reset() {
+      for (const d of doors) d.reset();
+      elevator.reset();
+      props.suit.group.visible = true;
+      this.setCanisterVisible(true);
+    },
+
+    // Toggle meshes and dim the light rather than hiding the group: changing
+    // how many lights are visible forces every shader to recompile (a stutter).
+    setCanisterVisible(visible) {
+      for (const m of props.canister.meshes) m.visible = visible;
+      props.canister.glow.intensity = visible ? 2.5 : 0;
+    },
+
+    doorByLabel(label) {
+      return doors.find((d) => d.label === label);
+    },
+
     update(dt, player) {
-      for (const d of doors) d.update(dt);
+      for (const d of doors) d.update(dt, player);
       elevator.update(dt, player);
       props.canister.goob.rotation.y += dt * 0.6;
     },
@@ -99,7 +129,9 @@ function buildWall(ctx, floor, spec, doors) {
   const end = Math.max(alongX ? x1 : z1, alongX ? x2 : z2) + t;
 
   // Box spanning s0..s1 along the wall, yb..yt above the floor, with half-thickness th.
-  const piece = (s0, s1, yb, yt, m, opts, th = t) => (alongX
+  // Wall tops are never seen (floors, ceilings and sills cover them) and would
+  // flicker against the floor above, so pieces skip their top face by default.
+  const piece = (s0, s1, yb, yt, m, opts = { noTop: true }, th = t) => (alongX
     ? b.box(s0, y0 + yb, c - th, s1, y0 + yt, c + th, m, opts)
     : b.box(c - th, y0 + yb, s0, c + th, y0 + yt, s1, m, opts));
 
@@ -114,7 +146,7 @@ function buildWall(ctx, floor, spec, doors) {
       piece(o.s0, o.s1, 0, o.sill, mat);
       piece(o.s0, o.s1, o.top, h, mat);
       piece(o.s0, o.s1, o.sill, o.top, 'glass', {}, 0.02);
-      piece(o.s0, o.s1, o.sill - 0.03, o.sill, 'counter', { collide: false }, t + 0.04);
+      piece(o.s0, o.s1, o.sill, o.sill + 0.03, 'counter', { collide: false }, t + 0.04);
     } else if (o.kind === 'panel') {
       piece(o.s0, o.s1, 0, o.top, o.mat, {}, t * 0.6);
       piece(o.s0, o.s1, o.top, h, mat);
@@ -190,7 +222,9 @@ function buildStairs(b, collision, s) {
     const z = s.z0 + i * run;
     const top = s.y0 + (i + 1) * rise;
     b.box(s.x0, s.y0, z, s.x1, top, z + run, 'concrete', { collide: false });
-    b.box(s.x0, top, z, s.x1, top + 0.008, z + 0.06, 'hazard', { collide: false });
+    // Yellow strip on the front of each step (on the riser, not the tread,
+    // so it doesn't sit flush with the surface you walk on).
+    b.box(s.x0, top - 0.06, z - 0.02, s.x1, top, z, 'hazard', { collide: false });
   }
   collision.addRamp({ minX: s.x0, maxX: s.x1, minZ: s.z0, maxZ: s.z1, y0: s.y0, y1: s.y1, offset: rise / 2 });
 }

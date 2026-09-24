@@ -28,6 +28,13 @@ export class Player {
     this.noclip = false;
     this.bob = 0;
     this.spawnPoint = null;
+    this.suited = false;
+    // When set ({ x, y, z }), the camera turns smoothly to look at this point.
+    this.lookTarget = null;
+  }
+
+  get eyeY() {
+    return this.pos.y + EYE;
   }
 
   spawn({ x, y, z, yaw = 0 }) {
@@ -40,7 +47,9 @@ export class Player {
   }
 
   update(dt, input, active) {
-    if (active) {
+    if (this.lookTarget) {
+      this.turnTowards(this.lookTarget, dt);
+    } else if (active) {
       this.yaw -= input.mouseDX * LOOK;
       this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch - input.mouseDY * LOOK));
     }
@@ -92,6 +101,16 @@ export class Player {
     this.updateCamera();
   }
 
+  turnTowards(t, dt) {
+    const dx = t.x - this.pos.x;
+    const dz = t.z - this.pos.z;
+    const yaw = Math.atan2(-dx, -dz);
+    const pitch = Math.atan2(t.y - this.eyeY, Math.hypot(dx, dz));
+    const k = 1 - Math.exp(-6 * dt);
+    this.yaw += Math.atan2(Math.sin(yaw - this.yaw), Math.cos(yaw - this.yaw)) * k;
+    this.pitch += (pitch - this.pitch) * k;
+  }
+
   overlapsXZ(b, r = RADIUS) {
     const p = this.pos;
     return p.x + r > b.minX && p.x - r < b.maxX && p.z + r > b.minZ && p.z - r < b.maxZ;
@@ -105,7 +124,13 @@ export class Player {
       if (!b.enabled || !this.overlapsXZ(b)) continue;
       // Low enough to step onto, or entirely overhead: not a wall.
       if (b.maxY <= p.y + STEP || b.minY >= p.y + HEIGHT) continue;
-      if (axis === 'x') p.x = d > 0 ? b.minX - RADIUS - SKIN : b.maxX + RADIUS + SKIN;
+      // Were we already inside this box before moving (a door or elevator
+      // closed on us)? Then escape by the shortest way out, never through it.
+      p[axis] -= d;
+      const wasInside = this.overlapsXZ(b);
+      p[axis] += d;
+      if (wasInside) this.escape(b);
+      else if (axis === 'x') p.x = d > 0 ? b.minX - RADIUS - SKIN : b.maxX + RADIUS + SKIN;
       else p.z = d > 0 ? b.minZ - RADIUS - SKIN : b.maxZ + RADIUS + SKIN;
     }
     for (const r of this.collision.ramps) {
@@ -115,6 +140,18 @@ export class Player {
         break;
       }
     }
+  }
+
+  // Push out of box b along whichever side needs the smallest move.
+  escape(b) {
+    const p = this.pos;
+    const options = [
+      ['x', b.minX - RADIUS - SKIN], ['x', b.maxX + RADIUS + SKIN],
+      ['z', b.minZ - RADIUS - SKIN], ['z', b.maxZ + RADIUS + SKIN],
+    ];
+    let best = options[0];
+    for (const o of options) if (Math.abs(o[1] - p[o[0]]) < Math.abs(best[1] - p[best[0]])) best = o;
+    p[best[0]] = best[1];
   }
 
   groundHeight() {

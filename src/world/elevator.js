@@ -82,6 +82,15 @@ export class Elevator {
     this.syncDoors();
   }
 
+  reset() {
+    this.current = this.target = this.def.startFloor;
+    this.carY = this.floors[this.current];
+    this.phase = 'closed';
+    this.open.fill(0);
+    this.syncCar();
+    this.syncDoors();
+  }
+
   request(floor) {
     if (this.phase === 'moving') return;
     if (floor === this.current) {

@@ -11,22 +11,28 @@ const TILE = {
   fridge: 1, vending: 1, red: 0.5, plant: 0.5, pot: 0.5, rubber: 0.5,
 };
 
-export function createMaterials() {
-  const textures = createTextures();
+// Big architectural surfaces don't get vertex wobble (see ps1ify).
+const NO_SNAP = new Set([
+  'wall', 'carpet', 'carpetRed', 'ceiling', 'linoleum', 'tile', 'concrete',
+  'freezer', 'freezerFloor', 'hazard', 'shutter', 'asphalt',
+]);
+
+export function createMaterials(maxAnisotropy = 1) {
+  const textures = createTextures(maxAnisotropy);
   const mats = {};
 
   for (const [name, map] of Object.entries(textures)) {
-    mats[name] = ps1ify(new THREE.MeshLambertMaterial({ map }));
+    mats[name] = ps1ify(new THREE.MeshLambertMaterial({ map }), { snap: !NO_SNAP.has(name) });
   }
   // Unlit materials: light panels, screens, glass and the goob itself.
   mats.screen = ps1ify(new THREE.MeshBasicMaterial({ map: textures.screen }));
-  mats.light = ps1ify(new THREE.MeshBasicMaterial({ color: 0xfff6e0 }));
-  mats.lightBlue = ps1ify(new THREE.MeshBasicMaterial({ color: 0xcfe8ff }));
+  mats.light = ps1ify(new THREE.MeshBasicMaterial({ color: 0xfff6e0 }), { snap: false });
+  mats.lightBlue = ps1ify(new THREE.MeshBasicMaterial({ color: 0xcfe8ff }), { snap: false });
   mats.visor = ps1ify(new THREE.MeshBasicMaterial({ color: 0x14201e }));
   mats.goob = ps1ify(new THREE.MeshBasicMaterial({ color: 0x6cff4a }));
   mats.glass = ps1ify(new THREE.MeshBasicMaterial({
     color: 0x9fc4d0, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
-  }));
+  }), { snap: false });
 
   return {
     get(name) {

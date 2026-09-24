@@ -39,7 +39,8 @@ export function chair(b, x, z, rot = 0, y = 0) {
   p(-0.04, 0.04, -0.3, 0.04, 0.1, 0.3, 'metal', NC);
 }
 
-// Desk with monitor at the back (-z) and a chair in front (+z). Returns the seat position.
+// Desk with monitor at the back (-z) and a chair in front (+z).
+// Returns the seat: { x, z, rot } where rot is the desk's rotation.
 export function desk(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
   p(-0.8, 0.72, -0.4, 0.8, 0.76, 0.4, 'desk', NC);
@@ -48,12 +49,13 @@ export function desk(b, x, z, rot = 0, y = 0) {
   p(-0.76, 0.25, -0.4, 0.76, 0.72, -0.37, 'plastic', NC);
   p(-0.8, 0, -0.4, 0.8, 0.76, 0.4, null);
   p(-0.26, 0.9, -0.3, 0.26, 1.22, -0.24, 'plastic', NC);
-  p(-0.23, 0.93, -0.24, 0.23, 1.19, -0.235, 'screen', { collide: false, boxUV: true });
+  // Screen stands 2 cm proud of the casing so the two never flicker.
+  p(-0.23, 0.93, -0.24, 0.23, 1.19, -0.22, 'screen', { collide: false, boxUV: true });
   p(-0.04, 0.76, -0.3, 0.04, 0.9, -0.26, 'plastic', NC);
   p(-0.22, 0.76, -0.05, 0.22, 0.785, 0.12, 'plastic', NC);
   const seat = p.point(0, 0.75);
   chair(b, seat.x, seat.z, rot, y);
-  return seat;
+  return { ...seat, rot };
 }
 
 // Four desks around a cross of cubicle partitions. Returns seat positions.
@@ -181,8 +183,9 @@ export function palletRack(b, x0, z0, x1, z1, rng, y = 0) {
     b.box(cx, y, cz, cx + 0.1, y + h, cz + 0.1, 'suit', NC);
   }
   for (const level of [0.15, 1.9, 3.65]) {
-    b.box(x0, y + level - 0.12, z0, x1, y + level, z0 + 0.08, 'red', NC);
-    b.box(x0, y + level - 0.12, z1 - 0.08, x1, y + level, z1, 'red', NC);
+    // Beams run between the uprights (not flush with their ends, which flickers).
+    b.box(x0 + 0.1, y + level - 0.12, z0 + 0.01, x1 - 0.1, y + level, z0 + 0.08, 'red', NC);
+    b.box(x0 + 0.1, y + level - 0.12, z1 - 0.08, x1 - 0.1, y + level, z1 - 0.01, 'red', NC);
     let s = x0 + 0.15;
     while (s < x1 - 1.1) {
       if (rng() < 0.8) {
@@ -227,6 +230,29 @@ export function hazmatSuit(b, x, z, rot = 0, y = 0) {
   p(-0.17, 1.55, -0.17, 0.17, 1.9, 0.17, 'suit', NC);
   p(-0.12, 1.62, 0.17, 0.12, 1.8, 0.18, 'visor', NC);
   p(-0.02, 1.9, -0.02, 0.02, 2.05, 0.02, 'metal', NC);
+}
+
+// Builder stand-in that creates separate meshes inside a group instead of
+// merged static geometry, for props that move, hide or get picked up.
+export function groupBuilder(group, materials) {
+  return {
+    box(x0, y0, z0, x1, y1, z1, mat) {
+      if (!mat) return null;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), materials.get(mat));
+      m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+      group.add(m);
+      return null;
+    },
+  };
+}
+
+// A hazmat suit you can take off the rack.
+export function hazmatSuitProp(scene, materials, x, y, z, rot) {
+  const group = new THREE.Group();
+  group.position.set(x, y, z);
+  hazmatSuit(groupBuilder(group, materials), 0, 0, rot);
+  scene.add(group);
+  return { group, meshes: [...group.children] };
 }
 
 // Couch with the backrest on local +z.
@@ -292,9 +318,10 @@ export function goobCanister(scene, materials, x, y, z) {
   part(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 10), 'steel', 0.47);
   const goob = part(new THREE.CylinderGeometry(0.11, 0.11, 0.36, 8), 'goob', 0.25);
   part(new THREE.CylinderGeometry(0.14, 0.14, 0.38, 10), 'glass', 0.25);
+  const meshes = [...group.children];
   const glow = new THREE.PointLight(0x66ff44, 2.5, 3.5, 1.5);
   glow.position.y = 0.3;
   group.add(glow);
   scene.add(group);
-  return { group, goob };
+  return { group, goob, meshes, glow };
 }

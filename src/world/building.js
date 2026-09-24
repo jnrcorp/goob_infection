@@ -62,7 +62,8 @@ export const BUILDING = {
         { id: 'lobby', name: 'Lobby', rect: { x0: 14, z0: 0, x1: 24, z1: 10 }, floor: 'linoleum', ceiling: 3 },
         { id: 'corridor1', name: 'Corridor', rect: { x0: 0, z0: 10, x1: 24, z1: 13 }, floor: 'linoleum', ceiling: 3 },
         { id: 'breakroom', name: 'Break Room', rect: { x0: 0, z0: 13, x1: 12, z1: 24 }, floor: 'linoleum', ceiling: 3 },
-        { id: 'stair1', name: 'Stairwell', rect: { x0: 12, z0: 13, x1: 15, z1: 24 }, floor: 'concrete', ceiling: null, lightY: 3.4 },
+        // No ceiling (it's open to 2F), so no light panels: they'd float over the stairs.
+        { id: 'stair1', name: 'Stairwell', rect: { x0: 12, z0: 13, x1: 15, z1: 24 }, floor: 'concrete', ceiling: null, lightY: 3.4, fixture: null },
         { id: 'closet', name: 'Janitor Closet', rect: { x0: 15, z0: 16, x1: 18, z1: 24 }, floor: 'concrete', ceiling: 3 },
         { id: 'storage', name: 'Storage', rect: { x0: 18, z0: 13, x1: 24, z1: 24 }, floor: 'concrete', ceiling: 3 },
         {

@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { createRng } from '../core/random.js';
 
-// Procedural 64x64 textures, drawn per pixel. Nearest filtering and no
-// mipmaps keep them crunchy like PS1 textures.
+// Procedural 64x64 textures, drawn per pixel. Nearest magnification keeps
+// them crunchy up close; trilinear + anisotropic minification stops floors
+// sparkling and banding at a distance and at grazing angles.
 const SIZE = 64;
 
-function makeTexture(fn, seed) {
+function makeTexture(fn, seed, anisotropy) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = SIZE;
   const g = canvas.getContext('2d');
@@ -22,15 +23,16 @@ function makeTexture(fn, seed) {
     }
   }
   g.putImageData(img, 0, 0);
-  return toTexture(canvas);
+  return toTexture(canvas, anisotropy);
 }
 
-export function toTexture(canvas) {
+export function toTexture(canvas, anisotropy = 1) {
   const t = new THREE.CanvasTexture(canvas);
   t.colorSpace = THREE.SRGBColorSpace;
   t.magFilter = THREE.NearestFilter;
-  t.minFilter = THREE.NearestFilter;
-  t.generateMipmaps = false;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
+  t.anisotropy = anisotropy;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
@@ -93,9 +95,9 @@ const DRAW = {
   rubber: flat([34, 34, 36], 6),
 };
 
-export function createTextures() {
+export function createTextures(anisotropy = 1) {
   const textures = {};
   let seed = 1;
-  for (const [name, fn] of Object.entries(DRAW)) textures[name] = makeTexture(fn, seed++);
+  for (const [name, fn] of Object.entries(DRAW)) textures[name] = makeTexture(fn, seed++, anisotropy);
   return textures;
 }

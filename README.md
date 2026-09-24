@@ -8,10 +8,9 @@ ES modules can't load from `file://`, so serve the folder locally:
 
 ```powershell
 ./serve.ps1
-# or: python -m http.server 8000
 ```
 
-Then open http://localhost:8000.
+Then open http://localhost:8000. The server (`serve.py`) turns off browser caching, so a normal reload always runs the latest code.
 
 ## Layout
 
@@ -21,7 +20,9 @@ Then open http://localhost:8000.
 - `src/render/`: PS1 renderer (low-res target, vertex snapping, dithering), procedural textures, materials.
 - `src/world/`: building data (`building.js`), the builder that turns it into geometry, collision, doors, elevator, furniture, interactions.
 - `src/player/`: first-person controller.
-- `src/ui/`: HUD.
+- `src/npc/`: blocky coworker model and animation, NPC behavior, and the cast (who's where and what they say).
+- `src/story/`: chapter state machines. `chapter1.js` runs the objectives, briefing, suit-up and goob pickup.
+- `src/ui/`: HUD, dialogue box, fades and the suit visor.
 - `GAME_DESIGN.md`, `PLAN.md`: design and implementation plan.
 
 ## Controls
@@ -30,6 +31,24 @@ WASD move, mouse look, E interact, Shift run, Space jump, Esc pause.
 
 ## Debugging
 
-- `` ` `` (backquote) toggles a readout with FPS and position. While it's on, `N` toggles noclip (Space/C to fly up/down).
-- URL options: `?debug` starts with the readout on, `?at=x,y,z,yaw` starts at a position (yaw in degrees, 0 = facing south / -z), `?shot` hides the title screen.
-  Example: `http://localhost:8000/?debug&at=26,0,11.5,-90` starts in the loading dock facing the shutters.
+- `` ` `` (backquote) toggles a readout with FPS and position. While it's on:
+  - `N` toggles noclip (Space/C to fly up/down).
+  - `1` toggles PS1 vertex wobble (off by default, because it makes nearly-touching surfaces flicker).
+  - `2` toggles dithering.
+- URL options:
+  - `?debug` starts with the readout on.
+  - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
+  - `?stage=TO_LOCKERS` or `?stage=TO_FREEZER` skips ahead in the story (the second one puts the suit on you).
+  - `?sim=seconds` fast-forwards the game at load.
+  - `?shot` skips the title screen.
+  - `?nolock` acts as if the mouse is captured, and `?keys=KeyE:0,KeyW:2` taps E then holds W for 2 seconds after `?sim` (`?after=N` runs N more seconds). These are for automated testing in a headless browser.
+  - `?checkfaces` logs static surfaces that overlap closely enough to flicker (`?checkfaces=desk` limits it to one material).
+
+## Tuning the look
+
+In `src/render/ps1.js`:
+- `PS1_HEIGHT` sets the render resolution (240 is authentic PS1; currently 480).
+- `VERTEX_SNAP_DEFAULT` turns the PS1 vertex wobble on at startup, and `VERTEX_JITTER` sets how strong it is.
+- `COLOR_LEVELS` sets the color steps per channel (31 is authentic PS1; currently 63).
+
+  Example: `http://localhost:8000/?debug&stage=TO_FREEZER&at=26,0,11.5,-90` starts suited up in the loading dock.

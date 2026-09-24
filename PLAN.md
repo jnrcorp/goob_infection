@@ -102,8 +102,11 @@ src/
 
 Each milestone ends in something you can play.
 
-1. **Building greybox**: PS1 renderer, both floors built from data, collision, stairs, working elevator, doors. You can walk the whole building.
-2. **Pre-spill story**: interaction system, coworkers idling, boss briefing, objectives, locker suit-up, freezer. Playable from the desk to picking up the goob.
+1. ✅ **Building greybox**: PS1 renderer, both floors built from data, collision, stairs, working elevator, doors. You can walk the whole building.
+2. ✅ **Pre-spill story**: interaction system, coworkers idling, boss briefing, objectives, locker suit-up, freezer. Playable from the desk to picking up the goob.
+   - Manager: **Dale**, cheerfully oblivious. 17 coworkers across both floors, each with a couple of lines.
+   - The freezer door stays locked until you're wearing the hazard suit.
+   - Picking up the goob currently ends on a "To be continued" card.
 3. **Spill + goob**: slow-motion cinematic, goob blobs, spreading and hiding spots, vacuum suck, tank, bins, HUD progress.
 4. **Infected**: infection transformation, chase AI and pathfinding, suit damage, blow mode, duct tape, game over.
 5. **Finish chapter 1**: secure-in-freezer ending, autosave and continue, menus, audio pass, tuning.

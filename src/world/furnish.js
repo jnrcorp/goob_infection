@@ -1,7 +1,7 @@
 import { createRng } from '../core/random.js';
 import {
   bench, bin, cabinet, chair, chairsAround, counter, couch, crate, desk, forklift, fridge, goobCanister,
-  hazmatSuit, lockers, pallet, palletRack, plant, pod, printer, shelf, sign, sinks, stallRow, table,
+  hazmatSuit, hazmatSuitProp, lockers, pallet, palletRack, plant, pod, printer, shelf, sign, sinks, stallRow, table,
   vending, waterCooler,
 } from './furniture.js';
 
@@ -22,12 +22,14 @@ export function furnish({ builder: b, scene, materials }) {
   bench(b, 2.5, 4.8, 5.5, 5.2);
   b.box(7.55, 2.05, 2.2, 7.65, 2.1, 6.2, 'metal', NC);
   for (const z of [2.2, 6.1]) b.box(7.55, 0, z, 7.65, 2.1, z + 0.1, 'metal', NC);
-  for (const z of [2.9, 4.2, 5.5]) hazmatSuit(b, 7.6, z, 3);
+  hazmatSuit(b, 7.6, 2.9, 3);
+  hazmatSuit(b, 7.6, 5.5, 3);
+  out.suit = hazmatSuitProp(scene, materials, 7.6, 0, 4.2, 3);
   b.box(7.2, 0, 2.2, 7.9, 2.1, 6.2, null);
   sign(scene, 'LOCKERS', 4, 2.55, 10.12, 'n', { w: 1.2, h: 0.28 });
 
   // Restroom
-  stallRow(b, 8.1, 0.1, 0, 3);
+  stallRow(b, 8.14, 0.1, 0, 3);
   sinks(b, 13.35, 3, 13.9, 6.2);
   sign(scene, 'RESTROOM', 11, 2.55, 10.12, 'n', { w: 1.2, h: 0.28 });
 
@@ -87,8 +89,8 @@ export function furnish({ builder: b, scene, materials }) {
   pallet(b, 29.5, 18, 1.2, 1.0);
   crate(b, 29.5, 18, 0.9, 0.8, 0.14);
   forklift(b, 32, 10, 1);
-  b.box(34.5, 0, 4, 35.9, 0.012, 8, 'hazard', NC);
-  b.box(34.5, 0, 10, 35.9, 0.012, 14, 'hazard', NC);
+  b.plane(34.5, 4, 35.9, 8, 0.04, 'hazard');
+  b.plane(34.5, 10, 35.9, 14, 0.04, 'hazard');
   crate(b, 33.5, 15.2, 1.2, 1.1);
   sign(scene, 'TO: MARS', 32.88, 0.7, 15.2, 'w', { w: 0.9, h: 0.3, ...HAZARD });
   sign(scene, 'GOOB CO. INTERPLANETARY SHIPPING', 28, 6.2, 23.88, 's', { w: 6, h: 0.7, ...LOGO });
@@ -132,7 +134,7 @@ export function furnish({ builder: b, scene, materials }) {
   waterCooler(b, 23.5, 17, y);
 
   // Restroom
-  stallRow(b, 17.9, 23.9, 2, 2, y);
+  stallRow(b, 17.86, 23.9, 2, 2, y);
   sinks(b, 15.1, 17, 15.6, 19, y);
 
   // Open office extras

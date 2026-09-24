@@ -20,12 +20,20 @@
 <body>
   <canvas id="game"></canvas>
   <div id="hud">
+    <div id="visor" hidden></div>
     <div id="location" hidden></div>
+    <div id="objective" hidden></div>
     <div id="crosshair"></div>
     <div id="prompt" hidden></div>
     <div id="toast" hidden></div>
     <div id="debug" hidden></div>
+    <div id="dialogue" hidden>
+      <div id="dialogue-speaker"></div>
+      <p id="dialogue-text"></p>
+      <div class="more">[E]</div>
+    </div>
   </div>
+  <div id="fade"></div>
   <section id="title" class="screen title-screen">
     <h1>The Goob<br>Infection</h1>
     <nav class="menu" aria-label="Main menu">
@@ -40,6 +48,15 @@
     <nav class="menu" aria-label="Pause menu">
       <button id="pause-resume" type="button">Resume</button>
       <button id="pause-title" type="button">Quit to title</button>
+    </nav>
+  </section>
+
+  <section id="tbc" class="screen dim-screen" hidden>
+    <h2>To be continued</h2>
+    <p>The goob slips out of your hands...</p>
+    <p class="hint">The spill and the cleanup arrive in the next milestone.</p>
+    <nav class="menu" aria-label="End menu">
+      <button id="tbc-title" type="button">Back to title</button>
     </nav>
   </section>
 

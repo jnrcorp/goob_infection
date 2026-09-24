@@ -69,6 +69,68 @@ html, body {
   text-align: center;
 }
 
+#objective {
+  position: absolute;
+  top: 46px;
+  left: 20px;
+  max-width: min(46vw, 520px);
+  color: var(--goob);
+}
+
+#objective::before {
+  content: "\25B6\00a0";
+}
+
+#dialogue {
+  position: absolute;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  width: min(86vw, 820px);
+  box-sizing: border-box;
+  padding: 14px 20px 12px;
+  background: rgba(6, 12, 6, 0.86);
+  border: 3px solid var(--goob);
+  box-shadow: 4px 4px 0 #000;
+  text-shadow: none;
+}
+
+#dialogue-speaker {
+  color: var(--goob);
+  font-size: 26px;
+  text-transform: uppercase;
+}
+
+#dialogue-text {
+  margin: 4px 0 0;
+  min-height: 2.2em;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+#dialogue .more {
+  text-align: right;
+  font-size: 20px;
+  opacity: 0.6;
+}
+
+/* Hazard suit visor: dark rounded frame and faint scanlines */
+#visor {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(120, 255, 120, 0.035) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse 72% 68% at 50% 50%, transparent 64%, rgba(8, 18, 8, 0.6) 82%, rgba(0, 0, 0, 0.96) 100%);
+}
+
+#fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
 #debug {
   position: absolute;
   left: 20px;

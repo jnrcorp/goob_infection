@@ -1,4 +1,4 @@
-# Serves the game at http://localhost:8000 (ES modules don't load from file://)
+# Serves the game at http://localhost:8000 (ES modules don't load from file://).
+# Caching is off, so a normal reload always picks up code changes.
 Set-Location $PSScriptRoot
-Write-Host "Open http://localhost:8000  (Ctrl+C to stop)"
-python -m http.server 8000
+python serve.py 8000

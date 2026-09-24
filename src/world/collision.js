@@ -26,15 +26,23 @@ export class CollisionWorld {
   }
 
   // Distance along the ray to the nearest enabled box, or maxT if none is closer.
-  raycast(origin, dir, maxT, ignore = []) {
+  // Boxes in `ignore`, or containing `ignorePoint`, are skipped.
+  raycast(origin, dir, maxT, ignore = [], ignorePoint = null) {
     let best = maxT;
     for (const b of this.boxes) {
       if (!b.enabled || ignore.includes(b)) continue;
+      if (ignorePoint && contains(b, ignorePoint, 0.01)) continue;
       const t = rayBox(origin, dir, b);
       if (t !== null && t < best) best = t;
     }
     return best;
   }
+}
+
+function contains(b, p, margin) {
+  return p.x >= b.minX - margin && p.x <= b.maxX + margin
+    && p.y >= b.minY - margin && p.y <= b.maxY + margin
+    && p.z >= b.minZ - margin && p.z <= b.maxZ + margin;
 }
 
 function rayBox(o, d, b) {

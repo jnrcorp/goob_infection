@@ -8,16 +8,22 @@ export class StaticBuilder {
     this.materials = materials;
     this.collision = collision;
     this.buckets = new Map();
+    // Every visible box and plane, for debug checks (see debugOverlaps.js).
+    this.records = [];
   }
 
   // Box from min to max corner. mat = null adds only a collider.
   // opts.collide (default true), opts.boxUV: stretch the texture over each face
-  // instead of tiling it in world space.
+  // instead of tiling it in world space. opts.noTop: leave out the top face
+  // (for walls, whose tops are hidden under the next floor and would otherwise
+  // flicker against it).
   box(x0, y0, z0, x1, y1, z1, mat, opts = {}) {
     if (x1 - x0 <= 1e-4 || y1 - y0 <= 1e-4 || z1 - z0 <= 1e-4) return null;
     const collider = opts.collide === false ? null : this.collision.addBox(x0, y0, z0, x1, y1, z1);
     if (mat) {
-      const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+      this.records.push({ kind: 'box', x0, y0, z0, x1, y1, z1, mat, noTop: !!opts.noTop });
+      let g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+      if (opts.noTop) g = withoutTopFace(g);
       g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
       if (!opts.boxUV) worldUV(g, this.materials.tile(mat));
       this.add(mat, g);
@@ -27,6 +33,7 @@ export class StaticBuilder {
 
   // Horizontal plane facing up (floors) or down (ceilings). No collider.
   plane(x0, z0, x1, z1, y, mat, facingDown = false) {
+    this.records.push({ kind: 'plane', x0, z0, x1, z1, y, mat, facingDown });
     const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0);
     g.rotateX(facingDown ? Math.PI / 2 : -Math.PI / 2);
     g.translate((x0 + x1) / 2, y, (z0 + z1) / 2);
@@ -49,6 +56,17 @@ export class StaticBuilder {
     }
     this.buckets.clear();
   }
+}
+
+// BoxGeometry's faces are index groups in the order +x, -x, +y, -y, +z, -z.
+// Drop the +y group's triangles.
+function withoutTopFace(g) {
+  const top = g.groups[2];
+  const index = [...g.index.array];
+  index.splice(top.start, top.count);
+  g.setIndex(index);
+  g.clearGroups();
+  return g;
 }
 
 // Set UVs from world position so textures tile evenly across any box size

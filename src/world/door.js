@@ -9,6 +9,7 @@ export class Door {
   constructor(ctx, { x, y, z, axis, w, h = 2.18, mat = 'door', label = 'door', locked = null }) {
     const { scene, collision, materials, interactions, hud } = ctx;
     this.hud = hud;
+    this.label = label;
     this.x = x;
     this.z = z;
     this.axis = axis;
@@ -39,14 +40,19 @@ export class Door {
     this.pivot.add(panel, handle);
     scene.add(this.pivot);
 
+    // Closed: blocks the doorway. Open: a thin box along the swung-open panel,
+    // so you can't walk through the door itself.
     this.collider = axis === 'x'
       ? collision.addBox(x - w / 2, y, z - 0.05, x + w / 2, y + h, z + 0.05)
       : collision.addBox(x - 0.05, y, z - w / 2, x + 0.05, y + h, z + w / 2);
+    this.openCollider = collision.addBox(0, y, 0, 0, y + h, 0);
+    this.openCollider.enabled = false;
+    this.panelLength = pw;
 
     const name = label.charAt(0).toUpperCase() + label.slice(1);
     interactions.add({
       mesh: [panel, handle],
-      ignore: [this.collider],
+      ignore: [this.collider, this.openCollider],
       label: () => (this.locked ? `${name} (locked)` : `${this.isOpen ? 'Close' : 'Open'} ${label}`),
       use: (player) => this.toggle(player),
     });
@@ -56,13 +62,48 @@ export class Door {
     return this.target !== 0;
   }
 
+  // Snap shut (used when restarting the chapter).
+  reset() {
+    this.angle = this.target = 0;
+    this.pivot.rotation.y = 0;
+    this.syncColliders();
+  }
+
+  // Snap open. sign follows the same convention as toggle().
+  setOpen(sign) {
+    this.angle = this.target = sign * OPEN_ANGLE;
+    this.pivot.rotation.y = this.angle;
+    this.syncColliders();
+  }
+
+  // Closed collider when shut, panel collider when fully open, neither mid-swing.
+  syncColliders() {
+    const shut = this.target === 0 && this.angle === 0;
+    const open = this.target !== 0 && this.angle === this.target;
+    this.collider.enabled = shut;
+    this.openCollider.enabled = open;
+    if (!open) return;
+    // Panel runs from the hinge in the direction the door now points.
+    const hinge = this.pivot.position;
+    const dx = this.axis === 'x' ? Math.cos(this.angle) : Math.sin(this.angle);
+    const dz = this.axis === 'x' ? -Math.sin(this.angle) : Math.cos(this.angle);
+    const ex = hinge.x + dx * this.panelLength;
+    const ez = hinge.z + dz * this.panelLength;
+    const c = this.openCollider;
+    c.minX = Math.min(hinge.x, ex) - 0.04; c.maxX = Math.max(hinge.x, ex) + 0.04;
+    c.minZ = Math.min(hinge.z, ez) - 0.04; c.maxZ = Math.max(hinge.z, ez) + 0.04;
+  }
+
   toggle(player) {
     if (this.locked) {
       this.hud.toast(this.locked);
       return;
     }
     if (this.isOpen) {
+      // Don't shut the door on the player.
+      if (this.playerInDoorway(player)) return;
       this.target = 0;
+      this.syncColliders();
       return;
     }
     // Positive rotation swings an x-axis door toward -z and a z-axis door toward +x.
@@ -70,14 +111,27 @@ export class Door {
       ? (player.pos.z < this.z ? -1 : 1)
       : (player.pos.x < this.x ? 1 : -1);
     this.target = sign * OPEN_ANGLE;
-    this.collider.enabled = false;
+    this.syncColliders();
   }
 
-  update(dt) {
+  // Player's body overlaps the closed door's space (plus their radius).
+  playerInDoorway(player) {
+    const c = this.collider;
+    const r = 0.35;
+    return player.pos.x + r > c.minX && player.pos.x - r < c.maxX
+      && player.pos.z + r > c.minZ && player.pos.z - r < c.maxZ
+      && player.pos.y < c.maxY && player.pos.y + 1.75 > c.minY;
+  }
+
+  update(dt, player) {
+    // If the player steps into the doorway while it's swinging shut, open it back up.
+    if (this.target === 0 && this.angle !== 0 && player && this.playerInDoorway(player)) {
+      this.target = Math.sign(this.angle) * OPEN_ANGLE;
+    }
     const diff = this.target - this.angle;
     const step = SWING_SPEED * dt;
     this.angle = Math.abs(diff) <= step ? this.target : this.angle + Math.sign(diff) * step;
     this.pivot.rotation.y = this.angle;
-    if (this.target === 0 && this.angle === 0) this.collider.enabled = true;
+    this.syncColliders();
   }
 }

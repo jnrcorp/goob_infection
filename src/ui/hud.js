@@ -6,6 +6,7 @@ export class Hud {
       prompt: document.getElementById('prompt'),
       toast: document.getElementById('toast'),
       debug: document.getElementById('debug'),
+      objective: document.getElementById('objective'),
     };
     this.cache = {};
     this.toastTime = 0;
@@ -22,6 +23,7 @@ export class Hud {
   setLocation(text) { this.setText('location', text); }
   setPrompt(text) { this.setText('prompt', text); }
   setDebug(text) { this.setText('debug', text); }
+  setObjective(text) { this.setText('objective', text); }
 
   toast(text, seconds = 3) {
     this.cache.toast = null;
