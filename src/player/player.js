@@ -29,6 +29,7 @@ export class Player {
     this.bob = 0;
     this.spawnPoint = null;
     this.suited = false;
+    this.shake = 0;
     // When set ({ x, y, z }), the camera turns smoothly to look at this point.
     this.lookTarget = null;
   }
@@ -67,7 +68,7 @@ export class Player {
       this.pos.z += (-cos * cp * forward - sin * strafe) * FLY * dt;
       this.pos.y += (sp * forward + up) * FLY * dt;
       this.vel.set(0, 0, 0);
-      this.updateCamera();
+      this.updateCamera(dt);
       return;
     }
 
@@ -98,7 +99,7 @@ export class Player {
 
     const horizontal = Math.hypot(this.vel.x, this.vel.z);
     if (this.grounded && horizontal > 0.5) this.bob += dt * horizontal * 2.2;
-    this.updateCamera();
+    this.updateCamera(dt);
   }
 
   turnTowards(t, dt) {
@@ -197,9 +198,21 @@ export class Player {
     p.y = y;
   }
 
-  updateCamera() {
+  // Camera shake: seconds remaining; strength fades out with it.
+  shakeFor(seconds) {
+    this.shake = Math.max(this.shake ?? 0, seconds);
+  }
+
+  updateCamera(dt = 0) {
     const bob = this.noclip ? 0 : Math.sin(this.bob * 2) * 0.03;
     this.camera.position.set(this.pos.x, this.pos.y + EYE + bob, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
+    if (this.shake > 0) {
+      this.shake = Math.max(0, this.shake - dt);
+      const s = Math.min(1, this.shake) * 0.05;
+      this.camera.position.x += (Math.random() - 0.5) * s;
+      this.camera.position.y += (Math.random() - 0.5) * s;
+      this.camera.rotation.z = (Math.random() - 0.5) * s;
+    }
   }
 }

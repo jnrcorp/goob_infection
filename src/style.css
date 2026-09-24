@@ -123,6 +123,68 @@ html, body {
     radial-gradient(ellipse 72% 68% at 50% 50%, transparent 64%, rgba(8, 18, 8, 0.6) 82%, rgba(0, 0, 0, 0.96) 100%);
 }
 
+#goob-hud {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 24px;
+}
+
+.goob-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.goob-label {
+  min-width: 128px;
+  color: var(--goob);
+  text-transform: uppercase;
+}
+
+.tank-bar {
+  width: 160px;
+  height: 14px;
+  border: 2px solid var(--text);
+  box-shadow: 2px 2px 0 var(--shadow);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.tank-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--goob);
+}
+
+#goob-hud.full .tank-bar {
+  border-color: #ffd23a;
+  animation: blink 0.6s steps(2, start) infinite;
+}
+
+#tank-text,
+#cleaned-text {
+  font-variant-numeric: tabular-nums;
+}
+
+#flash {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+@keyframes blink {
+  to { visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #goob-hud.full .tank-bar { animation: none; }
+}
+
 #fade {
   position: fixed;
   inset: 0;
@@ -133,7 +195,7 @@ html, body {
 
 #debug {
   position: absolute;
-  left: 20px;
+  right: 20px;
   bottom: 16px;
   font-size: 20px;
   color: var(--goob);

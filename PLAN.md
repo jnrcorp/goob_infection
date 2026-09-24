@@ -107,7 +107,13 @@ Each milestone ends in something you can play.
    - Manager: **Dale**, cheerfully oblivious. 17 coworkers across both floors, each with a couple of lines.
    - The freezer door stays locked until you're wearing the hazard suit.
    - Picking up the goob currently ends on a "To be continued" card.
-3. **Spill + goob**: slow-motion cinematic, goob blobs, spreading and hiding spots, vacuum suck, tank, bins, HUD progress.
+3. ✅ **Spill + goob**: slow-motion cinematic, goob blobs, spreading and hiding spots, vacuum suck, tank, bins, HUD progress.
+   - Hank waits outside the freezer and is the first to be infected; everyone else turns right after.
+   - The goob gets into 14 floor vents; 6 random ones start with goob. It also hides on ceilings and under desks.
+   - The elevator jams on 1F with goob inside, so the stairs are the only way up.
+   - The vacuum hangs beside the freezer door. Tank: 30 L. Four biohazard bins, two per floor.
+   - Coworkers turn green and shamble around (not hostile yet: that's milestone 4).
+   - Cleaning up everything ends on a "Goob contained" card for now.
 4. **Infected**: infection transformation, chase AI and pathfinding, suit damage, blow mode, duct tape, game over.
 5. **Finish chapter 1**: secure-in-freezer ending, autosave and continue, menus, audio pass, tuning.
 

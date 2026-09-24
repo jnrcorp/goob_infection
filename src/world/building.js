@@ -63,7 +63,11 @@ export const BUILDING = {
         { id: 'corridor1', name: 'Corridor', rect: { x0: 0, z0: 10, x1: 24, z1: 13 }, floor: 'linoleum', ceiling: 3 },
         { id: 'breakroom', name: 'Break Room', rect: { x0: 0, z0: 13, x1: 12, z1: 24 }, floor: 'linoleum', ceiling: 3 },
         // No ceiling (it's open to 2F), so no light panels: they'd float over the stairs.
-        { id: 'stair1', name: 'Stairwell', rect: { x0: 12, z0: 13, x1: 15, z1: 24 }, floor: 'concrete', ceiling: null, lightY: 3.4, fixture: null },
+        // Goob can only reach the landing; the rest is under the stairs.
+        {
+          id: 'stair1', name: 'Stairwell', rect: { x0: 12, z0: 13, x1: 15, z1: 24 }, floor: 'concrete', ceiling: null,
+          lightY: 3.4, fixture: null, goobRect: { x0: 12, z0: 13, x1: 15, z1: 15 },
+        },
         { id: 'closet', name: 'Janitor Closet', rect: { x0: 15, z0: 16, x1: 18, z1: 24 }, floor: 'concrete', ceiling: 3 },
         { id: 'storage', name: 'Storage', rect: { x0: 18, z0: 13, x1: 24, z1: 24 }, floor: 'concrete', ceiling: 3 },
         {
@@ -130,4 +134,38 @@ export const BUILDING = {
 
   // Standing behind your chair at your desk on 2F, facing the monitor.
   spawn: { x: 8.15, y: 4, z: 10.7, yaw: 0 },
+
+  // Floor-level air vents, where goob hides after it gets into the ventilation.
+  // Position is on the wall face; facing is the direction the vent points
+  // (n = +z, s = -z, e = +x, w = -x).
+  vents: [
+    { x: 7.3, y: 0.35, z: 9.9, facing: 's' },     // locker room
+    { x: 13.9, y: 0.35, z: 8, facing: 'w' },      // 1F restroom
+    { x: 23.9, y: 0.35, z: 5, facing: 'w' },      // lobby
+    { x: 0.1, y: 0.35, z: 12.45, facing: 'e' },   // 1F corridor (beside the water cooler)
+    { x: 0.1, y: 0.35, z: 14.5, facing: 'e' },    // break room
+    { x: 23.9, y: 0.35, z: 14.5, facing: 'w' },   // storage
+    { x: 17.9, y: 0.35, z: 23, facing: 'w' },     // janitor closet
+    { x: 35.9, y: 0.35, z: 16, facing: 'w' },     // loading dock
+    { x: 0.1, y: 4.35, z: 7.5, facing: 'e' },     // open office, west
+    { x: 23.9, y: 4.35, z: 13.5, facing: 'w' },   // open office, east
+    { x: 5.9, y: 4.35, z: 1, facing: 'w' },       // manager's office
+    { x: 23.9, y: 4.35, z: 6.2, facing: 'w' },    // meeting room
+    { x: 18.1, y: 4.35, z: 23, facing: 'e' },     // kitchenette
+    { x: 15.1, y: 4.35, z: 21, facing: 'e' },     // 2F restroom
+  ],
+
+  // Yellow drums where you empty the vacuum tank. Two per floor.
+  bins: [
+    { x: 11.8, y: 0, z: 12.45 },  // 1F corridor
+    { x: 33.0, y: 0, z: 2.2 },    // loading dock
+    { x: 0.55, y: 4, z: 16.1 },   // open office
+    { x: 23.35, y: 4, z: 18.3 },  // kitchenette
+  ],
+
+  // The containment vacuum hangs on the dock wall beside the freezer door.
+  vacuumRack: { x: 30.9, y: 0, z: 18.4 },
+
+  // Where Hank waits to watch you bring the goob out of the freezer.
+  hankWatch: [{ x: 30.8, z: 16.5 }, { x: 30.6, z: 19.2 }, { x: 29.3, z: 20.8 }],
 };

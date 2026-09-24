@@ -7,6 +7,10 @@ export class Hud {
       toast: document.getElementById('toast'),
       debug: document.getElementById('debug'),
       objective: document.getElementById('objective'),
+      goob: document.getElementById('goob-hud'),
+      tankFill: document.getElementById('tank-fill'),
+      tankText: document.getElementById('tank-text'),
+      cleaned: document.getElementById('cleaned-text'),
     };
     this.cache = {};
     this.toastTime = 0;
@@ -24,6 +28,26 @@ export class Hud {
   setPrompt(text) { this.setText('prompt', text); }
   setDebug(text) { this.setText('debug', text); }
   setObjective(text) { this.setText('objective', text); }
+
+  // Vacuum tank and cleanup progress; pass null to hide.
+  setGoob(info) {
+    const el = this.el;
+    el.goob.hidden = !info;
+    if (!info) return;
+    const { tank, capacity, cleaned } = info;
+    const tankText = `${Math.floor(tank)} / ${capacity} L`;
+    if (this.cache.tank !== tankText) {
+      this.cache.tank = tankText;
+      el.tankText.textContent = tankText;
+      el.tankFill.style.width = `${(tank / capacity) * 100}%`;
+      el.goob.classList.toggle('full', tank >= capacity - 1e-3);
+    }
+    const cleanedText = `${Math.floor(cleaned)}%`;
+    if (this.cache.cleaned !== cleanedText) {
+      this.cache.cleaned = cleanedText;
+      el.cleaned.textContent = cleanedText;
+    }
+  }
 
   toast(text, seconds = 3) {
     this.cache.toast = null;

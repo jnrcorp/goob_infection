@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Person } from './person.js';
 
 const WALK_SPEED = 1.3;
+const INFECTED_SPEED = 0.45;
 const TURN_RATE = 6;
 const RADIUS = 0.25;
 const HEIGHT = 1.75;
@@ -16,9 +17,11 @@ export class NPC {
     const { scene, collision, interactions } = ctx;
     this.def = def;
     this.name = def.name;
+    this.collision = collision;
     this.person = new Person(def.look);
     scene.add(this.person.root);
     this.pos = new THREE.Vector3();
+    this.home = new THREE.Vector3();
     this.collider = collision.addBox(0, 0, 0, 0, 0, 0);
     this.onTalk = null;
     this.talkable = true;
@@ -46,6 +49,44 @@ export class NPC {
     this.onArrive = null;
     this.talking = false;
     this.talkable = true;
+    this.speed = WALK_SPEED;
+    this.person.setInfected(false);
+  }
+
+  // Turned by the goob. Stops talking and shuffles around where it stood.
+  infect() {
+    this.mode = 'infected';
+    this.path = null;
+    this.onArrive = null;
+    this.talking = false;
+    this.talkable = false;
+    this.speed = INFECTED_SPEED;
+    this.home.copy(this.pos);
+    this.pause = Math.random() * 2;
+    this.person.setInfected(true);
+  }
+
+  get infected() {
+    return this.mode === 'infected';
+  }
+
+  // Pick a nearby spot with a clear straight line to it.
+  wander() {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.5 + Math.random() * 1.5;
+    const target = { x: this.home.x + Math.cos(a) * r, z: this.home.z + Math.sin(a) * r };
+    const from = new THREE.Vector3(this.pos.x, this.pos.y + 0.5, this.pos.z);
+    const dir = new THREE.Vector3(target.x - this.pos.x, 0, target.z - this.pos.z);
+    const dist = dir.length();
+    dir.normalize();
+    const clear = this.collision.raycast(from, dir, dist + RADIUS, new Set([this.collider])) >= dist + RADIUS;
+    const rest = () => { this.pause = 2 + Math.random() * 4; };
+    if (clear) {
+      this.pause = 0;
+      this.walkPath([target], rest);
+    } else {
+      rest();
+    }
   }
 
   get seated() {
@@ -73,6 +114,10 @@ export class NPC {
 
   update(dt, player) {
     let moving = false;
+    if (this.infected && !this.path) {
+      this.pause -= dt;
+      if (this.pause <= 0) this.wander();
+    }
     const targets = this.path ?? (this.mode === 'route' ? this.def.route : null);
 
     if (targets && !this.talking) {
@@ -87,7 +132,7 @@ export class NPC {
         if (dist < 0.05) {
           this.arrive(targets);
         } else if (!this.blockedBy(player, dx, dz)) {
-          const step = Math.min(dist, WALK_SPEED * dt);
+          const step = Math.min(dist, this.speed * dt);
           this.pos.x += (dx / dist) * step;
           this.pos.z += (dz / dist) * step;
           this.turnTowards(Math.atan2(dx, dz), dt);
@@ -108,7 +153,7 @@ export class NPC {
     person.talking = this.talking;
     person.root.position.copy(this.pos);
     person.root.rotation.y = this.yaw;
-    person.update(dt, WALK_SPEED);
+    person.update(dt, this.speed);
 
     const c = this.collider;
     c.minX = this.pos.x - RADIUS; c.maxX = this.pos.x + RADIUS;

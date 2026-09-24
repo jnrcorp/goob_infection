@@ -40,7 +40,8 @@ export function chair(b, x, z, rot = 0, y = 0) {
 }
 
 // Desk with monitor at the back (-z) and a chair in front (+z).
-// Returns the seat: { x, z, rot } where rot is the desk's rotation.
+// Returns the seat { x, z, rot } (rot = the desk's rotation) and the desk
+// center { deskX, deskZ }.
 export function desk(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
   p(-0.8, 0.72, -0.4, 0.8, 0.76, 0.4, 'desk', NC);
@@ -55,7 +56,7 @@ export function desk(b, x, z, rot = 0, y = 0) {
   p(-0.22, 0.76, -0.05, 0.22, 0.785, 0.12, 'plastic', NC);
   const seat = p.point(0, 0.75);
   chair(b, seat.x, seat.z, rot, y);
-  return { ...seat, rot };
+  return { ...seat, rot, deskX: x, deskZ: z };
 }
 
 // Four desks around a cross of cubicle partitions. Returns seat positions.

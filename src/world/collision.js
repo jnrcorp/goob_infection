@@ -26,16 +26,22 @@ export class CollisionWorld {
   }
 
   // Distance along the ray to the nearest enabled box, or maxT if none is closer.
-  // Boxes in `ignore`, or containing `ignorePoint`, are skipped.
+  // Boxes in `ignore` (an array or Set), or containing `ignorePoint`, are skipped.
   raycast(origin, dir, maxT, ignore = [], ignorePoint = null) {
+    const skip = ignore instanceof Set ? (b) => ignore.has(b) : (b) => ignore.includes(b);
     let best = maxT;
     for (const b of this.boxes) {
-      if (!b.enabled || ignore.includes(b)) continue;
+      if (!b.enabled || skip(b)) continue;
       if (ignorePoint && contains(b, ignorePoint, 0.01)) continue;
       const t = rayBox(origin, dir, b);
       if (t !== null && t < best) best = t;
     }
     return best;
+  }
+
+  // Is the point inside any enabled box (other than those in `ignore`)?
+  pointInside(p, ignore = new Set()) {
+    return this.boxes.some((b) => b.enabled && !ignore.has(b) && contains(b, p, 0));
   }
 }
 
@@ -45,10 +51,13 @@ function contains(b, p, margin) {
     && p.z >= b.minZ - margin && p.z <= b.maxZ + margin;
 }
 
+// Slab test. Returns the entry distance (0 if the origin is inside), or null.
 function rayBox(o, d, b) {
   let tmin = -Infinity;
   let tmax = Infinity;
-  for (const [oa, da, lo, hi] of [[o.x, d.x, b.minX, b.maxX], [o.y, d.y, b.minY, b.maxY], [o.z, d.z, b.minZ, b.maxZ]]) {
+  const axes = [o.x, d.x, b.minX, b.maxX, o.y, d.y, b.minY, b.maxY, o.z, d.z, b.minZ, b.maxZ];
+  for (let i = 0; i < 12; i += 4) {
+    const oa = axes[i], da = axes[i + 1], lo = axes[i + 2], hi = axes[i + 3];
     if (Math.abs(da) < 1e-9) {
       if (oa < lo || oa > hi) return null;
       continue;

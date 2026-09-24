@@ -4,8 +4,17 @@ export class ScreenFx {
   constructor() {
     this.fadeEl = document.getElementById('fade');
     this.visorEl = document.getElementById('visor');
+    this.flashEl = document.getElementById('flash');
     this.opacity = 0;
     this.fading = null;
+    this.flashTime = 0;
+    this.flashDuration = 1;
+  }
+
+  // A burst of color that fades out.
+  flash(color, seconds = 0.6) {
+    this.flashEl.style.background = color;
+    this.flashTime = this.flashDuration = seconds;
   }
 
   // Fade to opacity (0 = clear, 1 = black) over the given seconds.
@@ -22,6 +31,8 @@ export class ScreenFx {
   }
 
   update(dt) {
+    this.flashTime = Math.max(0, this.flashTime - dt);
+    this.flashEl.style.opacity = String(0.6 * (this.flashTime / this.flashDuration));
     const f = this.fading;
     if (!f) return;
     f.t = Math.min(f.duration, f.t + dt);

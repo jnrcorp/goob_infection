@@ -1,4 +1,5 @@
 import { createRng } from '../core/random.js';
+import { BUILDING } from './building.js';
 import {
   bench, bin, cabinet, chair, chairsAround, counter, couch, crate, desk, forklift, fridge, goobCanister,
   hazmatSuit, hazmatSuitProp, lockers, pallet, palletRack, plant, pod, printer, shelf, sign, sinks, stallRow, table,
@@ -148,5 +149,20 @@ export function furnish({ builder: b, scene, materials }) {
   sign(scene, 'STAIRS', 11.88, y + 2.5, 22.5, 'w', { w: 1.0, h: 0.28 });
   sign(scene, '2F', 14.88, y + 2.2, 22.5, 'w', { w: 0.6, h: 0.4 });
 
+  // Air vent grilles, low on the walls.
+  for (const v of BUILDING.vents) vent(b, v);
+
   return out;
+}
+
+// A 50x30 cm grille standing 3 cm off the wall.
+function vent(b, { x, y, z, facing }) {
+  const hw = 0.25;
+  const hh = 0.15;
+  const t = 0.03;
+  const opts = { collide: false, boxUV: true };
+  if (facing === 'n') b.box(x - hw, y - hh, z, x + hw, y + hh, z + t, 'shutter', opts);
+  else if (facing === 's') b.box(x - hw, y - hh, z - t, x + hw, y + hh, z, 'shutter', opts);
+  else if (facing === 'e') b.box(x, y - hh, z - hw, x + t, y + hh, z + hw, 'shutter', opts);
+  else b.box(x - t, y - hh, z - hw, x, y + hh, z + hw, 'shutter', opts);
 }

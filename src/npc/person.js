@@ -17,6 +17,10 @@ function mat(color) {
   return materials.get(color);
 }
 
+const GOOB_COLOR = 0x4cd62e;
+const INFECTED_SKIN = 0x7fae5a;
+const glowingEyes = ps1ify(new THREE.MeshBasicMaterial({ color: 0xb6ff6a }));
+
 function part(w, h, d, color, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
   m.position.set(x, y, z);
@@ -70,6 +74,21 @@ export class Person {
     );
     this.body.add(this.head);
 
+    // Parts that change when infected.
+    this.skinMeshes = [this.head.children[0], ...this.arms.map((a) => a.elbow.children[0])];
+    this.skinMaterial = mat(skin);
+    this.eyes = this.head.children.slice(3, 5);
+    this.drips = new THREE.Group();
+    this.drips.add(
+      part(0.12, 0.04, 0.1, GOOB_COLOR, 0.04, HIP + 0.94, 0.02),
+      part(0.04, 0.12, 0.03, GOOB_COLOR, 0.09, HIP + 0.86, 0.12),
+      part(0.1, 0.03, 0.1, GOOB_COLOR, -0.26, HIP + 0.58, 0.01),
+      part(0.14, 0.1, 0.02, GOOB_COLOR, -0.08, HIP + 0.42, 0.13),
+    );
+    this.drips.visible = false;
+    this.body.add(this.drips);
+    this.infected = false;
+
     this.meshes = [];
     this.root.traverse((o) => { if (o.isMesh) this.meshes.push(o); });
 
@@ -78,6 +97,13 @@ export class Person {
     this.headYaw = null; // overrides the idle head turn when set
     this.t = Math.random() * 10;
     this.walkPhase = 0;
+  }
+
+  setInfected(on) {
+    this.infected = on;
+    for (const m of this.skinMeshes) m.material = on ? mat(INFECTED_SKIN) : this.skinMaterial;
+    for (const m of this.eyes) m.material = on ? glowingEyes : mat(0x111111);
+    this.drips.visible = on;
   }
 
   update(dt, walkSpeed = 1.3) {
@@ -124,6 +150,16 @@ export class Person {
       default: // stand
         this.body.rotation.z = Math.sin(t * 1.3) * 0.015;
         this.head.rotation.y = Math.sin(t * 0.4) * 0.35;
+    }
+
+    // Infected: arms reaching forward, lolling head, a lurching sway.
+    if (this.infected && (this.pose === 'stand' || this.pose === 'walk')) {
+      armL.shoulder.rotation.x = -1.25 + Math.sin(t * 1.7) * 0.12;
+      armR.shoulder.rotation.x = -1.25 + Math.sin(t * 1.7 + 2) * 0.12;
+      armL.elbow.rotation.x = armR.elbow.rotation.x = -0.2;
+      this.head.rotation.z = 0.3 + Math.sin(t * 0.9) * 0.15;
+      this.head.rotation.x = 0.25;
+      this.body.rotation.z = Math.sin(t * 1.1) * 0.06;
     }
 
     if (this.headYaw !== null) this.head.rotation.y = this.headYaw;

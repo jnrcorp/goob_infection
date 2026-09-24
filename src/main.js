@@ -6,6 +6,11 @@ import { Interactions } from './world/interaction.js';
 import { buildBuilding } from './world/buildBuilding.js';
 import { createCast } from './npc/cast.js';
 import { Player } from './player/player.js';
+import { Viewmodel } from './player/viewmodel.js';
+import { Vacuum } from './player/vacuum.js';
+import { GoobGraph } from './goob/goobGraph.js';
+import { GoobSystem } from './goob/goobSystem.js';
+import { Spill } from './story/spill.js';
 import { Chapter1 } from './story/chapter1.js';
 import { Input } from './core/input.js';
 import { Hud } from './ui/hud.js';
@@ -38,7 +43,22 @@ const ctx = { scene, collision, materials, interactions, hud };
 const world = buildBuilding(ctx);
 const cast = createCast(ctx, world.props);
 const player = new Player(camera, collision);
-const chapter = new Chapter1({ world, player, cast, hud, dialogue, interactions, fx, onEnd: endChapter });
+const viewmodel = new Viewmodel(materials);
+
+// Goob flows under doors and around people, so those colliders don't block it.
+const goobPassable = new Set([
+  ...world.doors.flatMap((d) => [d.collider, d.openCollider]),
+  ...world.elevator.doors.map((d) => d.collider),
+  ...cast.all.map((n) => n.collider),
+]);
+const goobGraph = new GoobGraph(collision, goobPassable).build(world);
+const goob = new GoobSystem(scene, goobGraph, collision);
+const vacuum = new Vacuum(viewmodel, hud);
+const spill = new Spill({ scene, materials, player, camera, viewmodel, goob, fx, hud, world, cast });
+const chapter = new Chapter1({
+  ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph: goobGraph, vacuum, spill, onEnd: endChapter,
+});
+let gameTime = 0;
 
 // ---------- Menus ----------
 // 'title' | 'playing' | 'paused' | 'ended' | 'quit'. Gameplay runs while the pointer is locked.
@@ -54,9 +74,12 @@ function goToTitle() {
   showScreen('title');
 }
 
-function endChapter() {
+function endChapter({ title, text, hint } = {}) {
   state = 'ended';
   if (document.pointerLockElement) document.exitPointerLock();
+  document.getElementById('tbc-title').textContent = title ?? 'To be continued';
+  document.getElementById('tbc-text').textContent = text ?? '';
+  document.getElementById('tbc-hint').textContent = hint ?? '';
   showScreen('tbc');
 }
 
@@ -99,11 +122,12 @@ window.addEventListener('keydown', (e) => {
 
 // ---------- Debug ----------
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
-// 1 toggles vertex wobble, 2 toggles dithering.
+// 1 toggles vertex wobble, 2 toggles dithering, G removes all goob.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
-//   ?stage=NAME     skip ahead: TO_LOCKERS or TO_FREEZER
+//   ?stage=NAME     skip ahead: TO_LOCKERS, TO_FREEZER, GET_VACUUM or CLEANUP
+//   ?goobspots      show every spot goob can spread to
 //   ?at=x,y,z,yaw,pitch   start at a position (angles in degrees)
 //   ?sim=seconds    fast-forward the game at load
 //   ?nolock         act as if the mouse is captured (for automated testing)
@@ -126,12 +150,36 @@ if (params.has('shot')) {
 } else {
   showScreen('title');
 }
+if (params.has('goobspots')) {
+  const positions = goobGraph.nodes.flatMap((n) => [n.pos.x, n.pos.y + 0.1, n.pos.z]);
+  const geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  scene.add(new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xff40ff, size: 0.15 })));
+  // Count connected groups: goob can only spread within a group.
+  const seen = new Set();
+  const groups = [];
+  for (const start of goobGraph.nodes) {
+    if (seen.has(start)) continue;
+    const group = [];
+    const queue = [start];
+    seen.add(start);
+    while (queue.length) {
+      const n = queue.pop();
+      group.push(n);
+      for (const m of n.links) if (!seen.has(m)) { seen.add(m); queue.push(m); }
+    }
+    groups.push(group);
+  }
+  groups.sort((a, b) => b.length - a.length);
+  console.log(`[goobspots] ${goobGraph.nodes.length} spots in ${groups.length} connected groups: ${groups.map((g) => g.length).join(', ')}`);
+  for (const g of groups.slice(1)) console.log(`[goobspots] separate group at ${g.slice(0, 3).map((n) => `${n.kind}(${n.pos.x.toFixed(1)},${n.pos.y.toFixed(1)},${n.pos.z.toFixed(1)})`).join(' ')}`);
+}
 
 // ---------- Loop ----------
 function resize() {
   ps1.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  viewmodel.setAspect(camera.aspect);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -155,9 +203,13 @@ async function runStartupSimulation() {
   await simulate(Number(params.get('sim')) || 0);
   for (const step of (params.get('keys') ?? '').split(',').filter(Boolean)) {
     const [code, seconds] = step.split(':');
-    window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+    // Mouse buttons (Mouse0) are pressed directly; keys go through real events.
+    const mouse = code.startsWith('Mouse');
+    if (mouse) input.keys.add(code);
+    else window.dispatchEvent(new KeyboardEvent('keydown', { code }));
     await simulate(Math.max(1 / 30, Number(seconds) || 0));
-    window.dispatchEvent(new KeyboardEvent('keyup', { code }));
+    if (mouse) input.keys.delete(code);
+    else window.dispatchEvent(new KeyboardEvent('keyup', { code }));
     await simulate(1 / 30);
   }
   await simulate(Number(params.get('after')) || 0);
@@ -167,7 +219,7 @@ runStartupSimulation().then(() => {
   clock.getDelta();
   ps1.renderer.setAnimationLoop(() => {
     step(Math.min(clock.getDelta(), 0.05));
-    ps1.render(scene, camera);
+    ps1.render(scene, camera, viewmodel);
     input.endFrame();
   });
 });
@@ -190,13 +242,25 @@ function step(dt) {
     ps1.dither = !ps1.dither;
     hud.toast(`Dithering ${ps1.dither ? 'on' : 'off'}`, 1.5);
   }
+  if (active && debug && input.wasPressed('KeyG')) {
+    goob.collected += goob.remaining;
+    goob.blobs.clear();
+    hud.toast('Debug: all goob removed', 1.5);
+  }
 
   // The world only runs while playing; menus and the pause screen freeze it.
+  // The world runs at the chapter's time scale (slow motion in the spill);
+  // the story, camera and screen effects run in real time.
   if (state === 'playing') {
+    const worldDt = dt * chapter.timeScale;
+    gameTime += worldDt;
     dialogue.update(dt, input);
     player.update(dt, input, controlling);
-    world.update(dt, player);
-    cast.update(dt, player);
+    world.update(worldDt, player);
+    cast.update(worldDt, player);
+    goob.update(worldDt, gameTime);
+    camera.updateMatrixWorld();
+    vacuum.update(dt, input, controlling, camera, player, goob);
     chapter.update(dt);
     fx.update(dt);
   }

@@ -108,10 +108,19 @@ export class PS1Renderer {
     snapUniform.value.set(w / 2 / VERTEX_JITTER, h / 2 / VERTEX_JITTER);
   }
 
-  render(scene, camera) {
-    this.renderer.setRenderTarget(this.target);
-    this.renderer.render(scene, camera);
-    this.renderer.setRenderTarget(null);
+  // overlay: things held in front of the camera (drawn last, over everything,
+  // so they never clip into walls).
+  render(scene, camera, overlay = null) {
+    const r = this.renderer;
+    r.setRenderTarget(this.target);
+    r.render(scene, camera);
+    if (overlay) {
+      r.autoClear = false;
+      r.clearDepth();
+      r.render(overlay.scene, overlay.camera);
+      r.autoClear = true;
+    }
+    r.setRenderTarget(null);
     this.renderer.render(this.postScene, this.postCamera);
   }
 }

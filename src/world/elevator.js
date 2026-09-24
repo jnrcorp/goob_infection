@@ -54,7 +54,7 @@ export class Elevator {
     const other = () => (this.current + 1) % this.floors.length;
     interactions.add({
       mesh: [panel, b1, b2],
-      label: () => (this.phase === 'moving' ? 'Elevator moving…' : `Go to ${floorName(other())}`),
+      label: () => (this.jammed ? 'Out of service' : this.phase === 'moving' ? 'Elevator moving…' : `Go to ${floorName(other())}`),
       use: () => this.request(other()),
     });
 
@@ -75,7 +75,11 @@ export class Elevator {
       const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.02), materials.get('light'));
       lamp.position.set(bx, fy + 1.2, z - 0.145);
       scene.add(button, lamp);
-      interactions.add({ mesh: [button, lamp], label: 'Call elevator', use: () => this.request(i) });
+      interactions.add({
+        mesh: [button, lamp],
+        label: () => (this.jammed ? 'Elevator: out of service' : 'Call elevator'),
+        use: () => this.request(i),
+      });
 
       return { left, right, collider, fy };
     });
@@ -91,8 +95,29 @@ export class Elevator {
     this.syncDoors();
   }
 
+  // Breaks down: returns to the ground floor and stays there with its doors
+  // jammed open. Buttons stop working.
+  jam() {
+    this.current = this.target = 0;
+    this.carY = this.floors[0];
+    this.phase = 'jammed';
+    this.open.fill(0);
+    this.open[0] = 0.8;
+    this.syncCar();
+    this.syncDoors();
+  }
+
+  get jammed() {
+    return this.phase === 'jammed';
+  }
+
+  // Center of the car floor, for putting goob in it.
+  get carFloorPoint() {
+    return { x: (this.def.x0 + this.def.x1) / 2, y: this.carY, z: (this.def.z0 + this.def.z1) / 2 };
+  }
+
   request(floor) {
-    if (this.phase === 'moving') return;
+    if (this.phase === 'moving' || this.jammed) return;
     if (floor === this.current) {
       if (this.phase === 'closed' || this.phase === 'closing') this.phase = 'opening';
       else if (this.phase === 'open') this.timer = HOLD_OPEN;
@@ -164,7 +189,8 @@ export class Elevator {
       const f = this.open[i];
       d.left.position.x = this.def.doorAt - hw / 2 - f * travel;
       d.right.position.x = this.def.doorAt + hw / 2 + f * travel;
-      d.collider.enabled = f < 0.85;
+      // Half-open jammed doors still leave a gap wide enough to squeeze through.
+      d.collider.enabled = f < (this.jammed ? 0.5 : 0.85);
     });
   }
 }

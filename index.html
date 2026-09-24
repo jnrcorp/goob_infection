@@ -27,12 +27,24 @@
     <div id="prompt" hidden></div>
     <div id="toast" hidden></div>
     <div id="debug" hidden></div>
+    <div id="goob-hud" hidden>
+      <div class="goob-row">
+        <span class="goob-label">Tank</span>
+        <div class="tank-bar"><i id="tank-fill"></i></div>
+        <span id="tank-text">0 / 30 L</span>
+      </div>
+      <div class="goob-row">
+        <span class="goob-label">Goob cleaned</span>
+        <span id="cleaned-text">0%</span>
+      </div>
+    </div>
     <div id="dialogue" hidden>
       <div id="dialogue-speaker"></div>
       <p id="dialogue-text"></p>
       <div class="more">[E]</div>
     </div>
   </div>
+  <div id="flash"></div>
   <div id="fade"></div>
   <section id="title" class="screen title-screen">
     <h1>The Goob<br>Infection</h1>
@@ -52,9 +64,9 @@
   </section>
 
   <section id="tbc" class="screen dim-screen" hidden>
-    <h2>To be continued</h2>
-    <p>The goob slips out of your hands...</p>
-    <p class="hint">The spill and the cleanup arrive in the next milestone.</p>
+    <h2 id="tbc-title">To be continued</h2>
+    <p id="tbc-text"></p>
+    <p class="hint" id="tbc-hint"></p>
     <nav class="menu" aria-label="End menu">
       <button id="tbc-title" type="button">Back to title</button>
     </nav>
