@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Goob Infection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+  <link rel="stylesheet" href="src/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="location" hidden></div>
+    <div id="crosshair"></div>
+    <div id="prompt" hidden></div>
+    <div id="toast" hidden></div>
+    <div id="debug" hidden></div>
+  </div>
+  <section id="title" class="screen title-screen">
+    <h1>The Goob<br>Infection</h1>
+    <nav class="menu" aria-label="Main menu">
+      <button id="menu-play" type="button">Play Chapter 1: The Infection</button>
+      <button id="menu-quit" type="button">Quit</button>
+    </nav>
+    <p class="hint">WASD move · Mouse look · E interact · Shift run · Space jump · Esc pause</p>
+  </section>
+
+  <section id="pause" class="screen dim-screen" hidden>
+    <h2>Paused</h2>
+    <nav class="menu" aria-label="Pause menu">
+      <button id="pause-resume" type="button">Resume</button>
+      <button id="pause-title" type="button">Quit to title</button>
+    </nav>
+  </section>
+
+  <section id="quit" class="screen title-screen" hidden>
+    <h2>Thanks for playing</h2>
+    <p>You can close this tab now.</p>
+    <nav class="menu" aria-label="Quit menu">
+      <button id="quit-back" type="button">Back to title</button>
+    </nav>
+  </section>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
