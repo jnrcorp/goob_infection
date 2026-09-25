@@ -57,11 +57,11 @@ The title screen has Continue (the autosave), Difficulty and Volume. Settings an
   - `?click=id1,id2` clicks menu buttons by id after the simulation (testing menus).
   - `?checkfaces` logs static surfaces that overlap closely enough to flicker (`?checkfaces=desk` limits it to one material).
 
+  Combine options with `&`. Example: `http://localhost:8000/?debug&stage=TO_FREEZER&at=26,0,11.5,-90` starts suited up in the loading dock, facing the shutters.
+
 ## Tuning the look
 
 In `src/render/ps1.js`:
-- `PS1_HEIGHT` sets the render resolution (240 is authentic PS1; currently 480).
+- `PS1_HEIGHT` sets the render resolution (240 is authentic PS1; currently 960).
 - `VERTEX_SNAP_DEFAULT` turns the PS1 vertex wobble on at startup, and `VERTEX_JITTER` sets how strong it is.
 - `COLOR_LEVELS` sets the color steps per channel (31 is authentic PS1; currently 63).
-
-  Example: `http://localhost:8000/?debug&stage=TO_FREEZER&at=26,0,11.5,-90` starts suited up in the loading dock.

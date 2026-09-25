@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 // Vertical render resolution. Width follows the window's aspect ratio.
-// 240 is authentic PS1; 480 keeps the look with much less shimmer.
-export const PS1_HEIGHT = 480;
+// 240 is authentic PS1; higher keeps the chunky style but looks sharper.
+export const PS1_HEIGHT = 960;
 // Vertex wobble: snaps vertices to the pixel grid like the PS1 did. Off by
 // default: it makes nearly-touching surfaces (eyes on a face, a sign on a
 // wall) fight over which is in front, which flickers. Debug key 1 toggles it.
