@@ -10,9 +10,11 @@ import { Viewmodel } from './player/viewmodel.js';
 import { Vacuum } from './player/vacuum.js';
 import { GoobGraph } from './goob/goobGraph.js';
 import { GoobSystem } from './goob/goobSystem.js';
+import { Navigation } from './npc/navigation.js';
 import { Spill } from './story/spill.js';
 import { Chapter1 } from './story/chapter1.js';
 import { Input } from './core/input.js';
+import { DIFFICULTIES, settings, saveSettings, difficulty } from './core/settings.js';
 import { Hud } from './ui/hud.js';
 import { Dialogue } from './ui/dialogue.js';
 import { ScreenFx } from './ui/screenFx.js';
@@ -21,6 +23,8 @@ const canvas = document.getElementById('game');
 const screens = {
   title: document.getElementById('title'),
   pause: document.getElementById('pause'),
+  ready: document.getElementById('ready'),
+  breached: document.getElementById('breached'),
   tbc: document.getElementById('tbc'),
   quit: document.getElementById('quit'),
 };
@@ -45,18 +49,42 @@ const cast = createCast(ctx, world.props);
 const player = new Player(camera, collision);
 const viewmodel = new Viewmodel(materials);
 
-// Goob flows under doors and around people, so those colliders don't block it.
+// Spots link through doorways whether the door is open or not (a shut door
+// then blocks spreading or walking along that link), and people never block.
 const goobPassable = new Set([
   ...world.doors.flatMap((d) => [d.collider, d.openCollider]),
   ...world.elevator.doors.map((d) => d.collider),
   ...cast.all.map((n) => n.collider),
 ]);
-const goobGraph = new GoobGraph(collision, goobPassable).build(world);
+const peopleColliders = cast.all.map((n) => n.collider);
+const goobGraph = new GoobGraph(collision, goobPassable, {
+  // Shut doors (including the elevator's) stop goob spreading between rooms.
+  doors: [...world.doors.map((d) => d.collider), ...world.elevator.doors.map((d) => d.collider)],
+  people: new Set(peopleColliders),
+}).build(world);
 const goob = new GoobSystem(scene, goobGraph, collision);
-const vacuum = new Vacuum(viewmodel, hud);
+
+// Infected walk through each other but not through doors (they can't open
+// them), and see through each other and past open door panels.
+const sightIgnore = new Set([...peopleColliders, ...world.doors.map((d) => d.openCollider)]);
+const vacuum = new Vacuum({ viewmodel, hud, scene, collision, sightIgnore });
 const spill = new Spill({ scene, materials, player, camera, viewmodel, goob, fx, hud, world, cast });
 const chapter = new Chapter1({
-  ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph: goobGraph, vacuum, spill, onEnd: endChapter,
+  ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph: goobGraph, vacuum, spill,
+  onEnd: endChapter, onBreach: suitBreached,
+});
+cast.setEnv({
+  player,
+  nav: new Navigation(goobGraph),
+  collision,
+  moveIgnore: new Set(peopleColliders),
+  sightIgnore,
+  isHostile: () => chapter.hostile,
+  isNoisy: () => vacuum.noisy > 0,
+  attackers: () => cast.all.filter((n) => n.brain && (n.brain.state === 'windup' || n.brain.state === 'recover')).length,
+  onHit: (npc) => { if (!params.has('peaceful')) chapter.hurtPlayer(npc); },
+  canOpenDoors: () => difficulty().infectedOpenDoors,
+  openDoorsNear: (npc) => world.openDoorsNear(npc),
 });
 let gameTime = 0;
 
@@ -83,6 +111,13 @@ function endChapter({ title, text, hint } = {}) {
   showScreen('tbc');
 }
 
+function suitBreached() {
+  state = 'ended';
+  if (document.pointerLockElement) document.exitPointerLock();
+  document.getElementById('breach-retry').hidden = !chapter.hasCheckpoint;
+  showScreen('breached');
+}
+
 input.onLockChange = (locked) => {
   if (locked) {
     state = 'playing';
@@ -98,6 +133,41 @@ document.getElementById('menu-play').addEventListener('click', () => {
   input.lock();
 });
 document.getElementById('pause-resume').addEventListener('click', () => input.lock());
+
+// Difficulty button on the title screen: switches between the options and
+// remembers the choice.
+const difficultyButton = document.getElementById('menu-difficulty');
+function showDifficulty() {
+  difficultyButton.textContent = `Difficulty: ${difficulty().label}`;
+  document.getElementById('difficulty-note').textContent = difficulty().description;
+}
+difficultyButton.addEventListener('click', () => {
+  const keys = Object.keys(DIFFICULTIES);
+  settings.difficulty = keys[(keys.indexOf(settings.difficulty) + 1) % keys.length];
+  saveSettings();
+  showDifficulty();
+});
+showDifficulty();
+document.getElementById('ready-play').addEventListener('click', () => input.lock());
+document.getElementById('breach-retry').addEventListener('click', () => {
+  chapter.restoreCheckpoint();
+  if (noLock) {
+    state = 'playing';
+    showScreen(null);
+    return;
+  }
+  state = 'paused'; // the next successful mouse capture resumes play
+  input.lock();
+});
+document.getElementById('breach-title').addEventListener('click', goToTitle);
+// Right mouse is the vacuum blast, so no context menu over the game.
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('contextmenu', (e) => { if (input.locked) e.preventDefault(); });
+// If the browser refuses to capture the mouse (it does for about a second
+// after Esc), ask for one more click instead of silently doing nothing.
+input.onLockError = () => {
+  if (state === 'title' || state === 'paused') showScreen('ready');
+};
 document.getElementById('pause-title').addEventListener('click', goToTitle);
 document.getElementById('tbc-title').addEventListener('click', goToTitle);
 document.getElementById('quit-back').addEventListener('click', goToTitle);
@@ -128,6 +198,9 @@ window.addEventListener('keydown', (e) => {
 //   ?shot           skip the title screen (for screenshots)
 //   ?stage=NAME     skip ahead: TO_LOCKERS, TO_FREEZER, GET_VACUUM or CLEANUP
 //   ?goobspots      show every spot goob can spread to
+//   ?peaceful       infected still chase but their hits do nothing (for testing)
+//   ?report=Name    after the simulation, log open doors and where Name is
+//   ?difficulty=hard   play on a difficulty without changing the saved setting
 //   ?at=x,y,z,yaw,pitch   start at a position (angles in degrees)
 //   ?sim=seconds    fast-forward the game at load
 //   ?nolock         act as if the mouse is captured (for automated testing)
@@ -135,6 +208,10 @@ window.addEventListener('keydown', (e) => {
 const params = new URLSearchParams(location.search);
 let debug = params.has('debug');
 const noLock = params.has('nolock');
+if (DIFFICULTIES[params.get('difficulty')]) {
+  settings.difficulty = params.get('difficulty'); // for this visit only, not saved
+  showDifficulty();
+}
 
 chapter.start();
 if (params.has('stage')) chapter.skipTo(params.get('stage'));
@@ -171,6 +248,12 @@ if (params.has('goobspots')) {
   }
   groups.sort((a, b) => b.length - a.length);
   console.log(`[goobspots] ${goobGraph.nodes.length} spots in ${groups.length} connected groups: ${groups.map((g) => g.length).join(', ')}`);
+  const doorLinks = goobGraph.nodes.reduce((sum, n) => sum + n.doorsTo.size, 0) / 2;
+  const clearances = goobGraph.nodes.map((n) => n.clearance).sort((a, b) => a - b);
+  console.log(`[goobspots] ${doorLinks} links pass through doors; spot clearance min ${clearances[0].toFixed(2)} m, median ${clearances[clearances.length >> 1].toFixed(2)} m`);
+  const nav = new Navigation(goobGraph);
+  const route = nav.path(nav.nearest(new THREE.Vector3(8.15, 4, 10.7)), nav.nearest(new THREE.Vector3(30, 0, 20.5)));
+  console.log(`[goobspots] walking route from your desk to the freezer door: ${route ? `${route.length} steps via ${route.filter((p) => p.y > 0.3 && p.y < 3.7).length} on the stairs` : 'NONE'}`);
   for (const g of groups.slice(1)) console.log(`[goobspots] separate group at ${g.slice(0, 3).map((n) => `${n.kind}(${n.pos.x.toFixed(1)},${n.pos.y.toFixed(1)},${n.pos.z.toFixed(1)})`).join(' ')}`);
 }
 
@@ -205,14 +288,30 @@ async function runStartupSimulation() {
     const [code, seconds] = step.split(':');
     // Mouse buttons (Mouse0) are pressed directly; keys go through real events.
     const mouse = code.startsWith('Mouse');
-    if (mouse) input.keys.add(code);
-    else window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+    if (mouse) {
+      input.keys.add(code);
+      input.pressed.add(code);
+    } else {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code }));
+    }
     await simulate(Math.max(1 / 30, Number(seconds) || 0));
     if (mouse) input.keys.delete(code);
     else window.dispatchEvent(new KeyboardEvent('keyup', { code }));
     await simulate(1 / 30);
   }
   await simulate(Number(params.get('after')) || 0);
+  if (params.has('report')) {
+    const npc = cast.all.find((n) => n.name === params.get('report'));
+    const open = world.doors.filter((d) => d.isOpen).map((d) => d.label);
+    console.log(`[report] open doors: ${open.join(', ') || 'none'}`);
+    if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
+  }
+  // ?click=id1,id2 clicks buttons by id (for testing menus).
+  for (const id of (params.get('click') ?? '').split(',').filter(Boolean)) {
+    document.getElementById(id)?.click();
+    console.log(`[click] ${id} -> state ${state}, visible screen: ${Object.keys(screens).find((k) => !screens[k].hidden) ?? 'none'}`);
+    await simulate(0.2);
+  }
 }
 
 runStartupSimulation().then(() => {
@@ -260,7 +359,7 @@ function step(dt) {
     cast.update(worldDt, player);
     goob.update(worldDt, gameTime);
     camera.updateMatrixWorld();
-    vacuum.update(dt, input, controlling, camera, player, goob);
+    vacuum.update(dt, input, controlling, camera, player, goob, cast.all);
     chapter.update(dt);
     fx.update(dt);
   }

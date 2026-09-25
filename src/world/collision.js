@@ -39,6 +39,32 @@ export class CollisionWorld {
     return best;
   }
 
+  // Highest walkable surface under a footprint (half-size r) that's at most
+  // `step` above height y: box tops and ramps. -Infinity if none.
+  groundAt(x, z, y, r, step, ignore = new Set()) {
+    let best = -Infinity;
+    for (const b of this.boxes) {
+      if (!b.enabled || ignore.has(b) || b.maxY > y + step || b.maxY <= best) continue;
+      if (x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) best = b.maxY;
+    }
+    for (const ramp of this.ramps) {
+      if (x < ramp.minX || x > ramp.maxX || z < ramp.minZ || z > ramp.maxZ) continue;
+      const h = ramp.heightAt(z);
+      if (h <= y + step && h > best) best = h;
+    }
+    return best;
+  }
+
+  // Does the segment from `a` to `b` pass through this one box (enabled or not)?
+  segmentHits(box, a, b) {
+    const dir = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+    const len = Math.hypot(dir.x, dir.y, dir.z);
+    if (len < 1e-6) return false;
+    dir.x /= len; dir.y /= len; dir.z /= len;
+    const t = rayBox(a, dir, box);
+    return t !== null && t <= len;
+  }
+
   // Is the point inside any enabled box (other than those in `ignore`)?
   pointInside(p, ignore = new Set()) {
     return this.boxes.some((b) => b.enabled && !ignore.has(b) && contains(b, p, 0));

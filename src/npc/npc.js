@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { Person } from './person.js';
+import { InfectedBrain, INFECTED } from './infectedBrain.js';
 
 const WALK_SPEED = 1.3;
-const INFECTED_SPEED = 0.45;
 const TURN_RATE = 6;
+const STEP = 0.45;
 const RADIUS = 0.25;
 const HEIGHT = 1.75;
 
@@ -50,20 +51,91 @@ export class NPC {
     this.talking = false;
     this.talkable = true;
     this.speed = WALK_SPEED;
+    this.brain = null;
+    this.person.action = null;
     this.person.setInfected(false);
   }
 
-  // Turned by the goob. Stops talking and shuffles around where it stood.
+  // Shared world info for infected behavior (set once by the cast).
+  // { player, nav, collision, moveIgnore, sightIgnore, isHostile, isNoisy, onHit, attackers,
+  //   canOpenDoors, openDoorsNear }
+  setEnv(env) {
+    this.env = env;
+  }
+
+  // Turned by the goob: stops talking, and from now on the infected brain
+  // decides what to do (dazed at first, then hunting the player).
   infect() {
     this.mode = 'infected';
     this.path = null;
     this.onArrive = null;
     this.talking = false;
     this.talkable = false;
-    this.speed = INFECTED_SPEED;
+    this.speed = INFECTED.wanderSpeed;
     this.home.copy(this.pos);
     this.pause = Math.random() * 2;
     this.person.setInfected(true);
+    this.brain = new InfectedBrain(this, this.env);
+  }
+
+  // Walk with collision against the building and doors (not other people),
+  // and follow the floor up and down steps and stairs.
+  move(dx, dz) {
+    const p = this.pos;
+    const ignore = this.env.moveIgnore;
+    const overlaps = (b) => p.x + RADIUS > b.minX && p.x - RADIUS < b.maxX && p.z + RADIUS > b.minZ && p.z - RADIUS < b.maxZ;
+    for (const [axis, d] of [['x', dx], ['z', dz]]) {
+      if (!d) continue;
+      p[axis] += d;
+      for (const b of this.collision.boxes) {
+        if (!b.enabled || ignore.has(b) || !overlaps(b)) continue;
+        if (b.maxY <= p.y + STEP || b.minY >= p.y + HEIGHT) continue;
+        // Already inside before this step (a door shut on them): out the
+        // shortest way, never through to the far side.
+        p[axis] -= d;
+        const wasInside = overlaps(b);
+        p[axis] += d;
+        if (wasInside) this.escape(b);
+        else if (axis === 'x') p.x = d > 0 ? b.minX - RADIUS - 0.001 : b.maxX + RADIUS + 0.001;
+        else p.z = d > 0 ? b.minZ - RADIUS - 0.001 : b.maxZ + RADIUS + 0.001;
+      }
+    }
+    const ground = this.collision.groundAt(p.x, p.z, p.y, 0.15, STEP, ignore);
+    if (ground > -Infinity) p.y = ground;
+    // Hard difficulty: infected shove doors open as they reach them.
+    if (this.infected && this.env.canOpenDoors?.()) this.env.openDoorsNear?.(this);
+  }
+
+  escape(b) {
+    const p = this.pos;
+    const options = [
+      ['x', b.minX - RADIUS - 0.001], ['x', b.maxX + RADIUS + 0.001],
+      ['z', b.minZ - RADIUS - 0.001], ['z', b.maxZ + RADIUS + 0.001],
+    ];
+    let best = options[0];
+    for (const o of options) if (Math.abs(o[1] - p[o[0]]) < Math.abs(best[1] - p[best[0]])) best = o;
+    p[best[0]] = best[1];
+  }
+
+  // Infected idle: short strolls around where they were infected.
+  stepWander(dt) {
+    if (!this.path) {
+      this.pause -= dt;
+      if (this.pause <= 0) this.wander();
+      return false;
+    }
+    const t = this.path[this.pathIndex];
+    const dx = t.x - this.pos.x;
+    const dz = t.z - this.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 0.05) {
+      this.arrive(this.path);
+      return false;
+    }
+    const step = Math.min(dist, INFECTED.wanderSpeed * dt);
+    this.move((dx / dist) * step, (dz / dist) * step);
+    this.turnTowards(Math.atan2(dx, dz), dt);
+    return true;
   }
 
   get infected() {
@@ -114,11 +186,8 @@ export class NPC {
 
   update(dt, player) {
     let moving = false;
-    if (this.infected && !this.path) {
-      this.pause -= dt;
-      if (this.pause <= 0) this.wander();
-    }
-    const targets = this.path ?? (this.mode === 'route' ? this.def.route : null);
+    const targets = this.brain ? null : this.path ?? (this.mode === 'route' ? this.def.route : null);
+    if (this.brain) moving = this.brain.update(dt);
 
     if (targets && !this.talking) {
       if (this.pause > 0) {
@@ -153,7 +222,7 @@ export class NPC {
     person.talking = this.talking;
     person.root.position.copy(this.pos);
     person.root.rotation.y = this.yaw;
-    person.update(dt, this.speed);
+    person.update(dt, this.brain?.state === 'chase' ? INFECTED.chaseSpeed : this.speed);
 
     const c = this.collider;
     c.minX = this.pos.x - RADIUS; c.maxX = this.pos.x + RADIUS;

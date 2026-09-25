@@ -29,6 +29,7 @@ export class Player {
     this.bob = 0;
     this.spawnPoint = null;
     this.suited = false;
+    this.suit = 100; // hazard suit integrity, percent
     this.shake = 0;
     // When set ({ x, y, z }), the camera turns smoothly to look at this point.
     this.lookTarget = null;
@@ -196,6 +197,15 @@ export class Player {
       }
     }
     p.y = y;
+  }
+
+  // Shoved: horizontal push away from `from` (an attacker's position).
+  knockFrom(from, strength) {
+    const dx = this.pos.x - from.x;
+    const dz = this.pos.z - from.z;
+    const d = Math.hypot(dx, dz) || 1;
+    this.vel.x += (dx / d) * strength;
+    this.vel.z += (dz / d) * strength;
   }
 
   // Camera shake: seconds remaining; strength fades out with it.

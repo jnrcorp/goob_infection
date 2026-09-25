@@ -20,7 +20,7 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 - `src/render/`: PS1 renderer (low-res target, vertex snapping, dithering), procedural textures, materials.
 - `src/world/`: building data (`building.js`), the builder that turns it into geometry, collision, doors, elevator, furniture, interactions.
 - `src/player/`: first-person controller.
-- `src/npc/`: blocky coworker model and animation, NPC behavior, and the cast (who's where and what they say).
+- `src/npc/`: blocky coworker model and animation, NPC behavior, the cast (who's where and what they say), infected AI (`infectedBrain.js`, tuning in `INFECTED`) and pathfinding.
 - `src/goob/`: the goob spot network (`goobGraph.js`), blobs and spreading (`goobSystem.js`, tuning in `GOOB`), bins and the vacuum rack.
 - `src/story/`: chapter state machines. `chapter1.js` runs the objectives, briefing, suit-up and goob pickup.
 - `src/ui/`: HUD, dialogue box, fades and the suit visor.
@@ -28,7 +28,7 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 
 ## Controls
 
-WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob.
+WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back.
 
 ## Debugging
 
@@ -42,9 +42,13 @@ WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the va
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
   - `?stage=TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM` or `CLEANUP` skips ahead in the story (suit, spill aftermath and vacuum are set up for you).
   - `?goobspots` shows every spot goob can spread to, and logs how they connect.
+  - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
+  - `?difficulty=hard` (or `normal`) plays on that difficulty without changing your saved choice.
+  - `?report=Hank` logs which doors are open and where that coworker is after the simulation.
   - `?sim=seconds` fast-forwards the game at load.
   - `?shot` skips the title screen.
   - `?nolock` acts as if the mouse is captured, and `?keys=KeyE:0,KeyW:2` taps E then holds W for 2 seconds after `?sim` (`?after=N` runs N more seconds). These are for automated testing in a headless browser.
+  - `?click=id1,id2` clicks menu buttons by id after the simulation (testing menus).
   - `?checkfaces` logs static surfaces that overlap closely enough to flicker (`?checkfaces=desk` limits it to one material).
 
 ## Tuning the look

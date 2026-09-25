@@ -59,8 +59,9 @@ export class Viewmodel {
     this.camera.updateProjectionMatrix();
   }
 
-  // tankLevel 0..1; sucking jiggles the vacuum; bob follows the player's step.
-  updateVacuum(dt, { tankLevel, sucking, bob }) {
+  // tankLevel 0..1; sucking jiggles the vacuum; bob follows the player's step;
+  // kick 1..0 is the recoil after a blast.
+  updateVacuum(dt, { tankLevel, sucking, bob, kick = 0 }) {
     const v = this.vacuum;
     this.tankFill.scale.y = Math.max(0.001, tankLevel);
     this.tankFill.position.y = -0.075 + 0.075 * tankLevel;
@@ -69,7 +70,8 @@ export class Viewmodel {
     v.position.set(
       this.vacuumRest.x + Math.cos(bob) * 0.008 + (Math.random() - 0.5) * shake,
       this.vacuumRest.y + Math.abs(Math.sin(bob)) * 0.01 + (Math.random() - 0.5) * shake,
-      this.vacuumRest.z + (sucking ? 0.02 : 0),
+      this.vacuumRest.z + (sucking ? 0.02 : 0) + kick * kick * 0.08,
     );
+    v.rotation.x = kick * kick * 0.25;
   }
 }

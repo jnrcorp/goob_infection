@@ -106,10 +106,17 @@ export class Door {
       this.syncColliders();
       return;
     }
+    this.openFrom(player.pos);
+  }
+
+  // Swing open away from whoever is at `pos` (the player, or an infected
+  // coworker shoving through).
+  openFrom(pos) {
+    if (this.locked || this.isOpen) return;
     // Positive rotation swings an x-axis door toward -z and a z-axis door toward +x.
     const sign = this.axis === 'x'
-      ? (player.pos.z < this.z ? -1 : 1)
-      : (player.pos.x < this.x ? 1 : -1);
+      ? (pos.z < this.z ? -1 : 1)
+      : (pos.x < this.x ? 1 : -1);
     this.target = sign * OPEN_ANGLE;
     this.syncColliders();
   }

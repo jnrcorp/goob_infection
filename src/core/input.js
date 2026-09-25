@@ -37,11 +37,18 @@ export class Input {
       if (!this.locked) this.keys.clear();
       this.onLockChange?.(this.locked);
     });
+    // The browser can refuse to capture the mouse, e.g. for about a second
+    // after the player pressed Esc to release it.
+    document.addEventListener('pointerlockerror', () => this.onLockError?.());
   }
 
   lock() {
-    const result = this.canvas.requestPointerLock();
-    if (result?.catch) result.catch(() => {});
+    try {
+      const result = this.canvas.requestPointerLock();
+      if (result?.catch) result.catch(() => this.onLockError?.());
+    } catch {
+      this.onLockError?.();
+    }
   }
 
   down(code) {

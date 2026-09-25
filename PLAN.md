@@ -110,11 +110,19 @@ Each milestone ends in something you can play.
 3. ✅ **Spill + goob**: slow-motion cinematic, goob blobs, spreading and hiding spots, vacuum suck, tank, bins, HUD progress.
    - Hank waits outside the freezer and is the first to be infected; everyone else turns right after.
    - The goob gets into 14 floor vents; 6 random ones start with goob. It also hides on ceilings and under desks.
+   - Goob never spreads through walls, and a shut door stops it spreading between rooms (closing doors is a way to contain it). Blobs are drawn no bigger than the space around them.
    - The elevator jams on 1F with goob inside, so the stairs are the only way up.
    - The vacuum hangs beside the freezer door. Tank: 30 L. Four biohazard bins, two per floor.
    - Coworkers turn green and shamble around (not hostile yet: that's milestone 4).
    - Cleaning up everything ends on a "Goob contained" card for now.
-4. **Infected**: infection transformation, chase AI and pathfinding, suit damage, blow mode, duct tape, game over.
+4. ✅ **Infected**: infection transformation, chase AI and pathfinding, suit damage, blow mode, duct tape, game over.
+   - Infected notice you by sight (14 m, in front of them), by hearing you run or use the vacuum nearby, or when you're right next to them.
+   - They chase at 2.3 m/s (you walk 3.4, run 5.6) and path around walls and up/down the stairs.
+   - Difficulty (title screen, remembered): on **Normal** infected can't open doors, so a shut door stops them; on **Hard** they shove doors open.
+   - At most two lunge at once. Each hit costs 10% suit integrity. They're dazed for a few seconds after the spill.
+   - Right mouse blasts them back and stuns them for 3 seconds.
+   - 10 rolls of duct tape around the building each patch 35%.
+   - Suit breached at 0%: retry from the last checkpoint (after the spill, when you take the vacuum, each time you empty the tank). Checkpoints are in memory until milestone 5 saves them.
 5. **Finish chapter 1**: secure-in-freezer ending, autosave and continue, menus, audio pass, tuning.
 
 ## Still open (answer any time; defaults in brackets)

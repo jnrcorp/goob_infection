@@ -2,6 +2,8 @@ import { BOSS_BRIEFING, BOSS_ROUTE } from '../npc/cast.js';
 import { BUILDING } from '../world/building.js';
 import { createBins, createVacuumRack } from '../goob/bins.js';
 import { VACUUM } from '../player/vacuum.js';
+import { INFECTED } from '../npc/infectedBrain.js';
+import { createDuctTape } from '../world/pickups.js';
 
 // Chapter 1 story flow.
 // INTRO → BRIEFING → TO_LOCKERS → TO_FREEZER → SPILL → GET_VACUUM → CLEANUP → CONTAINED
@@ -20,6 +22,8 @@ const OBJECTIVES = {
 const FREEZER_LOCKED = 'Hazard suit required beyond this point.';
 const BRIEFING_RANGE = 2.8;
 const VENT_SEEDS = 6;
+const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
+const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP']);
 
 const HANK_WATCHING = [
   'Careful carrying that thing. Nice and slow.',
@@ -27,8 +31,10 @@ const HANK_WATCHING = [
 ];
 
 export class Chapter1 {
-  constructor({ ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph, vacuum, spill, onEnd }) {
-    Object.assign(this, { world, player, cast, hud, dialogue, fx, goob, graph, vacuum, spill, onEnd });
+  constructor({ ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph, vacuum, spill, onEnd, onBreach }) {
+    Object.assign(this, { world, player, cast, hud, dialogue, fx, goob, graph, vacuum, spill, onEnd, onBreach });
+    this.outbreak = false;
+    this.checkpoint = null;
     this.token = 0;
     this.time = 0;
     this.timers = [];
@@ -59,7 +65,16 @@ export class Chapter1 {
       enabled: () => vacuum.equipped && !this.busy,
       onUse: () => this.emptyTank(),
     });
+    this.tapes = createDuctTape(ctx, BUILDING.ductTape, {
+      enabled: () => this.outbreak && !this.busy,
+      onTake: (tape) => this.takeTape(tape),
+    });
     for (const npc of cast.all) npc.onTalk = (n) => this.talkTo(n);
+  }
+
+  // Infected only attack during the cleanup (not in cutscenes or menus).
+  get hostile() {
+    return this.outbreak && !this.busy && HOSTILE_STATES.has(this.state);
   }
 
   // True while the player shouldn't be able to move or interact.
@@ -83,9 +98,13 @@ export class Chapter1 {
     this.vacuum.reset();
     this.spill.reset();
     this.rack.vacuum.visible = true;
+    for (const tape of this.tapes) tape.taken = false;
+    this.outbreak = false;
+    this.checkpoint = null;
     this.hud.setGoob(null);
     this.player.spawn(this.world.spawn);
     this.player.suited = false;
+    this.player.suit = 100;
     this.player.lookTarget = null;
     this.fx.setVisor(false);
     this.freezerDoor.locked = FREEZER_LOCKED;
@@ -114,6 +133,7 @@ export class Chapter1 {
     }
     if (step >= 3) this.equipVacuum();
     this.setState(state, OBJECTIVES[state], false);
+    if (step >= 2) this.saveCheckpoint();
   }
 
   update(dt) {
@@ -128,8 +148,13 @@ export class Chapter1 {
       else this.hud.setObjective(OBJECTIVES.INTRO_AWAY);
     }
 
-    if (this.vacuum.equipped) {
-      this.hud.setGoob({ tank: this.vacuum.tank, capacity: VACUUM.capacity, cleaned: this.goob.cleanedPercent });
+    if (this.outbreak) {
+      this.hud.setGoob({
+        suit: this.player.suit,
+        tank: this.vacuum.equipped ? this.vacuum.tank : null,
+        capacity: VACUUM.capacity,
+        cleaned: this.goob.cleanedPercent,
+      });
     }
 
     if (this.state === 'CLEANUP' && this.goob.blobs.size === 0) {
@@ -233,6 +258,7 @@ export class Chapter1 {
     this.busy = false;
     this.setState('GET_VACUUM', OBJECTIVES.GET_VACUUM, false);
     this.hud.toast("The goob is loose, and it's in the vents! Everyone's infected.", 4.5);
+    this.saveCheckpoint();
   }
 
   // Everyone turns, goob gets into the vents, the elevator jams, and it all
@@ -246,6 +272,7 @@ export class Chapter1 {
     if (!this.elevatorSpot) this.elevatorSpot = this.graph.addHidingSpot(car.x, car.y, car.z, 'elevator');
     this.goob.spawn(this.elevatorSpot, 1.5);
     this.goob.spreading = true;
+    this.outbreak = true;
   }
 
   // ---------- Cleanup ----------
@@ -258,7 +285,8 @@ export class Chapter1 {
   takeVacuum() {
     this.equipVacuum();
     this.setState('CLEANUP', OBJECTIVES.CLEANUP);
-    this.hud.toast('Hold the left mouse button to vacuum goob.', 4);
+    this.hud.toast('Left mouse: vacuum goob. Right mouse: blast infected away.', 5);
+    this.saveCheckpoint();
   }
 
   emptyTank() {
@@ -267,7 +295,99 @@ export class Chapter1 {
       return;
     }
     const amount = this.vacuum.empty();
-    this.hud.toast(`Emptied ${Math.round(amount)} L of goob into the bin.`, 2.5);
+    this.hud.toast(`Emptied ${Math.round(amount)} L of goob into the bin. Checkpoint saved.`, 2.5);
+    this.saveCheckpoint();
+  }
+
+  takeTape(tape) {
+    if (this.player.suit >= 100) {
+      this.hud.toast("Your suit doesn't need patching yet.", 2);
+      return;
+    }
+    tape.taken = true;
+    this.player.suit = Math.min(100, this.player.suit + TAPE_REPAIR);
+    this.hud.toast(`Patched your suit with duct tape: ${Math.ceil(this.player.suit)}%.`, 2.5);
+  }
+
+  // ---------- Getting hurt ----------
+
+  // An infected coworker's lunge landed.
+  hurtPlayer(npc) {
+    if (!this.hostile) return;
+    const before = this.player.suit;
+    this.player.suit = Math.max(0, before - INFECTED.damage);
+    this.player.knockFrom(npc.pos, 6);
+    this.player.shakeFor(0.35);
+    this.fx.flash('#ff3a2a', 0.45);
+    const after = this.player.suit;
+    if (after <= 0) {
+      this.breach();
+    } else if (before > 50 && after <= 50) {
+      this.hud.toast('Suit integrity at 50%. Find duct tape to patch it.', 3);
+    } else if (before > 25 && after <= 25) {
+      this.hud.toast('WARNING: suit integrity critical!', 3);
+    }
+  }
+
+  async breach() {
+    const token = this.token;
+    this.busy = true;
+    this.setState('BREACHED', null, false);
+    this.fx.flash('#6cff4a', 1.2);
+    await this.fx.fade(1, 1.5);
+    if (token !== this.token) return;
+    this.onBreach?.();
+  }
+
+  // ---------- Checkpoints ----------
+  // Taken after the spill, when you grab the vacuum, and every time you empty
+  // the tank. (Saved in memory for now; saving to the browser comes later.)
+
+  saveCheckpoint() {
+    const p = this.player;
+    this.checkpoint = {
+      state: this.state,
+      player: { x: p.pos.x, y: p.pos.y, z: p.pos.z, yaw: p.yaw },
+      suit: p.suit,
+      vacuum: { equipped: this.vacuum.equipped, tank: this.vacuum.tank },
+      goob: this.goob.snapshot(),
+      npcs: this.cast.all.map((n) => ({ x: n.pos.x, y: n.pos.y, z: n.pos.z, yaw: n.yaw })),
+      tapes: this.tapes.map((t) => t.taken),
+    };
+  }
+
+  get hasCheckpoint() {
+    return !!this.checkpoint;
+  }
+
+  restoreCheckpoint() {
+    const c = this.checkpoint;
+    if (!c) return false;
+    this.token++;
+    this.busy = false;
+    this.dialogue.close();
+    this.player.spawn(c.player);
+    this.player.suit = c.suit;
+    this.player.lookTarget = null;
+    this.vacuum.reset();
+    this.vacuum.equip(c.vacuum.equipped);
+    this.vacuum.tank = c.vacuum.tank;
+    this.rack.vacuum.visible = !c.vacuum.equipped;
+    this.goob.restore(c.goob);
+    c.npcs.forEach((s, i) => {
+      const npc = this.cast.all[i];
+      npc.pos.set(s.x, s.y, s.z);
+      npc.yaw = s.yaw;
+      if (!npc.infected) npc.infect();
+      npc.home.copy(npc.pos);
+      npc.brain.reset(2.5);
+    });
+    this.tapes.forEach((t, i) => { t.taken = c.tapes[i]; });
+    this.outbreak = true;
+    this.setState(c.state, OBJECTIVES[c.state], false);
+    this.fx.fade(1, 0);
+    this.fx.fade(0, 0.8);
+    return true;
   }
 
   contained() {

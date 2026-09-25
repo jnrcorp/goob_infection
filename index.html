@@ -28,12 +28,17 @@
     <div id="toast" hidden></div>
     <div id="debug" hidden></div>
     <div id="goob-hud" hidden>
-      <div class="goob-row">
+      <div class="goob-row" id="suit-row">
+        <span class="goob-label">Suit</span>
+        <div class="tank-bar suit-bar"><i id="suit-fill"></i></div>
+        <span id="suit-text">100%</span>
+      </div>
+      <div class="goob-row" id="tank-row">
         <span class="goob-label">Tank</span>
         <div class="tank-bar"><i id="tank-fill"></i></div>
         <span id="tank-text">0 / 30 L</span>
       </div>
-      <div class="goob-row">
+      <div class="goob-row" id="cleaned-row">
         <span class="goob-label">Goob cleaned</span>
         <span id="cleaned-text">0%</span>
       </div>
@@ -50,8 +55,10 @@
     <h1>The Goob<br>Infection</h1>
     <nav class="menu" aria-label="Main menu">
       <button id="menu-play" type="button">Play Chapter 1: The Infection</button>
+      <button id="menu-difficulty" type="button">Difficulty: Normal</button>
       <button id="menu-quit" type="button">Quit</button>
     </nav>
+    <p class="difficulty-note" id="difficulty-note"></p>
     <p class="hint">WASD move · Mouse look · E interact · Shift run · Space jump · Esc pause</p>
   </section>
 
@@ -60,6 +67,22 @@
     <nav class="menu" aria-label="Pause menu">
       <button id="pause-resume" type="button">Resume</button>
       <button id="pause-title" type="button">Quit to title</button>
+    </nav>
+  </section>
+
+  <section id="breached" class="screen breach-screen" hidden>
+    <h2>Suit breached</h2>
+    <p>The goob got in. You feel... surprisingly happy.</p>
+    <nav class="menu" aria-label="Game over">
+      <button id="breach-retry" type="button">Try again from last checkpoint</button>
+      <button id="breach-title" type="button">Back to title</button>
+    </nav>
+  </section>
+
+  <section id="ready" class="screen dim-screen" hidden>
+    <h2>Ready?</h2>
+    <nav class="menu" aria-label="Start">
+      <button id="ready-play" type="button">Click to play</button>
     </nav>
   </section>
 

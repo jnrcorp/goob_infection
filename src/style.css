@@ -159,6 +159,31 @@ html, body {
   background: var(--goob);
 }
 
+.suit-bar i {
+  background: #9fd8ff;
+}
+
+#goob-hud.suit-low .suit-bar {
+  border-color: #ff4a3a;
+  animation: blink 0.5s steps(2, start) infinite;
+}
+
+#goob-hud.suit-low .suit-bar i {
+  background: #ff4a3a;
+}
+
+/* Visor cracks as the suit takes damage */
+#visor.cracked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='white' stroke-opacity='.55' stroke-width='.35'%3E%3Cpath d='M100 8 L84 18 L78 16 L70 27 L63 29'/%3E%3Cpath d='M84 18 L86 30 L81 38'/%3E%3Cpath d='M78 16 L74 7'/%3E%3C/g%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+
+#visor.shattered::after {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='white' stroke-opacity='.6' stroke-width='.35'%3E%3Cpath d='M100 8 L84 18 L78 16 L70 27 L63 29'/%3E%3Cpath d='M84 18 L86 30 L81 38'/%3E%3Cpath d='M78 16 L74 7'/%3E%3Cpath d='M0 70 L12 64 L18 68 L27 58 L35 57'/%3E%3Cpath d='M12 64 L10 52 L15 45'/%3E%3Cpath d='M18 68 L22 80 L19 92'/%3E%3Cpath d='M27 58 L31 49'/%3E%3C/g%3E%3C/svg%3E") no-repeat center / 100% 100%;
+}
+
 #goob-hud.full .tank-bar {
   border-color: #ffd23a;
   animation: blink 0.6s steps(2, start) infinite;
@@ -182,7 +207,8 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #goob-hud.full .tank-bar { animation: none; }
+  #goob-hud.full .tank-bar,
+  #goob-hud.suit-low .suit-bar { animation: none; }
 }
 
 #fade {
@@ -219,6 +245,13 @@ html, body {
 .title-screen {
   background: var(--paper);
   color: var(--ink);
+}
+
+.breach-screen {
+  --ink: #c8ff9e;
+  --paper: #1a3d0c;
+  background: rgba(40, 110, 20, 0.88);
+  color: var(--text);
 }
 
 .dim-screen {
@@ -283,6 +316,12 @@ html, body {
 .menu button:hover::before,
 .menu button:focus-visible::before {
   visibility: visible;
+}
+
+.screen .difficulty-note {
+  margin-top: -18px;
+  font-size: 22px;
+  opacity: 0.8;
 }
 
 .screen .hint {

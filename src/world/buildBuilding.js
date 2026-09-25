@@ -98,6 +98,14 @@ export function buildBuilding(baseCtx) {
       return doors.find((d) => d.label === label);
     },
 
+    // Shove open any shut (unlocked) door the NPC has walked up to.
+    openDoorsNear(npc) {
+      for (const d of doors) {
+        if (d.isOpen || d.locked) continue;
+        if (Math.abs(npc.pos.y - d.pivot.position.y) > 1) continue;
+        if (Math.hypot(npc.pos.x - d.x, npc.pos.z - d.z) < 0.9) d.openFrom(npc.pos);
+      }
+    },
     update(dt, player) {
       for (const d of doors) d.update(dt, player);
       elevator.update(dt, player);

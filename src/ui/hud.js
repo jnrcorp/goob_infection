@@ -8,6 +8,11 @@ export class Hud {
       debug: document.getElementById('debug'),
       objective: document.getElementById('objective'),
       goob: document.getElementById('goob-hud'),
+      suitFill: document.getElementById('suit-fill'),
+      suitText: document.getElementById('suit-text'),
+      tankRow: document.getElementById('tank-row'),
+      cleanedRow: document.getElementById('cleaned-row'),
+      visor: document.getElementById('visor'),
       tankFill: document.getElementById('tank-fill'),
       tankText: document.getElementById('tank-text'),
       cleaned: document.getElementById('cleaned-text'),
@@ -29,12 +34,24 @@ export class Hud {
   setDebug(text) { this.setText('debug', text); }
   setObjective(text) { this.setText('objective', text); }
 
-  // Vacuum tank and cleanup progress; pass null to hide.
+  // Suit integrity, plus vacuum tank and cleanup progress once you have the
+  // vacuum (tank = null hides those). Pass null to hide the whole panel.
   setGoob(info) {
     const el = this.el;
     el.goob.hidden = !info;
     if (!info) return;
-    const { tank, capacity, cleaned } = info;
+    const { suit, tank, capacity, cleaned } = info;
+    const suitText = `${Math.ceil(suit)}%`;
+    if (this.cache.suit !== suitText) {
+      this.cache.suit = suitText;
+      el.suitText.textContent = suitText;
+      el.suitFill.style.width = `${suit}%`;
+      el.goob.classList.toggle('suit-low', suit <= 35);
+      el.visor.classList.toggle('cracked', suit <= 60);
+      el.visor.classList.toggle('shattered', suit <= 30);
+    }
+    el.tankRow.hidden = el.cleanedRow.hidden = tank === null;
+    if (tank === null) return;
     const tankText = `${Math.floor(tank)} / ${capacity} L`;
     if (this.cache.tank !== tankText) {
       this.cache.tank = tankText;

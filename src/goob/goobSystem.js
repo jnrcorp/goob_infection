@@ -54,6 +54,28 @@ export class GoobSystem {
     this.collected = 0;
   }
 
+  // For checkpoints: every blob as [spot id, liters, seconds until it spreads].
+  snapshot() {
+    return {
+      collected: this.collected,
+      spreading: this.spreading,
+      blobs: [...this.blobs.values()].map((b) => [b.node.id, b.volume, b.budTimer]),
+    };
+  }
+
+  restore(snap) {
+    this.blobs.clear();
+    this.particles.length = 0;
+    this.collected = snap.collected;
+    this.spreading = snap.spreading;
+    for (const [id, volume, budTimer] of snap.blobs) {
+      const node = this.graph.nodes[id];
+      if (!node) continue;
+      const blob = this.spawn(node, volume);
+      if (blob) blob.budTimer = budTimer;
+    }
+  }
+
   get remaining() {
     let total = 0;
     for (const b of this.blobs.values()) total += b.volume;
@@ -79,9 +101,10 @@ export class GoobSystem {
     return blob;
   }
 
-  // Put goob on the free spots nearest a point (the spill, a splat).
+  // Put goob on the free spots nearest a point (the spill, a splat), but only
+  // ones with a clear line to it: a splat doesn't go through walls.
   splat(point, radius, volume, maxCount = 99) {
-    const nodes = this.graph.nodesNear(point, radius)
+    const nodes = this.graph.visibleFrom(point, radius)
       .sort((a, b) => a.pos.distanceTo(point) - b.pos.distanceTo(point))
       .slice(0, maxCount);
     for (const n of nodes) this.spawn(n, volume * (0.6 + Math.random() * 0.6));
@@ -103,7 +126,8 @@ export class GoobSystem {
       blob.budTimer -= dt;
       if (blob.budTimer > 0) continue;
       blob.budTimer = randomBetween(...GOOB.budInterval);
-      const free = blob.node.links.filter((n) => !this.blobs.has(n.id));
+      // Not into occupied spots, and not under a shut door.
+      const free = blob.node.links.filter((n) => !this.blobs.has(n.id) && this.graph.canSpread(blob.node, n));
       if (free.length) newBlobs.push(free[Math.floor(Math.random() * free.length)]);
     }
     for (const node of newBlobs) this.spawn(node, GOOB.budVolume);
@@ -140,8 +164,11 @@ export class GoobSystem {
     return removed;
   }
 
+  // Radius of the main lump, capped by the closest wall or furniture so it
+  // never pokes through to the other side.
   radius(blob) {
-    return 0.14 + 0.2 * Math.sqrt(blob.volume);
+    const size = 0.14 + 0.2 * Math.sqrt(blob.volume);
+    return Math.max(0.06, Math.min(size, blob.node.clearance - 0.04));
   }
 
   emitParticle(from, target) {
@@ -174,23 +201,32 @@ export class GoobSystem {
     this.particleMesh.instanceMatrix.needsUpdate = true;
   }
 
-  // One main lump plus two smaller satellites per blob, flattened against the
-  // surface it sits on. Blobs being vacuumed jitter.
+  // One main lump plus two smaller ones per blob, flattened against the
+  // surface it sits on. The smaller lumps spread toward the spot's roomiest
+  // directions and stop short of anything solid. Blobs being vacuumed jitter.
   draw() {
     const { m, q, s, p, t } = this.tmp;
     let i = 0;
     for (const blob of this.blobs.values()) {
       const r = this.radius(blob);
-      const normal = blob.node.normal;
-      q.setFromUnitVectors(UP, normal);
+      const node = blob.node;
+      q.setFromUnitVectors(UP, node.normal);
       const jitter = blob.sucked > 0 ? 0.04 : 0;
       blob.sucked = Math.max(0, (blob.sucked ?? 0) - 0.016);
+      const grown = 0.14 + 0.2 * Math.sqrt(blob.volume);
       for (let k = 0; k < PARTS; k++) {
-        const size = k === 0 ? r : r * (0.45 + 0.15 * frac(blob.seed * (k + 3)));
-        const angle = blob.seed * 6.283 * (k + 1);
-        const offset = k === 0 ? 0 : r * 0.95;
-        t.set(Math.cos(angle) * offset, 0, Math.sin(angle) * offset).applyQuaternion(q);
-        p.copy(blob.node.pos).add(t);
+        let size = r;
+        t.set(0, 0, 0);
+        if (k > 0) {
+          const open = node.openDirs[k - 1];
+          // Capped by the tightest side too, so it can't poke through sideways.
+          size = Math.min(grown * (0.45 + 0.15 * frac(blob.seed * (k + 3))), node.clearance - 0.04);
+          const offset = Math.min(grown * 0.95, open.dist - size - 0.04);
+          if (offset < 0.02) size = 0; // no room for this lump
+          else t.copy(open.dir).multiplyScalar(offset);
+        }
+        if (size <= 0) continue;
+        p.copy(node.pos).add(t);
         if (jitter) p.add(t.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(jitter));
         s.set(size * 2, size * 0.8, size * 2);
         m.compose(p, q, s);

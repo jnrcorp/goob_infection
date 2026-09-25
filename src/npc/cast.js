@@ -127,8 +127,32 @@ export function createCast(ctx, props) {
     reset() {
       for (const npc of all) npc.reset();
     },
+    setEnv(env) {
+      for (const npc of all) npc.setEnv(env);
+    },
     update(dt, player) {
       for (const npc of all) npc.update(dt, player);
+      separate(all, dt);
     },
   };
+}
+
+// Infected crowding the same spot get nudged apart.
+const PERSONAL_SPACE = 0.55;
+function separate(npcs, dt) {
+  for (let i = 0; i < npcs.length; i++) {
+    const a = npcs[i];
+    if (!a.infected) continue;
+    for (let j = i + 1; j < npcs.length; j++) {
+      const b = npcs[j];
+      if (!b.infected || Math.abs(a.pos.y - b.pos.y) > 1) continue;
+      const dx = b.pos.x - a.pos.x;
+      const dz = b.pos.z - a.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d >= PERSONAL_SPACE || d < 1e-4) continue;
+      const push = Math.min((PERSONAL_SPACE - d) * 0.5, 1.5 * dt);
+      a.move((-dx / d) * push, (-dz / d) * push);
+      b.move((dx / d) * push, (dz / d) * push);
+    }
+  }
 }

@@ -95,6 +95,8 @@ export class Person {
     this.pose = 'stand';
     this.talking = false;
     this.headYaw = null; // overrides the idle head turn when set
+    this.action = null;  // 'lunge' | 'stunned' | null (infected only)
+    this.actionT = 0;
     this.t = Math.random() * 10;
     this.walkPhase = 0;
   }
@@ -114,6 +116,7 @@ export class Person {
 
     // Neutral pose, then apply the current one.
     this.body.position.y = 0;
+    this.body.rotation.x = 0;
     this.body.rotation.z = 0;
     for (const leg of this.legs) { leg.hip.rotation.x = 0; leg.knee.rotation.x = 0; }
     for (const arm of this.arms) { arm.shoulder.rotation.set(0, 0, arm.side * 0.06); arm.elbow.rotation.x = 0; }
@@ -160,6 +163,24 @@ export class Person {
       this.head.rotation.z = 0.3 + Math.sin(t * 0.9) * 0.15;
       this.head.rotation.x = 0.25;
       this.body.rotation.z = Math.sin(t * 1.1) * 0.06;
+    }
+
+    // One-off actions for infected: a lunging grab, or reeling after a blast.
+    // actionT runs 0..1 through the action.
+    if (this.action === 'lunge') {
+      const k = this.actionT;
+      armL.shoulder.rotation.x = armR.shoulder.rotation.x = -1.3 - 0.6 * k;
+      armL.elbow.rotation.x = armR.elbow.rotation.x = -0.1;
+      this.body.rotation.x = 0.35 * k;
+      this.head.rotation.x = -0.2 * k;
+    } else if (this.action === 'stunned') {
+      this.body.position.y = -0.22;
+      for (const leg of this.legs) { leg.hip.rotation.x = -0.8; leg.knee.rotation.x = 1.5; }
+      this.body.rotation.z = Math.sin(t * 7) * 0.18;
+      this.body.rotation.x = -0.15;
+      armL.shoulder.rotation.set(Math.sin(t * 9) * 0.8, 0, -0.9);
+      armR.shoulder.rotation.set(Math.sin(t * 9 + 2) * 0.8, 0, 0.9);
+      this.head.rotation.set(Math.sin(t * 5) * 0.3, 0, Math.sin(t * 6) * 0.4);
     }
 
     if (this.headYaw !== null) this.head.rotation.y = this.headYaw;

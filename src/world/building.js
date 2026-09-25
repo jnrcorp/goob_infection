@@ -163,6 +163,21 @@ export const BUILDING = {
     { x: 23.35, y: 4, z: 18.3 },  // kitchenette
   ],
 
+  // Rolls of duct tape that patch your hazard suit, sitting on tables, desks
+  // and crates.
+  ductTape: [
+    { x: 4.0, y: 0.47, z: 5.0 },     // locker room bench
+    { x: 18.3, y: 0.9, z: 6.3 },     // lobby reception counter
+    { x: 8.0, y: 0.76, z: 19.0 },    // break room table
+    { x: 21.5, y: 0, z: 14.4 },      // storage floor
+    { x: 28.1, y: 1.7, z: 7.05 },    // loading dock crate stack
+    { x: 16.8, y: 0, z: 22.0 },      // janitor closet
+    { x: 21.0, y: 4.76, z: 3.5 },    // meeting room table
+    { x: 20.5, y: 4.76, z: 19.5 },   // kitchenette table
+    { x: 2.8, y: 4.76, z: 3.3 },     // manager's desk
+    { x: 11.5, y: 5.0, z: 12.3 },    // printer
+  ],
+
   // The containment vacuum hangs on the dock wall beside the freezer door.
   vacuumRack: { x: 30.9, y: 0, z: 18.4 },
 

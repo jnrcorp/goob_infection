@@ -21,17 +21,41 @@ const NORMALS = {
 };
 
 export class GoobGraph {
-  // passable: colliders goob flows through (doors, people).
-  constructor(collision, passable) {
+  // passable: colliders ignored when deciding which spots are neighbors (doors
+  //   and people), so rooms still connect through their doorways.
+  // doors: door colliders (enabled while shut). Goob can't spread across a
+  //   link while a door on it is shut.
+  // people: colliders that never block goob.
+  constructor(collision, passable, { doors = [], people = new Set() } = {}) {
     this.collision = collision;
     this.passable = passable;
+    this.doors = doors;
+    this.people = people;
     this.nodes = [];
   }
 
   addNode(x, y, z, normal = NORMALS.floor, kind = 'floor') {
-    const node = { id: this.nodes.length, pos: new THREE.Vector3(x, y, z), normal: normal.clone(), kind, links: [] };
+    const node = {
+      id: this.nodes.length, pos: new THREE.Vector3(x, y, z), normal: normal.clone(), kind,
+      links: [], doorsTo: new Map(), clearance: 1,
+    };
     this.nodes.push(node);
     return node;
+  }
+
+  // Can goob spread from a to b right now? Not through a shut door.
+  canSpread(a, b) {
+    const doors = a.doorsTo.get(b);
+    return !doors || doors.every((d) => !d.enabled);
+  }
+
+  // Spots within `radius` of a point with a clear line to it (for splats).
+  visibleFrom(point, radius) {
+    const from = new THREE.Vector3(point.x, point.y + 0.3, point.z);
+    return this.nodesNear(point, radius).filter((n) => {
+      const to = n.pos.clone().addScaledVector(n.normal, 0.2);
+      return this.clearLine(from, to, this.people) && this.clearLine(to, from, this.people);
+    });
   }
 
   build(world) {
@@ -76,6 +100,7 @@ export class GoobGraph {
       hiding.push(this.addNode(d.deskX, 4, d.deskZ, NORMALS.floor, 'desk'));
     }
     for (const node of hiding) this.linkHidingSpot(node);
+    for (const node of this.nodes) this.measureClearance(node);
     return this;
   }
 
@@ -83,7 +108,32 @@ export class GoobGraph {
   addHidingSpot(x, y, z, kind) {
     const node = this.addNode(x, y, z, NORMALS.floor, kind);
     this.linkHidingSpot(node);
+    this.measureClearance(node);
     return node;
+  }
+
+  // How far the goob here can spread along its surface before hitting a wall,
+  // door or furniture. Blobs are drawn no bigger than this, so they never
+  // poke through to the other side of a wall.
+  measureClearance(node) {
+    const n = node.normal;
+    const t1 = Math.abs(n.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    t1.sub(n.clone().multiplyScalar(t1.dot(n))).normalize();
+    const t2 = new THREE.Vector3().crossVectors(n, t1);
+    const origin = node.pos.clone().addScaledVector(n, 0.08);
+    const reach = [];
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const dir = t1.clone().multiplyScalar(Math.cos(a)).addScaledVector(t2, Math.sin(a));
+      reach.push({ i, dir, dist: this.collision.raycast(origin, dir, 1.6, this.people, origin) });
+    }
+    node.clearance = Math.min(...reach.map((r) => r.dist));
+    // The two roomiest directions that aren't next to each other, for the
+    // smaller lumps of goob to spread toward.
+    const byRoom = [...reach].sort((a, b) => b.dist - a.dist);
+    const first = byRoom[0];
+    const second = byRoom.find((r) => Math.min((r.i - first.i + 8) % 8, (first.i - r.i + 8) % 8) >= 2) ?? byRoom[1];
+    node.openDirs = [first, second];
   }
 
   // Grid points inside furniture or under the stairs are skipped.
@@ -109,7 +159,7 @@ export class GoobGraph {
         for (let j = -1; j <= 1; j++) {
           for (const b of grid.get(`${cx + i},${cz + j}`) ?? []) {
             if (b.id <= a.id || a.pos.distanceTo(b.pos) > LINK || Math.abs(a.pos.y - b.pos.y) > 1.2) continue;
-            if (this.canSee(a, b)) link(a, b);
+            if (this.canSee(a, b)) this.link(a, b);
           }
         }
       }
@@ -124,7 +174,7 @@ export class GoobGraph {
     for (const c of candidates) {
       if (linked >= HIDE_LINKS) break;
       if (this.canSee(node, c)) {
-        link(node, c);
+        this.link(node, c);
         linked++;
       }
     }
@@ -139,22 +189,31 @@ export class GoobGraph {
     return this.clearLine(pa, mid) && this.clearLine(pb, mid);
   }
 
-  clearLine(from, to) {
+  clearLine(from, to, ignore = this.passable) {
     const dir = to.clone().sub(from);
     const dist = dir.length();
     if (dist < 1e-4) return true;
     dir.divideScalar(dist);
-    return this.collision.raycast(from, dir, dist, this.passable, from) >= dist;
+    return this.collision.raycast(from, dir, dist, ignore, from) >= dist;
+  }
+
+  // Link two spots, remembering any doors between them.
+  link(a, b) {
+    if (a.links.includes(b)) return;
+    a.links.push(b);
+    b.links.push(a);
+    const pa = a.pos.clone().addScaledVector(a.normal, 0.25);
+    const pb = b.pos.clone().addScaledVector(b.normal, 0.25);
+    const doors = this.doors.filter((d) => this.collision.segmentHits(d, pa, pb));
+    if (doors.length) {
+      a.doorsTo.set(b, doors);
+      b.doorsTo.set(a, doors);
+    }
   }
 
   nodesNear(point, radius) {
     return this.nodes.filter((n) => n.pos.distanceTo(point) <= radius);
   }
-}
-
-function link(a, b) {
-  if (!a.links.includes(b)) a.links.push(b);
-  if (!b.links.includes(a)) b.links.push(a);
 }
 
 // Evenly spaced values from a to b, about SPACING apart (at least one).
