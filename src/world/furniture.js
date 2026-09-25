@@ -62,10 +62,10 @@ export function desk(b, x, z, rot = 0, y = 0) {
 // Four desks around a cross of cubicle partitions. Returns seat positions.
 export function pod(b, x, z, y = 0) {
   const p = placer(b, x, z, 0, y);
-  p(-1.73, 0, -0.03, 1.73, 1.3, 0.03, 'cubicle');
-  p(-0.03, 0, -0.85, 0.03, 1.3, 0.85, 'cubicle');
-  p(-1.73, 0, -0.85, -1.67, 1.3, 0.85, 'cubicle');
-  p(1.67, 0, -0.85, 1.73, 1.3, 0.85, 'cubicle');
+  p(-1.73, 0, -0.03, 1.73, 1.3, 0.03, 'cubicle', { shadow: true });
+  p(-0.03, 0, -0.85, 0.03, 1.3, 0.85, 'cubicle', { shadow: true });
+  p(-1.73, 0, -0.85, -1.67, 1.3, 0.85, 'cubicle', { shadow: true });
+  p(1.67, 0, -0.85, 1.73, 1.3, 0.85, 'cubicle', { shadow: true });
   p(-1.75, 1.3, -0.05, 1.75, 1.34, 0.05, 'metal', NC);
   return [[-0.85, 0.45, 0], [0.85, 0.45, 0], [-0.85, -0.45, 2], [0.85, -0.45, 2]]
     .map(([lx, lz, rot]) => desk(b, x + lx, z + lz, rot, y));
@@ -73,12 +73,12 @@ export function pod(b, x, z, y = 0) {
 
 export function cabinet(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-0.25, 0, -0.3, 0.25, 1.3, 0.3, 'metal');
+  p(-0.25, 0, -0.3, 0.25, 1.3, 0.3, 'metal', { shadow: true });
   for (const h of [0.35, 0.75, 1.15]) p(-0.08, h, 0.3, 0.08, h + 0.03, 0.33, 'plastic', NC);
 }
 
 export function plant(b, x, z, y = 0) {
-  b.box(x - 0.2, y, z - 0.2, x + 0.2, y + 0.45, z + 0.2, 'pot');
+  b.box(x - 0.2, y, z - 0.2, x + 0.2, y + 0.45, z + 0.2, 'pot', { shadow: true });
   b.box(x - 0.3, y + 0.45, z - 0.3, x + 0.3, y + 1.0, z + 0.3, 'plant', NC);
   b.box(x - 0.18, y + 0.95, z - 0.22, x + 0.2, y + 1.35, z + 0.16, 'plant', NC);
 }
@@ -98,7 +98,7 @@ export function chairsAround(b, x, z, w, d, y = 0) {
 }
 
 export function counter(b, x0, z0, x1, z1, y = 0) {
-  b.box(x0, y, z0, x1, y + 0.86, z1, 'wood');
+  b.box(x0, y, z0, x1, y + 0.86, z1, 'wood', { shadow: true });
   b.box(x0 - 0.02, y + 0.86, z0 - 0.02, x1 + 0.02, y + 0.9, z1 + 0.02, 'counter', NC);
 }
 
@@ -114,15 +114,16 @@ export function sinks(b, x0, z0, x1, z1, y = 0) {
 }
 
 export function fridge(b, x0, z0, x1, z1, y = 0) {
-  b.box(x0, y, z0, x1, y + 1.85, z1, 'fridge');
+  b.box(x0, y, z0, x1, y + 1.85, z1, 'fridge', { shadow: true });
 }
 
 export function vending(b, x0, z0, x1, z1, y = 0) {
-  b.box(x0, y, z0, x1, y + 1.9, z1, 'vending', { boxUV: true });
+  b.box(x0, y, z0, x1, y + 1.9, z1, 'vending', { boxUV: true, shadow: true });
 }
 
 export function lockers(b, x0, z0, x1, z1, y = 0) {
   b.box(x0, y, z0, x1, y + 0.1, z1, 'rubber', NC);
+  b.shadow(x0, z0, x1, z1, y);
   b.box(x0, y + 0.1, z0, x1, y + 1.95, z1, 'locker');
 }
 
@@ -158,7 +159,7 @@ export function stallRow(b, x, z, rot, count, y = 0) {
   for (let i = 0; i < count; i++) {
     p(i * W, 0.15, D - 0.02, i * W + 0.2, 1.9, D + 0.02, 'stall');
     p(i * W + 1.0, 0.15, D - 0.02, (i + 1) * W, 1.9, D + 0.02, 'stall');
-    p(i * W + 0.4, 0, 0.05, i * W + 0.8, 0.45, 0.65, 'fridge');
+    p(i * W + 0.4, 0, 0.05, i * W + 0.8, 0.45, 0.65, 'fridge', { shadow: true });
     p(i * W + 0.35, 0.45, 0.05, i * W + 0.85, 0.8, 0.2, 'fridge', NC);
   }
 }
@@ -212,7 +213,7 @@ export function palletRack(b, x0, z0, x1, z1, rng, y = 0) {
 }
 
 export function crate(b, x, z, s, h = s, y = 0) {
-  b.box(x - s / 2, y, z - s / 2, x + s / 2, y + h, z + s / 2, 'cardboard');
+  b.box(x - s / 2, y, z - s / 2, x + s / 2, y + h, z + s / 2, 'cardboard', { shadow: true });
 }
 
 export function pallet(b, x, z, w, d, y = 0) {
@@ -271,7 +272,7 @@ export function hazmatSuitProp(scene, materials, x, y, z, rot) {
 // Couch with the backrest on local +z.
 export function couch(b, x, z, rot, len, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-len / 2, 0, -0.4, len / 2, 0.45, 0.4, 'cubicle');
+  p(-len / 2, 0, -0.4, len / 2, 0.45, 0.4, 'cubicle', { shadow: true });
   p(-len / 2, 0.45, 0.2, len / 2, 0.9, 0.4, 'cubicle', NC);
   p(-len / 2, 0.45, -0.4, -len / 2 + 0.15, 0.65, 0.4, 'cubicle', NC);
   p(len / 2 - 0.15, 0.45, -0.4, len / 2, 0.65, 0.4, 'cubicle', NC);
@@ -279,12 +280,12 @@ export function couch(b, x, z, rot, len, y = 0) {
 
 export function printer(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-0.35, 0, -0.3, 0.35, 0.9, 0.3, 'plastic');
+  p(-0.35, 0, -0.3, 0.35, 0.9, 0.3, 'plastic', { shadow: true });
   p(-0.33, 0.9, -0.28, 0.33, 1.0, 0.28, 'desk', NC);
 }
 
 export function waterCooler(b, x, z, y = 0) {
-  b.box(x - 0.18, y, z - 0.18, x + 0.18, y + 1.0, z + 0.18, 'fridge');
+  b.box(x - 0.18, y, z - 0.18, x + 0.18, y + 1.0, z + 0.18, 'fridge', { shadow: true });
   b.box(x - 0.13, y + 1.0, z - 0.13, x + 0.13, y + 1.4, z + 0.13, 'glass', NC);
 }
 
@@ -296,8 +297,8 @@ export function bin(b, x, z, y = 0) {
 const FACING = { n: 0, s: Math.PI, e: Math.PI / 2, w: -Math.PI / 2 };
 export function sign(scene, text, x, y, z, facing, { w = 1.6, h = 0.35, bg = '#1c2a22', fg = '#dfe8d4' } = {}) {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = Math.max(16, Math.round(256 * h / w));
+  canvas.width = 512;
+  canvas.height = Math.max(32, Math.round(512 * h / w));
   const g = canvas.getContext('2d');
   g.fillStyle = bg;
   g.fillRect(0, 0, canvas.width, canvas.height);
@@ -305,8 +306,10 @@ export function sign(scene, text, x, y, z, facing, { w = 1.6, h = 0.35, bg = '#1
   g.font = `bold ${Math.round(canvas.height * 0.6)}px "Courier New", monospace`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText(text, canvas.width / 2, canvas.height / 2 + 1, canvas.width - 12);
+  g.fillText(text, canvas.width / 2, canvas.height / 2 + 2, canvas.width - 24);
   const map = toTexture(canvas);
+  map.magFilter = THREE.LinearFilter; // smooth lettering up close
+  map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
     ps1ify(new THREE.MeshLambertMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.35 }))

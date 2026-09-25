@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { createRng } from '../core/random.js';
 
-// Procedural 64x64 textures, drawn per pixel. Nearest magnification keeps
-// them crunchy up close; trilinear + anisotropic minification stops floors
-// sparkling and banding at a distance and at grazing angles.
-const SIZE = 64;
+// Procedural textures, drawn per pixel. The patterns below are written on a
+// 64-unit grid; SIZE sets the actual pixel resolution (128 = twice the
+// detail: finer grain and thinner lines, same pattern and scale). Nearest
+// magnification keeps them crisp up close; trilinear + anisotropic
+// minification stops floors sparkling at a distance and at grazing angles.
+const GRID = 64;
+const SIZE = 128;
 
 function makeTexture(fn, seed, anisotropy) {
   const canvas = document.createElement('canvas');
@@ -12,9 +15,10 @@ function makeTexture(fn, seed, anisotropy) {
   const g = canvas.getContext('2d');
   const img = g.createImageData(SIZE, SIZE);
   const rng = createRng(seed);
+  const scale = GRID / SIZE;
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
-      const c = fn(x, y, rng);
+      const c = fn(x * scale, y * scale, rng);
       const k = (y * SIZE + x) * 4;
       img.data[k] = c[0];
       img.data[k + 1] = c[1];
@@ -62,8 +66,9 @@ const DRAW = {
   plastic: flat([66, 68, 74], 6),
   screen: (x, y) => {
     if (x < 4 || x > 59 || y < 4 || y > 59) return [20, 22, 26];
-    if (y % 6 === 2 && x > 8 && x < 12 + ((y * 37) % 40)) return [150, 200, 255];
-    return shade([28, 58, 108], y % 2 ? -6 : 0);
+    const row = Math.floor(y);
+    if (row % 6 === 2 && x > 8 && x < 12 + ((row * 37) % 40)) return [150, 200, 255]; // lines of text
+    return shade([28, 58, 108], Math.floor(y * 2) % 2 ? -6 : 0);                       // scanlines
   },
   cubicle: flat([100, 106, 122], 22),
   chair: flat([38, 40, 48], 10),

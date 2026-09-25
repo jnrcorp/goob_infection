@@ -9,9 +9,13 @@ export const PS1_HEIGHT = 960;
 const VERTEX_SNAP_DEFAULT = false;
 // Higher = chunkier wobble when it's on. 1 snaps to whole low-res pixels.
 const VERTEX_JITTER = 1;
-// Color steps per channel after quantizing. The PS1 had 32 (15-bit color);
-// 64 keeps the banding subtle, so the dither doesn't crawl as you look around.
-const COLOR_LEVELS = 63;
+// Color steps per channel. The PS1 had 32 (15-bit color); 255 is full color.
+const COLOR_LEVELS = 255;
+// Ordered dithering (PS1-style patterning). Off by default for smooth
+// gradients; debug key 2 toggles it.
+const DITHER_DEFAULT = false;
+// Multisample anti-aliasing on the 3D view (0 = off).
+const MSAA_SAMPLES = 4;
 
 const snapUniform = { value: new THREE.Vector2(160, 120) };
 const snapOnUniform = { value: VERTEX_SNAP_DEFAULT ? 1 : 0 };
@@ -42,25 +46,29 @@ export function ps1ify(material, { snap = true } = {}) {
   return material;
 }
 
-// Renders the scene at low resolution, then upscales with nearest-neighbor
-// filtering, ordered dithering and reduced color depth.
+// Renders the scene at a fixed resolution (PS1_HEIGHT lines, anti-aliased),
+// then scales it to the window, with optional dithering and color reduction.
 export class PS1Renderer {
   constructor(canvas) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+    // Linear scaling: at this resolution the render is close to screen size,
+    // and nearest-neighbor scaling by an odd factor (e.g. 960 -> 1080) doubles
+    // some rows and not others, which shimmers.
     this.target = new THREE.WebGLRenderTarget(320, PS1_HEIGHT, {
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
       generateMipmaps: false,
       type: THREE.HalfFloatType,
+      samples: MSAA_SAMPLES,
     });
 
     this.postMaterial = new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: this.target.texture },
         uRes: { value: new THREE.Vector2(320, PS1_HEIGHT) },
-        uDither: { value: 1 },
+        uDither: { value: DITHER_DEFAULT ? 1 : 0 },
       },
       vertexShader: /* glsl */ `
         varying vec2 vUv;

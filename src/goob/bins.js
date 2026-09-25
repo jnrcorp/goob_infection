@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ps1ify } from '../render/ps1.js';
 import { toTexture } from '../render/textures.js';
+import { blobShadow } from '../render/shadows.js';
 
 // Biohazard drums where the vacuum tank gets emptied.
 // onUse(bin) is called when the player empties into one; label() gives the prompt.
@@ -27,10 +28,12 @@ export function createBins(ctx, spots, { label, enabled, onUse }) {
       group.add(sign);
     }
     scene.add(group);
+    const meshes = [...group.children];
+    group.add(blobShadow(1.3)); // not part of the bin you interact with
     const collider = collision.addBox(spot.x - 0.36, spot.y, spot.z - 0.36, spot.x + 0.36, spot.y + 0.94, spot.z + 0.36);
     const bin = { group, collider, spot };
     interactions.add({
-      mesh: group.children,
+      mesh: meshes,
       ignore: [collider],
       label: () => label(bin),
       enabled: () => enabled(bin),

@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { shadowMaterials, boxShadowGeometry } from '../render/shadows.js';
+
+const SHADOW = '__shadow';
+const FLOOR_LEVELS = [0, 4];
 
 // Collects static boxes and planes, adds their colliders, and merges all
 // geometry that shares a material into one mesh (a few draw calls total).
@@ -16,10 +20,14 @@ export class StaticBuilder {
   // opts.collide (default true), opts.boxUV: stretch the texture over each face
   // instead of tiling it in world space. opts.noTop: leave out the top face
   // (for walls, whose tops are hidden under the next floor and would otherwise
-  // flicker against it).
+  // flicker against it). opts.shadow: cast a soft contact shadow.
+  // Collider-only boxes standing on a floor are furniture footprints, so they
+  // cast one automatically.
   box(x0, y0, z0, x1, y1, z1, mat, opts = {}) {
     if (x1 - x0 <= 1e-4 || y1 - y0 <= 1e-4 || z1 - z0 <= 1e-4) return null;
     const collider = opts.collide === false ? null : this.collision.addBox(x0, y0, z0, x1, y1, z1);
+    const onFloor = FLOOR_LEVELS.some((f) => Math.abs(y0 - f) < 0.02);
+    if (onFloor && y1 - y0 >= 0.3 && (opts.shadow || (!mat && collider))) this.shadow(x0, z0, x1, z1, y0);
     if (mat) {
       this.records.push({ kind: 'box', x0, y0, z0, x1, y1, z1, mat, noTop: !!opts.noTop });
       let g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
@@ -41,6 +49,11 @@ export class StaticBuilder {
     this.add(mat, g);
   }
 
+  // Soft contact shadow on the floor under a footprint.
+  shadow(x0, z0, x1, z1, y) {
+    this.add(SHADOW, boxShadowGeometry(x0, z0, x1, z1, y + 0.004));
+  }
+
   add(mat, geometry) {
     if (!this.buckets.has(mat)) this.buckets.set(mat, []);
     this.buckets.get(mat).push(geometry);
@@ -50,8 +63,9 @@ export class StaticBuilder {
     for (const [mat, geometries] of this.buckets) {
       const merged = mergeGeometries(geometries, false);
       geometries.forEach((g) => g.dispose());
-      const mesh = new THREE.Mesh(merged, this.materials.get(mat));
+      const mesh = new THREE.Mesh(merged, mat === SHADOW ? shadowMaterials.box : this.materials.get(mat));
       mesh.matrixAutoUpdate = false;
+      if (mat === SHADOW) mesh.renderOrder = -1; // before other see-through things (glass)
       scene.add(mesh);
     }
     this.buckets.clear();

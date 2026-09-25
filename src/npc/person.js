@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ps1ify } from '../render/ps1.js';
+import { blobShadow } from '../render/shadows.js';
 
 // A blocky office worker with jointed limbs. The model faces +z, with its
 // origin at the feet. Poses: 'stand', 'walk', 'sit', 'type'.
@@ -91,6 +92,7 @@ export class Person {
 
     this.meshes = [];
     this.root.traverse((o) => { if (o.isMesh) this.meshes.push(o); });
+    this.root.add(blobShadow(1.1)); // after collecting meshes: not part of "Talk to"
 
     this.pose = 'stand';
     this.talking = false;

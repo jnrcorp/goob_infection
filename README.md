@@ -63,5 +63,10 @@ The title screen has Continue (the autosave), Difficulty and Volume. Settings an
 
 In `src/render/ps1.js`:
 - `PS1_HEIGHT` sets the render resolution (240 is authentic PS1; currently 960).
+- `MSAA_SAMPLES` sets anti-aliasing (0 = off, 4 = on).
+- `COLOR_LEVELS` sets the color steps per channel (31 is authentic PS1; 255 = full color). `DITHER_DEFAULT` turns the PS1 dither pattern on at startup.
 - `VERTEX_SNAP_DEFAULT` turns the PS1 vertex wobble on at startup, and `VERTEX_JITTER` sets how strong it is.
-- `COLOR_LEVELS` sets the color steps per channel (31 is authentic PS1; currently 63).
+
+Elsewhere:
+- `SIZE` in `src/render/textures.js` sets texture resolution (currently 128; 64 is chunkier).
+- `STRENGTH` and `FADE` in `src/render/shadows.js` set how dark and how wide the soft contact shadows under furniture are.
