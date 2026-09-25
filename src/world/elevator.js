@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sfx } from '../core/sound.js';
 
 const CAR_SPEED = 1.6;   // m/s
 const DOOR_SPEED = 1.1;  // fraction per second
@@ -107,6 +108,15 @@ export class Elevator {
     this.syncDoors();
   }
 
+  // Working again (after the cleanup): stays where it is with its doors shut.
+  repair() {
+    if (!this.jammed) return;
+    this.phase = 'closed';
+    this.target = this.current;
+    this.open.fill(0);
+    this.syncDoors();
+  }
+
   get jammed() {
     return this.phase === 'jammed';
   }
@@ -164,6 +174,7 @@ export class Elevator {
           this.carY = this.floors[this.target];
           this.current = this.target;
           this.phase = 'opening';
+          sfx.elevator({ x: this.def.doorAt, y: this.carY + 1.5, z: this.def.doorZ });
         } else {
           this.carY += Math.sign(dy) * step;
         }

@@ -29,6 +29,7 @@ export function createMaterials(maxAnisotropy = 1) {
   mats.light = ps1ify(new THREE.MeshBasicMaterial({ color: 0xfff6e0 }), { snap: false });
   mats.lightBlue = ps1ify(new THREE.MeshBasicMaterial({ color: 0xcfe8ff }), { snap: false });
   mats.visor = ps1ify(new THREE.MeshBasicMaterial({ color: 0x14201e }));
+  mats.trophy = ps1ify(new THREE.MeshLambertMaterial({ color: 0xd9b03a, emissive: 0x3a2a00 }));
   mats.goob = ps1ify(new THREE.MeshBasicMaterial({ color: 0x6cff4a }));
   mats.glass = ps1ify(new THREE.MeshBasicMaterial({
     color: 0x9fc4d0, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,

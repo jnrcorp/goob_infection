@@ -123,11 +123,20 @@ Each milestone ends in something you can play.
    - Right mouse blasts them back and stuns them for 3 seconds.
    - 10 rolls of duct tape around the building each patch 35%.
    - Suit breached at 0%: retry from the last checkpoint (after the spill, when you take the vacuum, each time you empty the tank). Checkpoints are in memory until milestone 5 saves them.
-5. **Finish chapter 1**: secure-in-freezer ending, autosave and continue, menus, audio pass, tuning.
+5. ✅ **Finish chapter 1**: secure-in-freezer ending, cure the infected, autosave and continue, audio. (Tuning still waits on a playtest.)
+   0. **Conference room** (2F, northwest corner, across a short hallway from the stairwell door) with a window onto the office: another room to shut infected coworkers in. Replaces two cubicle pods.
+   1. **Bigger building**: a one-story annex off the west end of the 1F corridor holds the new **Storage** room. The old storage room (1F, beside the elevator) becomes the **Infirmary**: beds, a medicine cabinet, and the antidote rack.
+   2. **Secure the goob**: when the building is clean, the elevator is repaired. Wheel all four biohazard bins into the secure freezer (grab with E, push them along, slower while pushing; the 2F bins come down in the elevator). Then lock the freezer.
+   3. **Dale calls**: over the intercom, infected but still managerial. Everyone is still goob. There's antidote in the new infirmary.
+   4. **Cure everyone**: the antidote sprayer clips onto the vacuum. Hold **F** to spray; about 1.5 s of spray cures a coworker. The blast (right mouse) still stuns, so stun, then spray. Cured coworkers turn back to normal, are dazed for a moment, then are friendly again (with new lines).
+   5. **Chapter end**: when all 18 (Dale included) are cured, Dale thanks you (sort of) and the "Chapter 1 complete" card appears.
+   6. **Saving**: autosave to the browser at each story step, each tank emptied, each bin loaded and each cure. The title screen shows **Continue** when there's a save.
+   7. **Sound**: all synthesized: office hum, vacuum suck and blast, antidote spray, goob squelch, moans, suit breathing, footsteps, doors, bins, elevator, UI blips; volume setting on the title screen.
+   8. **Tuning** from playtesting.
 
 ## Still open (answer any time; defaults in brackets)
 
-- **Player name and company name**? [unnamed player, "Goob Co."]
+- ~~Player name and company name~~: you're **Champ** (what Dale calls you), at Goob Co. Every desk has a nameplate; yours is gold, with a trophy.
 - **Boss personality and lines**: stern, clueless, or overly cheerful? [cheerfully oblivious middle manager]
 - **How many coworkers**? [about 12 across both floors]
 - **Target chapter length**? [15–25 minutes]

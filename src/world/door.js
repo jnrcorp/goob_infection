@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sfx } from '../core/sound.js';
 
 const SWING_SPEED = 3.2; // radians per second
 const OPEN_ANGLE = Math.PI / 2 * 0.95;
@@ -49,12 +50,19 @@ export class Door {
     this.openCollider.enabled = false;
     this.panelLength = pw;
 
+    // A story step can take over the door with its own action (e.g. locking
+    // the freezer): { enabled(), label, use(player) }.
+    this.override = null;
     const name = label.charAt(0).toUpperCase() + label.slice(1);
+    const overriding = () => this.override?.enabled();
     interactions.add({
       mesh: [panel, handle],
       ignore: [this.collider, this.openCollider],
-      label: () => (this.locked ? `${name} (locked)` : `${this.isOpen ? 'Close' : 'Open'} ${label}`),
-      use: (player) => this.toggle(player),
+      label: () => {
+        if (overriding()) return this.override.label;
+        return this.locked ? `${name} (locked)` : `${this.isOpen ? 'Close' : 'Open'} ${label}`;
+      },
+      use: (player) => (overriding() ? this.override.use(player) : this.toggle(player)),
     });
   }
 
@@ -104,6 +112,7 @@ export class Door {
       if (this.playerInDoorway(player)) return;
       this.target = 0;
       this.syncColliders();
+      sfx.door(this.soundPos);
       return;
     }
     this.openFrom(player.pos);
@@ -119,6 +128,11 @@ export class Door {
       : (pos.x < this.x ? 1 : -1);
     this.target = sign * OPEN_ANGLE;
     this.syncColliders();
+    sfx.door(this.soundPos);
+  }
+
+  get soundPos() {
+    return { x: this.x, y: this.pivot.position.y + 1, z: this.z };
   }
 
   // Player's body overlaps the closed door's space (plus their radius).

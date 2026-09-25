@@ -17,8 +17,10 @@ const KEY = 'goob-infection.settings';
 
 export const settings = load();
 
+export const VOLUMES = [0, 0.25, 0.5, 0.75, 1];
+
 function load() {
-  const defaults = { difficulty: 'normal' };
+  const defaults = { difficulty: 'normal', volume: 0.75 };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
     const merged = { ...defaults, ...saved };

@@ -13,6 +13,8 @@ export const DOOR_HEIGHT = 2.2;
 
 export const BUILDING = {
   footprint: { x0: 0, z0: 0, x1: 36, z1: 24 },
+  // One-story wing off the west end of the 1F corridor (the storage room).
+  annex: { x0: -7, z0: 8, x1: 0, z1: 16, roofY: 4 },
   roofY: 7.7,
 
   floors: [
@@ -33,8 +35,12 @@ export const BUILDING = {
         wall(24, 0, 36, 0, { h: 7.7 }),
         wall(0, 24, 24, 24),
         wall(24, 24, 36, 24, { h: 7.7 }),
-        wall(0, 0, 0, 24, { openings: [win(17, 2), win(21, 2)] }),
+        wall(0, 0, 0, 24, { openings: [door(11.3, 'storage door', { w: 1.2 }), win(17, 2), win(21, 2)] }),
         wall(36, 0, 36, 24, { h: 7.7, openings: [shutter(6), shutter(12)] }),
+        // Storage annex
+        wall(-7, 8, 0, 8),
+        wall(-7, 16, 0, 16),
+        wall(-7, 8, -7, 16),
         // Interior
         wall(0, 10, 24, 10, { openings: [door(4, 'locker room door'), door(11, 'restroom door'), gap(19, 3.2)] }),
         wall(8, 0, 8, 10),
@@ -45,7 +51,7 @@ export const BUILDING = {
             door(6, 'break room door'),
             door(13.5, 'stairwell door'),
             { at: 16.5, w: 1.4, kind: 'elevator' },
-            door(21, 'storage door'),
+            door(21, 'infirmary door'),
           ],
         }),
         wall(12, 13, 12, 24),
@@ -69,7 +75,8 @@ export const BUILDING = {
           lightY: 3.4, fixture: null, goobRect: { x0: 12, z0: 13, x1: 15, z1: 15 },
         },
         { id: 'closet', name: 'Janitor Closet', rect: { x0: 15, z0: 16, x1: 18, z1: 24 }, floor: 'concrete', ceiling: 3 },
-        { id: 'storage', name: 'Storage', rect: { x0: 18, z0: 13, x1: 24, z1: 24 }, floor: 'concrete', ceiling: 3 },
+        { id: 'infirmary', name: 'Infirmary', rect: { x0: 18, z0: 13, x1: 24, z1: 24 }, floor: 'tile', ceiling: 3 },
+        { id: 'storage', name: 'Storage', rect: { x0: -7, z0: 8, x1: 0, z1: 16 }, floor: 'concrete', ceiling: 3 },
         {
           id: 'dock', name: 'Loading Dock', rect: { x0: 24, z0: 0, x1: 36, z1: 24 }, floor: 'concrete',
           ceiling: null, lightY: 7, lightRange: 18, lightIntensity: 30, excludeOthers: true,
@@ -102,6 +109,9 @@ export const BUILDING = {
         // Meeting room
         wall(18, 0, 18, 7, { openings: [door(5.5, 'meeting room door')] }),
         wall(18, 7, 24, 7, { openings: [win(21, 3, 1, 2.4)] }),
+        // Conference room, across from the stairwell door
+        wall(10, 19, 10, 24, { openings: [door(22.5, 'conference room door')] }),
+        wall(0, 19, 10, 19, { openings: [win(5, 3, 1, 2.4)] }),
         // Core: stairwell, elevator, restroom, kitchenette
         wall(12, 13, 12, 24, { openings: [door(22.5, 'stairwell door')] }),
         wall(15, 13, 15, 24),
@@ -114,6 +124,7 @@ export const BUILDING = {
         { id: 'office', name: 'Open Office', rect: { x0: 0, z0: 0, x1: 24, z1: 24 }, floor: 'carpet', ceiling: 3, excludeOthers: true },
         { id: 'manager', name: "Manager's Office", rect: { x0: 0, z0: 0, x1: 6, z1: 6 }, floor: 'carpetRed', ceiling: 3 },
         { id: 'meeting', name: 'Meeting Room', rect: { x0: 18, z0: 0, x1: 24, z1: 7 }, floor: 'carpet', ceiling: 3 },
+        { id: 'conference', name: 'Conference Room', rect: { x0: 0, z0: 19, x1: 10, z1: 24 }, floor: 'carpetRed', ceiling: 3 },
         { id: 'kitchen', name: 'Kitchenette', rect: { x0: 18, z0: 16, x1: 24, z1: 24 }, floor: 'linoleum', ceiling: 3 },
         { id: 'restroom2', name: 'Restroom', rect: { x0: 15, z0: 16, x1: 18, z1: 24 }, floor: 'tile', ceiling: 3 },
         { id: 'stair2', name: 'Stairwell', rect: { x0: 12, z0: 21, x1: 15, z1: 24 }, floor: 'concrete', ceiling: null, lightY: 3.3 },
@@ -144,7 +155,8 @@ export const BUILDING = {
     { x: 23.9, y: 0.35, z: 5, facing: 'w' },      // lobby
     { x: 0.1, y: 0.35, z: 12.45, facing: 'e' },   // 1F corridor (beside the water cooler)
     { x: 0.1, y: 0.35, z: 14.5, facing: 'e' },    // break room
-    { x: 23.9, y: 0.35, z: 14.5, facing: 'w' },   // storage
+    { x: 23.9, y: 0.35, z: 14.5, facing: 'w' },   // infirmary
+    { x: -5.7, y: 0.35, z: 8.1, facing: 'n' },    // storage annex
     { x: 17.9, y: 0.35, z: 23, facing: 'w' },     // janitor closet
     { x: 35.9, y: 0.35, z: 16, facing: 'w' },     // loading dock
     { x: 0.1, y: 4.35, z: 7.5, facing: 'e' },     // open office, west
@@ -153,6 +165,7 @@ export const BUILDING = {
     { x: 23.9, y: 4.35, z: 6.2, facing: 'w' },    // meeting room
     { x: 18.1, y: 4.35, z: 23, facing: 'e' },     // kitchenette
     { x: 15.1, y: 4.35, z: 21, facing: 'e' },     // 2F restroom
+    { x: 0.1, y: 4.35, z: 23.2, facing: 'e' },    // conference room
   ],
 
   // Yellow drums where you empty the vacuum tank. Two per floor.
@@ -169,14 +182,19 @@ export const BUILDING = {
     { x: 4.0, y: 0.47, z: 5.0 },     // locker room bench
     { x: 18.3, y: 0.9, z: 6.3 },     // lobby reception counter
     { x: 8.0, y: 0.76, z: 19.0 },    // break room table
-    { x: 21.5, y: 0, z: 14.4 },      // storage floor
+    { x: 21.5, y: 0, z: 14.4 },      // infirmary floor
+    { x: -2.2, y: 0, z: 14.4 },      // storage floor
     { x: 28.1, y: 1.7, z: 7.05 },    // loading dock crate stack
     { x: 16.8, y: 0, z: 22.0 },      // janitor closet
     { x: 21.0, y: 4.76, z: 3.5 },    // meeting room table
     { x: 20.5, y: 4.76, z: 19.5 },   // kitchenette table
     { x: 2.8, y: 4.76, z: 3.3 },     // manager's desk
     { x: 11.5, y: 5.0, z: 12.3 },    // printer
+    { x: 7.2, y: 4.76, z: 21.1 },    // conference table
   ],
+
+  // The antidote sprayer waits on the infirmary counter.
+  antidote: { x: 20.4, y: 0.9, z: 23.6 },
 
   // The containment vacuum hangs on the dock wall beside the freezer door.
   vacuumRack: { x: 30.9, y: 0, z: 18.4 },

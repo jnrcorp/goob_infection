@@ -73,6 +73,39 @@ function biohazardMaterial() {
   return cached;
 }
 
+// The antidote sprayer in its open case on the infirmary counter.
+export function createAntidoteProp(ctx, spot, { enabled, onUse }) {
+  const { scene, materials, interactions } = ctx;
+  const group = new THREE.Group();
+  group.position.set(spot.x, spot.y, spot.z);
+  const caseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.3), materials.get('plastic'));
+  caseMesh.position.y = 0.04;
+  const can = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.32, 10), materials.get('lightBlue'));
+  can.rotation.z = Math.PI / 2;
+  can.position.set(0, 0.14, 0);
+  const nozzle = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.04), materials.get('steel'));
+  nozzle.position.set(0.23, 0.14, 0);
+  group.add(caseMesh, can, nozzle);
+  const glow = new THREE.PointLight(0x8fd8ff, 1.5, 2.5, 1.5);
+  glow.position.y = 0.3;
+  group.add(glow);
+  scene.add(group);
+  interactions.add({
+    mesh: [caseMesh, can, nozzle],
+    label: 'Clip the antidote sprayer onto your vacuum',
+    enabled,
+    use: onUse,
+  });
+  return {
+    group,
+    // Hide by meshes + light intensity (hiding a light forces a shader recompile).
+    setVisible(visible) {
+      caseMesh.visible = can.visible = nozzle.visible = visible;
+      glow.intensity = visible ? 1.5 : 0;
+    },
+  };
+}
+
 // The containment vacuum hanging on its wall rack (world prop, not the one in
 // your hands). Faces -x, out into the loading dock.
 export function createVacuumRack(ctx, spot, { enabled, onUse }) {

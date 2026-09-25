@@ -1,7 +1,7 @@
 import { createRng } from '../core/random.js';
 import { BUILDING } from './building.js';
 import {
-  bench, bin, cabinet, chair, chairsAround, counter, couch, crate, desk, forklift, fridge, goobCanister,
+  bed, bench, bin, cabinet, chair, chairsAround, counter, couch, crate, desk, forklift, fridge, goobCanister,
   hazmatSuit, hazmatSuitProp, lockers, pallet, palletRack, plant, pod, printer, shelf, sign, sinks, stallRow, table,
   vending, waterCooler,
 } from './furniture.js';
@@ -10,6 +10,7 @@ const NC = { collide: false };
 const LOGO = { bg: '#102414', fg: '#6cff4a' };
 const HAZARD = { bg: '#e2ba24', fg: '#1e1e1e' };
 const DANGER = { bg: '#8e1f1f', fg: '#f4e6e6' };
+const MEDICAL = { bg: '#f2f2ee', fg: '#b0282a' };
 
 // Places furniture, props and signs. Returns objects the game needs later.
 export function furnish({ builder: b, scene, materials }) {
@@ -47,12 +48,13 @@ export function furnish({ builder: b, scene, materials }) {
   // Corridor
   b.box(8.5, 1.0, 10.1, 8.7, 1.5, 10.25, 'red', NC);
   b.box(9, 1.3, 12.87, 11, 2.1, 12.9, 'cardboard', NC);
-  waterCooler(b, 0.4, 11.5);
+  waterCooler(b, 0.4, 10.35);
   bin(b, 23.5, 10.4);
   sign(scene, 'BREAK ROOM', 6, 2.55, 12.88, 's', { w: 1.3, h: 0.28 });
   sign(scene, 'STAIRS', 13.5, 2.55, 12.88, 's', { w: 1.0, h: 0.28 });
   sign(scene, 'ELEVATOR', 16.5, 2.55, 12.88, 's', { w: 1.2, h: 0.28 });
-  sign(scene, 'STORAGE', 21, 2.55, 12.88, 's', { w: 1.1, h: 0.28 });
+  sign(scene, 'INFIRMARY', 21, 2.55, 12.88, 's', { w: 1.3, h: 0.28, ...MEDICAL });
+  sign(scene, 'STORAGE', 0.12, 2.55, 11.3, 'e', { w: 1.1, h: 0.28 });
   sign(scene, 'LOADING DOCK', 23.88, 2.6, 11.5, 'w', { w: 1.8, h: 0.35, ...HAZARD });
 
   // Break room
@@ -76,10 +78,19 @@ export function furnish({ builder: b, scene, materials }) {
   b.box(17.2, 0, 17, 17.6, 0.35, 17.4, 'suit', NC);
   b.box(15.2, 0, 23.3, 16.2, 0.6, 23.9, 'fridge');
 
-  // Storage
-  shelf(b, 19.3, 16.2, 23.8, 16.8, 2.2, rng);
-  shelf(b, 19.3, 19.2, 23.8, 19.8, 2.2, rng);
-  shelf(b, 19.3, 23.2, 23.8, 23.8, 2.2, rng);
+  // Infirmary (the old storage room)
+  bed(b, 22.9, 14.3, 23.85, 16.3);
+  bed(b, 22.9, 17.3, 23.85, 19.3);
+  b.box(18.12, 0, 21.6, 18.6, 1.9, 23.2, 'fridge'); // medicine cabinet
+  sign(scene, '+', 18.62, 1.5, 22.4, 'e', { w: 0.4, h: 0.4, ...MEDICAL });
+  counter(b, 19.3, 23.3, 22.5, 23.9);
+  sign(scene, 'INFIRMARY', 21, 2.3, 23.88, 's', { w: 1.6, h: 0.35, ...MEDICAL });
+
+  // Storage (the annex off the west end of the corridor)
+  shelf(b, -6.8, 8.3, -6.2, 15.7, 2.2, rng);
+  shelf(b, -5.2, 8.3, -0.8, 8.9, 2.2, rng);
+  shelf(b, -5.2, 15.1, -0.8, 15.7, 2.2, rng);
+  shelf(b, -4.4, 10.8, -3.8, 13.8, 2.2, rng);
 
   // Loading dock
   palletRack(b, 25, 0.2, 31, 1.4, rng);
@@ -106,11 +117,11 @@ export function furnish({ builder: b, scene, materials }) {
 
   // ---------- 2F ----------
   const y = 4;
-  out.desks = [[9, 3.5], [14, 3.5], [9, 9], [14, 9], [3, 9.5], [3, 17], [8, 17], [3, 21], [8, 21]]
+  out.desks = [[9, 3.5], [14, 3.5], [9, 9], [14, 9], [3, 9.5], [3, 17], [8, 17]]
     .flatMap(([x, z]) => pod(b, x, z, y));
 
   // Manager's office
-  desk(b, 2.8, 3, 3, y);
+  out.managerDesk = desk(b, 2.8, 3, 3, y);
   chair(b, 3.95, 2.6, 1, y);
   chair(b, 3.95, 3.4, 1, y);
   cabinet(b, 0.45, 5.3, 1, y);
@@ -125,6 +136,19 @@ export function furnish({ builder: b, scene, materials }) {
   }
   b.box(18.1, y + 1.0, 1, 18.14, y + 2.2, 4, 'fridge', NC);
   sign(scene, 'MEETING', 17.88, y + 2.5, 5.5, 'w', { w: 1.2, h: 0.28 });
+
+  // Conference room (northwest corner, across from the stairwell door)
+  table(b, 4.8, 21.5, 5.6, 1.5, y);
+  for (const x of [2.6, 4.0, 5.4, 6.8]) {
+    chair(b, x, 20.4, 2, y);
+    chair(b, x, 22.6, 0, y);
+  }
+  chair(b, 1.65, 21.5, 3, y);
+  b.box(4.35, y + 1.0, 23.84, 6.15, y + 2.2, 23.88, 'fridge', NC); // whiteboard, between the windows
+  b.box(8.6, y, 23.3, 9.8, y + 0.9, 23.9, 'wood');                // credenza
+  b.box(8.8, y + 0.9, 23.5, 9.2, y + 1.3, 23.8, 'plastic', NC);    // speakerphone
+  plant(b, 9.4, 19.5, y);
+  sign(scene, 'CONFERENCE', 10.12, y + 2.5, 22.5, 'e', { w: 1.4, h: 0.28 });
 
   // Kitchenette
   counter(b, 18.2, 23.3, 22.7, 23.9, y);

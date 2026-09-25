@@ -33,8 +33,13 @@ export class Interactions {
     if (active) {
       this.camera.updateMatrixWorld();
       this.raycaster.setFromCamera(this.center, this.camera);
-      // Raycasting doesn't skip hidden meshes, so take the first visible hit.
-      const hit = this.raycaster.intersectObjects(this.meshes, false).find((h) => isVisible(h.object));
+      // Take the first hit that's visible and usable right now. (Raycasting
+      // doesn't skip hidden meshes, and unusable things like the bin you're
+      // pushing shouldn't block what's behind them.)
+      const hit = this.raycaster.intersectObjects(this.meshes, false).find((h) => {
+        const item = h.object.userData.interact;
+        return isVisible(h.object) && (!item.enabled || item.enabled());
+      });
       if (hit) {
         const item = hit.object.userData.interact;
         const { origin, direction } = this.raycaster.ray;
@@ -42,7 +47,7 @@ export class Interactions {
         // Colliders that contain the hit point (a rack around the suit, a desk
         // under a monitor) belong to the object itself and don't block it.
         const blocked = this.collision.raycast(origin, direction, limit, item.ignore, hit.point) < limit;
-        if (!blocked && (!item.enabled || item.enabled())) current = item;
+        if (!blocked) current = item;
       }
     }
     const label = current && (typeof current.label === 'function' ? current.label() : current.label);

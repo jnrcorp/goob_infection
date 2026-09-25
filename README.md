@@ -16,19 +16,21 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 
 - `index.html`: page shell. The import map loads Three.js from the jsDelivr CDN, so there's no build step.
 - `src/main.js`: bootstrap and game loop.
-- `src/core/`: input, seeded random numbers.
+- `src/core/`: input, seeded random numbers, settings, autosave, and synthesized sound (`sound.js`).
 - `src/render/`: PS1 renderer (low-res target, vertex snapping, dithering), procedural textures, materials.
 - `src/world/`: building data (`building.js`), the builder that turns it into geometry, collision, doors, elevator, furniture, interactions.
-- `src/player/`: first-person controller.
+- `src/player/`: first-person controller, the held vacuum and antidote sprayer.
 - `src/npc/`: blocky coworker model and animation, NPC behavior, the cast (who's where and what they say), infected AI (`infectedBrain.js`, tuning in `INFECTED`) and pathfinding.
 - `src/goob/`: the goob spot network (`goobGraph.js`), blobs and spreading (`goobSystem.js`, tuning in `GOOB`), bins and the vacuum rack.
-- `src/story/`: chapter state machines. `chapter1.js` runs the objectives, briefing, suit-up and goob pickup.
+- `src/story/`: chapter 1's story flow (`chapter1.js`), the spill cinematic, and wheeling bins to the freezer.
 - `src/ui/`: HUD, dialogue box, fades and the suit visor.
 - `GAME_DESIGN.md`, `PLAN.md`: design and implementation plan.
 
 ## Controls
 
-WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back.
+WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: Q lets go. With the antidote: hold F to spray.
+
+The title screen has Continue (the autosave), Difficulty and Volume. Settings and the autosave are kept in the browser (`localStorage`).
 
 ## Debugging
 
@@ -36,15 +38,19 @@ WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the va
   - `N` toggles noclip (Space/C to fly up/down).
   - `1` toggles PS1 vertex wobble (off by default, because it makes nearly-touching surfaces flicker).
   - `2` toggles dithering.
-  - `G` removes all goob (to test the ending).
+  - `G` removes all goob (to skip the cleanup).
+  - `K` cures everyone (during the cure objective, to test the ending).
 - URL options:
   - `?debug` starts with the readout on.
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
-  - `?stage=TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM` or `CLEANUP` skips ahead in the story (suit, spill aftermath and vacuum are set up for you).
+  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE` or `CURE`. Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
+  - `?grab=N` starts you pushing biohazard bin N (with `?stage=SECURE`); `?binat=N,x,y,z` places bin N.
+  - `?car=1` starts with the working elevator car on 2F (0 = 1F).
   - `?goobspots` shows every spot goob can spread to, and logs how they connect.
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
   - `?difficulty=hard` (or `normal`) plays on that difficulty without changing your saved choice.
-  - `?report=Hank` logs which doors are open and where that coworker is after the simulation.
+  - `?report=Hank` logs which doors are open, your suit integrity, and where that coworker is after the simulation, plus who lands each hit.
+  - `?npcat=Hank,x,y,z` places a coworker (testing).
   - `?sim=seconds` fast-forwards the game at load.
   - `?shot` skips the title screen.
   - `?nolock` acts as if the mouse is captured, and `?keys=KeyE:0,KeyW:2` taps E then holds W for 2 seconds after `?sim` (`?after=N` runs N more seconds). These are for automated testing in a headless browser.

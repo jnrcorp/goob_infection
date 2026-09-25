@@ -1,4 +1,15 @@
+import * as THREE from 'three';
 import { NPC } from './npc.js';
+import { sign } from '../world/furniture.js';
+
+// The player. Dale calls you "champ", so that's your name.
+export const PLAYER_NAME = 'Champ';
+// Your desk: the seat you start behind (see BUILDING.spawn).
+export const PLAYER_SEAT = 8;
+
+// Empty desks that belong to coworkers who spend the day somewhere else
+// (the meeting room, the kitchenette, the break room, laps of the office).
+const AWAY_DESKS = { Brad: 3, Olu: 5, Deb: 15, Stan: 18, Gus: 22, Nell: 24, Pat: 19 };
 
 // Everyone at Goob Co. on delivery day.
 
@@ -26,6 +37,37 @@ export const BOSS_BRIEFING = [
   "And don't drop it. Ha! Nobody's ever dropped it. Okay, go get 'em!",
 ];
 
+// Dale over the intercom once the goob is locked away: still infected, still a manager.
+export const DALE_CALL = [
+  '*crackle* Champ! *gurgle* Fantastic work. The goob is back in the freezer where it belongs.',
+  'Small hiccup. Everyone is still... *blorp* ...goob. Including me. I feel great, but HR says that is a problem.',
+  "There's antidote in the new infirmary. The old storage room, next to the elevator.",
+  'It clips right onto your vacuum. Hold F to spray. Spray everyone. Spray me. Especially me. *gurgle*',
+];
+
+// Dale, cured, when everyone is back to normal.
+export const DALE_THANKS = [
+  "Everyone's back to normal! I remember nothing, and I would like to keep it that way.",
+  'Outstanding teamwork. I will be mentioning it in my quarterly self-review.',
+  'Now. About that Mars delivery. We are going to need more goob.',
+];
+
+// What people say once cured (a general pool, plus a few personal ones).
+export const CURED_LINES = {
+  default: [
+    'Why do I taste pennies? And why is my mouth green?',
+    'I had the strangest dream I was a puddle. A happy puddle.',
+    'Thanks for the spray. I think. My ears are still ringing.',
+  ],
+  Earl: ["You got it all? Every drop? ...I'm not mopping anything today. Or ever."],
+  Hank: ['Last thing I remember is you holding that canister. Remind me never to say "careful" again.'],
+  Priya: ['It hummed at me again. Then everything went green. I am taking the rest of the week off.'],
+  Kevin: ['Wait, did I finish my solitaire game? Did I WIN?'],
+  Deb: ['I made coffee while I was goob. It was the best coffee I have ever made. I cannot remember how.'],
+  Walt: ['In my day, the goob stayed in the freezer. Uphill. Both ways.'],
+  Dale: ['Is it Friday? It feels like a Friday. A goob Friday.'],
+};
+
 const BOSS_AFTER = [
   "Suit first, then the freezer. You've got this!",
   'The shuttle leaves when the goob gets there. No pressure. Some pressure.',
@@ -43,7 +85,7 @@ const DESK_WORKERS = [
     "Don't look directly at the goob. That's not a rule. I just don't like it.",
     'Do the Mars people pay in space money? Asking for my 401k.',
   ] },
-  { seat: 11, name: 'Marcy', look: look(0xc2b280, 'navy', 0, 'red'), lines: [
+  { seat: 10, name: 'Marcy', look: look(0xc2b280, 'navy', 0, 'red'), lines: [
     "We sit back to back, so technically I'm your emotional support coworker.",
     'Bring me back a Mars rock. Or a Mars anything.',
   ] },
@@ -59,7 +101,7 @@ const DESK_WORKERS = [
     'Twelve years here and I still do not know what goob is for.',
     'Mars. Wow. The furthest I have delivered anything is the break room.',
   ] },
-  { seat: 33, name: 'Walt', look: look(0x8c5a3c, 'khaki', 4, 'grey'), lines: [
+  { seat: 27, name: 'Walt', look: look(0x8c5a3c, 'khaki', 4, 'grey'), lines: [
     'In my day we delivered the goob in a paper bag. Uphill.',
     'Freezer runs at minus forty. The goob likes it. I do not.',
   ] },
@@ -86,8 +128,8 @@ export function createCast(ctx, props) {
       'Somebody keeps labeling their yogurt "NOT GOOB". Suspicious.',
     ] },
     {
-      name: 'Stan', x: 5.5, y: y2, z: 6.3, mode: 'route',
-      route: [{ x: 5.5, z: 6.3 }, { x: 16.6, z: 6.3 }, { x: 16.6, z: 11.9 }, { x: 5.8, z: 11.9 }],
+      name: 'Stan', x: 5.5, y: y2, z: 6.6, mode: 'route',
+      route: [{ x: 5.5, z: 6.6 }, { x: 16.6, z: 6.6 }, { x: 16.6, z: 11.9 }, { x: 5.8, z: 11.9 }],
       look: look(0x6e7fa0, 'khaki', 0, 'grey'), lines: [
         "Ten thousand steps a day. I'm at nine thousand nine hundred. Laps.",
       ],
@@ -121,6 +163,7 @@ export function createCast(ctx, props) {
   ];
 
   const all = defs.map((d) => new NPC(ctx, d));
+  addNameplates(ctx, props);
   return {
     all,
     boss: all[0],
@@ -135,6 +178,78 @@ export function createCast(ctx, props) {
       separate(all, dt);
     },
   };
+}
+
+// ---------- Nameplates ----------
+
+const PLATE = { bg: '#262424', fg: '#e8dcb4' };                // brass text on black
+const CHAMP_PLATE = { bg: '#d9b03a', fg: '#241a00' };          // gold, for you
+const DESK_TOP = 0.76;
+
+// Put a desk nameplate on every desk that belongs to someone, a gold one and a
+// small trophy on yours, and plates on Dale's desk and the reception counter.
+function addNameplates(ctx, props) {
+  const floorY = 4;
+  const owners = [
+    ...DESK_WORKERS.map((w) => [w.seat, w.name]),
+    ...Object.entries(AWAY_DESKS).map(([name, seat]) => [seat, name]),
+  ];
+  for (const [seat, name] of owners) deskPlate(ctx, props.desks[seat], floorY, name.toUpperCase(), PLATE);
+
+  const mine = props.desks[PLAYER_SEAT];
+  deskPlate(ctx, mine, floorY, PLAYER_NAME.toUpperCase(), CHAMP_PLATE, { w: 0.44, h: 0.1 });
+  trophy(ctx, mine, floorY);
+
+  // Dale's plate faces visitors across the desk, not his own chair.
+  deskPlate(ctx, props.managerDesk, floorY, 'DALE · MANAGER', PLATE, { w: 0.5, lz: -0.34, back: true });
+
+  // Rhonda's sits on the reception counter, facing the front door.
+  const reception = new THREE.Group();
+  reception.position.set(20.0, 0.9, 6.12);
+  reception.rotation.y = Math.PI;
+  ctx.scene.add(reception);
+  plate(ctx, reception, 0, 0, 'RHONDA · RECEPTION', PLATE, { w: 0.52 });
+}
+
+// A group at the desk, turned so local +z points at the desk's chair side.
+function deskFrame(ctx, seat, floorY) {
+  const g = new THREE.Group();
+  g.position.set(seat.deskX, floorY + DESK_TOP, seat.deskZ);
+  g.rotation.y = (seat.rot & 3) * (Math.PI / 2);
+  ctx.scene.add(g);
+  return g;
+}
+
+function deskPlate(ctx, seat, floorY, text, style, { w = 0.38, h = 0.09, lz = 0.34, back = false } = {}) {
+  const g = deskFrame(ctx, seat, floorY);
+  plate(ctx, g, 0.5, lz, text, style, { w, h, back });
+}
+
+// A small wedge block with the name on the side facing local +z (or -z).
+function plate(ctx, parent, lx, lz, text, style, { w = 0.38, h = 0.09, back = false } = {}) {
+  const block = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, h + 0.02, 0.04), ctx.materials.get('plastic'));
+  block.position.set(lx, (h + 0.02) / 2, lz);
+  parent.add(block);
+  const label = sign(ctx.scene, text, 0, 0, 0, 'n', { w, h, ...style });
+  parent.add(label); // moves it from the scene into the desk's frame
+  label.position.set(lx, (h + 0.02) / 2, lz + (back ? -0.021 : 0.021));
+  label.rotation.y = back ? Math.PI : 0;
+}
+
+// A little gold "World's Okayest Employee" trophy by your monitor.
+function trophy(ctx, seat, floorY) {
+  const g = deskFrame(ctx, seat, floorY);
+  const gold = ctx.materials.get('trophy');
+  const dark = ctx.materials.get('plastic');
+  const part = (geo, mat, y) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(-0.58, y, -0.05);
+    g.add(m);
+  };
+  part(new THREE.BoxGeometry(0.1, 0.035, 0.1), dark, 0.0175);
+  part(new THREE.CylinderGeometry(0.012, 0.018, 0.06, 8), gold, 0.065);
+  part(new THREE.CylinderGeometry(0.048, 0.022, 0.07, 10), gold, 0.13);
+  part(new THREE.BoxGeometry(0.13, 0.015, 0.015), gold, 0.14);
 }
 
 // Infected crowding the same spot get nudged apart.

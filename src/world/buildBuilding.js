@@ -19,16 +19,20 @@ export function buildBuilding(baseCtx) {
   const ctx = { ...baseCtx, builder: b };
   const doors = [];
   const fp = BUILDING.footprint;
+  const annex = BUILDING.annex;
 
   scene.add(new THREE.AmbientLight(0xd8dcff, 1.6));
 
   // Outside ground, with the building's footprint cut out so it never sits
   // just under the floors (near-coplanar surfaces flicker).
-  for (const r of rectMinus({ x0: -60, z0: -60, x1: 96, z1: 84 }, [fp])) b.plane(r.x0, r.z0, r.x1, r.z1, -0.02, 'asphalt');
+  for (const r of rectMinus({ x0: -60, z0: -60, x1: 96, z1: 84 }, [fp, annex])) b.plane(r.x0, r.z0, r.x1, r.z1, -0.02, 'asphalt');
 
   // Structural slabs: colliders only, since every room draws its own floor.
   // Upper slabs get a visible underside for where you can see them from below.
   b.box(fp.x0, -0.3, fp.z0, fp.x1, 0, fp.z1, null);
+  b.box(annex.x0, -0.3, annex.z0, annex.x1, 0, annex.z1, null);
+  // The annex's own flat roof
+  b.box(annex.x0 - 0.1, annex.roofY, annex.z0 - 0.1, annex.x1, annex.roofY + 0.3, annex.z1 + 0.1, 'concrete');
   for (const floor of BUILDING.floors) {
     if (!floor.slab) continue;
     for (const r of rectMinus(floor.slab, floor.voids)) {

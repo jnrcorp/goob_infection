@@ -8,13 +8,16 @@ import { createCast } from './npc/cast.js';
 import { Player } from './player/player.js';
 import { Viewmodel } from './player/viewmodel.js';
 import { Vacuum } from './player/vacuum.js';
+import { Antidote } from './player/antidote.js';
 import { GoobGraph } from './goob/goobGraph.js';
 import { GoobSystem } from './goob/goobSystem.js';
 import { Navigation } from './npc/navigation.js';
 import { Spill } from './story/spill.js';
 import { Chapter1 } from './story/chapter1.js';
 import { Input } from './core/input.js';
-import { DIFFICULTIES, settings, saveSettings, difficulty } from './core/settings.js';
+import { DIFFICULTIES, VOLUMES, settings, saveSettings, difficulty } from './core/settings.js';
+import { startAudio, setVolume, setMuted, setListener, setLoops, sfx } from './core/sound.js';
+import { saveGame, loadGame, clearSave } from './core/save.js';
 import { Hud } from './ui/hud.js';
 import { Dialogue } from './ui/dialogue.js';
 import { ScreenFx } from './ui/screenFx.js';
@@ -68,11 +71,14 @@ const goob = new GoobSystem(scene, goobGraph, collision);
 // them), and see through each other and past open door panels.
 const sightIgnore = new Set([...peopleColliders, ...world.doors.map((d) => d.openCollider)]);
 const vacuum = new Vacuum({ viewmodel, hud, scene, collision, sightIgnore });
+const antidote = new Antidote({ viewmodel, hud, scene, collision, sightIgnore });
 const spill = new Spill({ scene, materials, player, camera, viewmodel, goob, fx, hud, world, cast });
 const chapter = new Chapter1({
-  ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph: goobGraph, vacuum, spill,
-  onEnd: endChapter, onBreach: suitBreached,
+  ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph: goobGraph, vacuum, antidote, spill,
+  sightIgnore, onEnd: endChapter, onBreach: suitBreached,
 });
+// Every checkpoint is also the autosave.
+chapter.onCheckpoint = (checkpoint) => saveGame(checkpoint);
 cast.setEnv({
   player,
   nav: new Navigation(goobGraph),
@@ -80,13 +86,17 @@ cast.setEnv({
   moveIgnore: new Set(peopleColliders),
   sightIgnore,
   isHostile: () => chapter.hostile,
-  isNoisy: () => vacuum.noisy > 0,
+  isNoisy: () => vacuum.noisy > 0 || antidote.spraying,
   attackers: () => cast.all.filter((n) => n.brain && (n.brain.state === 'windup' || n.brain.state === 'recover')).length,
-  onHit: (npc) => { if (!params.has('peaceful')) chapter.hurtPlayer(npc); },
+  onHit: (npc) => {
+    if (params.has('report')) console.log(`[report] hit by ${npc.name} at ${npc.pos.x.toFixed(2)}, ${npc.pos.z.toFixed(2)}`);
+    if (!params.has('peaceful')) chapter.hurtPlayer(npc);
+  },
   canOpenDoors: () => difficulty().infectedOpenDoors,
   openDoorsNear: (npc) => world.openDoorsNear(npc),
 });
 let gameTime = 0;
+let lastStep = 0; // footstep counter for sounds
 
 // ---------- Menus ----------
 // 'title' | 'playing' | 'paused' | 'ended' | 'quit'. Gameplay runs while the pointer is locked.
@@ -99,11 +109,14 @@ function showScreen(name) {
 
 function goToTitle() {
   state = 'title';
+  // Continue picks up from the autosave, if there is one.
+  document.getElementById('menu-continue').hidden = !loadGame();
   showScreen('title');
 }
 
 function endChapter({ title, text, hint } = {}) {
   state = 'ended';
+  clearSave(); // the chapter is finished; nothing to continue
   if (document.pointerLockElement) document.exitPointerLock();
   document.getElementById('tbc-heading').textContent = title ?? 'To be continued';
   document.getElementById('tbc-text').textContent = text ?? '';
@@ -128,9 +141,26 @@ input.onLockChange = (locked) => {
   }
 };
 
+// Capture the mouse to start playing (or, when testing with ?nolock, just go).
+function beginPlay() {
+  if (noLock) {
+    state = 'playing';
+    showScreen(null);
+  } else {
+    input.lock();
+  }
+}
+
 document.getElementById('menu-play').addEventListener('click', () => {
+  clearSave();
   chapter.start();
-  input.lock();
+  beginPlay();
+});
+document.getElementById('menu-continue').addEventListener('click', () => {
+  const saved = loadGame();
+  chapter.start();
+  if (saved) chapter.restoreCheckpoint(saved);
+  beginPlay();
 });
 document.getElementById('pause-resume').addEventListener('click', () => input.lock());
 
@@ -148,6 +178,29 @@ difficultyButton.addEventListener('click', () => {
   showDifficulty();
 });
 showDifficulty();
+
+// Volume button: steps through 0–100%.
+const volumeButton = document.getElementById('menu-volume');
+function showVolume() {
+  volumeButton.textContent = `Volume: ${Math.round(settings.volume * 100)}%`;
+  setVolume(settings.volume);
+}
+volumeButton.addEventListener('click', () => {
+  const i = VOLUMES.findIndex((v) => Math.abs(v - settings.volume) < 0.01);
+  settings.volume = VOLUMES[(i + 1) % VOLUMES.length];
+  saveSettings();
+  showVolume();
+});
+showVolume();
+
+// Any menu button starts the audio (browsers need a click first) and blips.
+for (const button of document.querySelectorAll('.menu button')) {
+  button.addEventListener('click', () => {
+    startAudio();
+    setVolume(settings.volume);
+    sfx.ui();
+  });
+}
 document.getElementById('ready-play').addEventListener('click', () => input.lock());
 document.getElementById('breach-retry').addEventListener('click', () => {
   chapter.restoreCheckpoint();
@@ -192,14 +245,17 @@ window.addEventListener('keydown', (e) => {
 
 // ---------- Debug ----------
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
-// 1 toggles vertex wobble, 2 toggles dithering, G removes all goob.
+// 1 toggles vertex wobble, 2 toggles dithering, G removes all goob,
+// K cures everyone (during the cure objective).
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
-//   ?stage=NAME     skip ahead: TO_LOCKERS, TO_FREEZER, GET_VACUUM or CLEANUP
+//   ?stage=NAME     skip ahead: TO_LOCKERS, TO_FREEZER, GET_VACUUM, CLEANUP, SECURE,
+//                   LOCK_FREEZER, GET_ANTIDOTE or CURE
 //   ?goobspots      show every spot goob can spread to
 //   ?peaceful       infected still chase but their hits do nothing (for testing)
 //   ?report=Name    after the simulation, log open doors and where Name is
+//   ?npcat=Name,x,y,z   place a coworker (testing)
 //   ?difficulty=hard   play on a difficulty without changing the saved setting
 //   ?at=x,y,z,yaw,pitch   start at a position (angles in degrees)
 //   ?sim=seconds    fast-forward the game at load
@@ -221,11 +277,33 @@ if (at?.length >= 3 && at.every(Number.isFinite)) {
   player.pitch = THREE.MathUtils.degToRad(at[4] ?? 0);
   player.updateCamera();
 }
+// ?npcat=Name,x,y,z: put a coworker somewhere (testing).
+const npcAt = params.get('npcat')?.split(',');
+if (npcAt) {
+  const npc = cast.all.find((n) => n.name === npcAt[0]);
+  if (npc) {
+    npc.pos.set(Number(npcAt[1]), Number(npcAt[2]), Number(npcAt[3]));
+    npc.home.copy(npc.pos);
+    npc.path = null;
+  }
+}
+// ?car=1: start with the (working) elevator car on that floor (testing).
+if (params.has('car') && !world.elevator.jammed) {
+  const e = world.elevator;
+  e.current = e.target = Number(params.get('car'));
+  e.carY = e.floors[e.current];
+  e.syncCar();
+}
+// ?binat=N,x,y,z: put biohazard bin N somewhere (testing).
+const binAt = params.get('binat')?.split(',').map(Number);
+if (binAt) chapter.hauler.place(chapter.hauler.bins[binAt[0]], binAt[1], binAt[2], binAt[3]);
+// ?grab=N: start pushing biohazard bin N (with ?stage=SECURE).
+if (params.has('grab') && chapter.state === 'SECURE') chapter.hauler.grab(chapter.hauler.bins[Number(params.get('grab'))]);
 if (params.has('shot')) {
   state = 'playing';
   showScreen(null);
 } else {
-  showScreen('title');
+  goToTitle();
 }
 if (params.has('goobspots')) {
   const positions = goobGraph.nodes.flatMap((n) => [n.pos.x, n.pos.y + 0.1, n.pos.z]);
@@ -252,8 +330,14 @@ if (params.has('goobspots')) {
   const clearances = goobGraph.nodes.map((n) => n.clearance).sort((a, b) => a - b);
   console.log(`[goobspots] ${doorLinks} links pass through doors; spot clearance min ${clearances[0].toFixed(2)} m, median ${clearances[clearances.length >> 1].toFixed(2)} m`);
   const nav = new Navigation(goobGraph);
-  const route = nav.path(nav.nearest(new THREE.Vector3(8.15, 4, 10.7)), nav.nearest(new THREE.Vector3(30, 0, 20.5)));
-  console.log(`[goobspots] walking route from your desk to the freezer door: ${route ? `${route.length} steps via ${route.filter((p) => p.y > 0.3 && p.y < 3.7).length} on the stairs` : 'NONE'}`);
+  const route = nav.path(nav.nearest(new THREE.Vector3(8.15, 4, 10.7)), nav.nearest(new THREE.Vector3(30, 0, 20.5)), true);
+  console.log(`[goobspots] walking route (doors open) from your desk to the freezer door: ${route ? `${route.length} steps via ${route.filter((p) => p.y > 0.3 && p.y < 3.7).length} on the stairs` : 'NONE'}`);
+  const probe = params.get('goobspots').split(',').map(Number);
+  if (probe.length === 3) {
+    for (const n of goobGraph.nodes.filter((m) => m.pos.distanceTo(new THREE.Vector3(...probe)) < 2.5)) {
+      console.log(`[goobspots] spot ${n.kind} (${n.pos.x.toFixed(2)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(2)}) links: ${n.links.map((m) => `(${m.pos.x.toFixed(1)},${m.pos.z.toFixed(1)})`).join(' ')}`);
+    }
+  }
   for (const g of groups.slice(1)) console.log(`[goobspots] separate group at ${g.slice(0, 3).map((n) => `${n.kind}(${n.pos.x.toFixed(1)},${n.pos.y.toFixed(1)},${n.pos.z.toFixed(1)})`).join(' ')}`);
 }
 
@@ -303,7 +387,11 @@ async function runStartupSimulation() {
   if (params.has('report')) {
     const npc = cast.all.find((n) => n.name === params.get('report'));
     const open = world.doors.filter((d) => d.isOpen).map((d) => d.label);
-    console.log(`[report] open doors: ${open.join(', ') || 'none'}`);
+    console.log(`[report] open doors: ${open.join(', ') || 'none'}; suit ${Math.ceil(player.suit)}%`);
+    const bins = chapter.hauler.bins.map((b, i) => `${i}: y ${b.group.position.y.toFixed(2)}`).join(', ');
+    console.log(`[report] bins ${bins}; elevator car at y ${world.elevator.carY.toFixed(2)}`);
+    const walking = cast.all.filter((n) => n.mode === 'returning');
+    console.log(`[report] cured: ${cast.all.filter((n) => n.cured).length}, still walking home: ${walking.map((n) => `${n.name} (${n.pos.x.toFixed(1)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(1)})`).join(', ') || 'none'}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
   }
   // ?click=id1,id2 clicks buttons by id (for testing menus).
@@ -323,6 +411,29 @@ runStartupSimulation().then(() => {
     input.endFrame();
   });
 });
+
+// Loops follow what's happening; footsteps follow the walk bob; infected moan
+// every so often (more often while chasing).
+function updateAudio(dt) {
+  setListener(camera.position.x, camera.position.y, camera.position.z, player.yaw);
+  setLoops({
+    hum: chapter.outbreak ? 0.6 : 1,
+    vacuum: vacuum.sucking ? 1 : 0,
+    spray: antidote.spraying ? 1 : 0,
+    breath: player.suited ? 1 : 0,
+  });
+  const stepIndex = Math.floor(player.bob / Math.PI);
+  if (stepIndex !== lastStep && player.grounded) sfx.step(player.pos);
+  lastStep = stepIndex;
+  for (const npc of cast.all) {
+    if (!npc.infected) continue;
+    npc.moanIn = (npc.moanIn ?? Math.random() * 6) - dt;
+    if (npc.moanIn > 0) continue;
+    const chasing = npc.brain?.state === 'chase';
+    npc.moanIn = chasing ? 2.5 + Math.random() * 2.5 : 6 + Math.random() * 7;
+    sfx.moan(npc.pos, 0.8 + (npc.name.charCodeAt(0) % 5) * 0.1);
+  }
+}
 
 function step(dt) {
   const active = input.locked || noLock;
@@ -347,6 +458,9 @@ function step(dt) {
     goob.blobs.clear();
     hud.toast('Debug: all goob removed', 1.5);
   }
+  if (active && debug && input.wasPressed('KeyK') && chapter.state === 'CURE') {
+    for (const npc of cast.all) if (npc.infected) chapter.cureNpc(npc);
+  }
 
   // The world only runs while playing; menus and the pause screen freeze it.
   // The world runs at the chapter's time scale (slow motion in the spill);
@@ -360,10 +474,15 @@ function step(dt) {
     cast.update(worldDt, player);
     goob.update(worldDt, gameTime);
     camera.updateMatrixWorld();
-    vacuum.update(dt, input, controlling, camera, player, goob, cast.all);
-    chapter.update(dt);
+    // No vacuuming or spraying with your hands full of bin.
+    const handsFree = controlling && !chapter.hauler.carrying;
+    vacuum.update(dt, input, handsFree, camera, player, goob, cast.all);
+    antidote.update(dt, input, handsFree, camera, cast.all, vacuum.nozzleWorld);
+    chapter.update(dt, input, controlling);
     fx.update(dt);
+    updateAudio(dt);
   }
+  setMuted(state !== 'playing');
   interactions.update(input, player, controlling);
 
   hud.setLocation(world.locationAt(player.pos));

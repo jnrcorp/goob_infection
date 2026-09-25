@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sfx } from '../core/sound.js';
 
 // Tuning for hostile infected coworkers.
 export const INFECTED = {
@@ -23,7 +24,7 @@ export const INFECTED = {
 const EYE = 1.55;
 
 // Behavior of one infected coworker:
-// dazed → wander → chase → windup → recover → chase ...; a vacuum blast stuns
+// dazed â†’ wander â†’ chase â†’ windup â†’ recover â†’ chase ...; a vacuum blast stuns
 // them from any state; losing you sends them to where they last saw you.
 export class InfectedBrain {
   constructor(npc, env) {
@@ -95,10 +96,11 @@ export class InfectedBrain {
             break;
           }
         }
-        if (sameLevel && dist < INFECTED.attackRange && env.isHostile()) {
+        if (sameLevel && dist < INFECTED.attackRange && env.isHostile() && this.canReachPlayer()) {
           if (env.attackers() < INFECTED.maxAttackers) {
             this.state = 'windup';
             this.timer = INFECTED.windup;
+            sfx.lunge(npc.pos);
           } else {
             this.facePlayer(dt); // waiting for a turn to lunge
           }
@@ -116,7 +118,7 @@ export class InfectedBrain {
         if (this.timer <= 0) {
           const p = env.player.pos;
           const dist = Math.hypot(p.x - npc.pos.x, p.z - npc.pos.z);
-          if (dist < INFECTED.hitRange && Math.abs(p.y - npc.pos.y) < 1) env.onHit(npc);
+          if (dist < INFECTED.hitRange && Math.abs(p.y - npc.pos.y) < 1 && this.canReachPlayer()) env.onHit(npc);
           this.state = 'recover';
           this.timer = INFECTED.recover;
         }
@@ -181,6 +183,20 @@ export class InfectedBrain {
     const to = new THREE.Vector3(p.x, env.player.eyeY, p.z);
     const dir = to.clone().sub(from);
     const d = dir.length();
+    dir.divideScalar(d);
+    return env.collision.raycast(from, dir, d, env.sightIgnore) >= d;
+  }
+
+  // Nothing solid between their chest and yours (a shut door, a wall), so a
+  // lunge can actually land.
+  canReachPlayer() {
+    const { npc, env } = this;
+    const p = env.player.pos;
+    const from = new THREE.Vector3(npc.pos.x, npc.pos.y + 1.2, npc.pos.z);
+    const to = new THREE.Vector3(p.x, p.y + 1.2, p.z);
+    const dir = to.clone().sub(from);
+    const d = dir.length();
+    if (d < 1e-3) return true;
     dir.divideScalar(d);
     return env.collision.raycast(from, dir, d, env.sightIgnore) >= d;
   }

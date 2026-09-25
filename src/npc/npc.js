@@ -50,6 +50,7 @@ export class NPC {
     this.onArrive = null;
     this.talking = false;
     this.talkable = true;
+    this.cured = false;
     this.speed = WALK_SPEED;
     this.brain = null;
     this.person.action = null;
@@ -102,8 +103,8 @@ export class NPC {
     }
     const ground = this.collision.groundAt(p.x, p.z, p.y, 0.15, STEP, ignore);
     if (ground > -Infinity) p.y = ground;
-    // Hard difficulty: infected shove doors open as they reach them.
-    if (this.infected && this.env.canOpenDoors?.()) this.env.openDoorsNear?.(this);
+    // Cured people open doors normally; infected only on Hard, by shoving.
+    if (this.cured || (this.infected && this.env.canOpenDoors?.())) this.env.openDoorsNear?.(this);
   }
 
   escape(b) {
@@ -140,6 +141,34 @@ export class NPC {
 
   get infected() {
     return this.mode === 'infected';
+  }
+
+  // The antidote worked: back to normal, with some post-goob things to say.
+  // They walk back to their usual spot (their desk, the break room, the
+  // dock...) and pick up their normal routine: typing, sitting, laps.
+  cure(lines) {
+    this.mode = 'returning';
+    this.cured = true;
+    this.brain = null;
+    this.talkable = true;
+    this.speed = WALK_SPEED;
+    this.stuckFor = 0;
+    this.person.action = null;
+    this.person.setInfected(false);
+    this.lines = [...lines];
+    this.lineIndex = 0;
+
+    const d = this.def;
+    const home = new THREE.Vector3(d.x, d.y, d.z);
+    const nav = this.env.nav;
+    const route = nav.path(nav.nearest(this.pos), nav.nearest(home), true) ?? [];
+    this.walkPath([...route, home], () => {
+      this.pos.set(d.x, d.y, d.z);
+      this.yaw = d.yaw ?? this.yaw;
+      this.mode = d.mode ?? 'stand';
+      this.routeIndex = 0;
+      this.pause = 0;
+    });
   }
 
   // Pick a nearby spot with a clear straight line to it.
@@ -202,8 +231,25 @@ export class NPC {
           this.arrive(targets);
         } else if (!this.blockedBy(player, dx, dz)) {
           const step = Math.min(dist, this.speed * dt);
-          this.pos.x += (dx / dist) * step;
-          this.pos.z += (dz / dist) * step;
+          if (this.cured) {
+            // After the outbreak people walk with collision (and open doors).
+            // Caught on a corner for a while: skip to the waypoint.
+            const before = this.pos.clone();
+            this.move((dx / dist) * step, (dz / dist) * step);
+            if (this.pos.distanceTo(before) < step * 0.3) {
+              this.stuckFor += dt;
+              if (this.stuckFor > 1.5) {
+                this.pos.set(t.x, this.pos.y, t.z);
+                this.move(0, 0);
+                this.stuckFor = 0;
+              }
+            } else {
+              this.stuckFor = 0;
+            }
+          } else {
+            this.pos.x += (dx / dist) * step;
+            this.pos.z += (dz / dist) * step;
+          }
           this.turnTowards(Math.atan2(dx, dz), dt);
           moving = true;
         }

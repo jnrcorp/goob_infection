@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sfx } from '../core/sound.js';
 
 // The slow-motion spill, seen in first person:
 //   you turn toward the freezer door holding the canister; it slips; time
@@ -107,6 +108,7 @@ export class Spill {
     this.player.lookTarget = point.clone().setY(point.y + 0.2);
     this.player.shakeFor(1.2);
     this.fx.flash('#6cff4a', 0.8);
+    sfx.smash();
 
     // Glass and steel shards.
     const glass = this.materials.get('glass');
@@ -156,8 +158,10 @@ export class Spill {
       if (u < 1) continue;
       g.landed = true;
       g.mesh.visible = false;
+      sfx.squelch(g.to);
       if (g.hitsHank) {
         this.hank.infect();
+        sfx.moan(this.hank.pos, 0.9);
         this.goob.splat(new THREE.Vector3(this.hank.pos.x, 0, this.hank.pos.z), 1.2, 1.5, 1);
       } else {
         this.goob.splat(g.to, 1.4, 2.5, 2);

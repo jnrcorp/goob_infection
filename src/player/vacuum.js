@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sfx } from '../core/sound.js';
 
 export const VACUUM = {
   capacity: 30,      // liters in the tank
@@ -104,6 +105,7 @@ export class Vacuum {
 
   // Knock back and stun every infected in the blast cone that the nozzle can see.
   blow(origin, forward, targets) {
+    sfx.blast();
     this.cooldown = VACUUM.blowCooldown;
     this.noisy = 1;
     const cosCone = Math.cos(THREE.MathUtils.degToRad(VACUUM.blowDegrees));

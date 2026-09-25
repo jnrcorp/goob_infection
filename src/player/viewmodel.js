@@ -28,6 +28,20 @@ export class Viewmodel {
     box(this.vacuum, 0.07, 0.07, 0.34, 'rubber', -0.05, -0.02, -0.36);
     this.nozzle = box(this.vacuum, 0.14, 0.09, 0.12, 'rubber', -0.07, -0.03, -0.58);
     this.nozzleGlow = box(this.vacuum, 0.1, 0.05, 0.01, 'goob', -0.07, -0.03, -0.645);
+    // Antidote sprayer clipped to the left side of the vacuum (hidden until found).
+    this.sprayer = new THREE.Group();
+    // Sits on top of the vacuum body, toward the far side, so it stays small
+    // on screen and doesn't cover the view.
+    const sprayCan = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 10), materials.get('lightBlue'));
+    sprayCan.rotation.x = Math.PI / 2;
+    sprayCan.position.set(0.05, 0.215, 0.02);
+    this.sprayer.add(sprayCan);
+    box(this.sprayer, 0.025, 0.025, 0.16, 'steel', 0.05, 0.215, -0.16);
+    this.sprayGlow = box(this.sprayer, 0.03, 0.03, 0.01, 'lightBlue', 0.05, 0.215, -0.245);
+    this.sprayGlow.visible = false;
+    this.sprayer.visible = false;
+    this.vacuum.add(this.sprayer);
+
     this.vacuum.position.set(0.3, -0.3, -0.72);
     this.vacuum.rotation.y = 0.12;
     this.vacuum.scale.setScalar(0.72);

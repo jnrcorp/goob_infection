@@ -137,6 +137,18 @@ export function bench(b, x0, z0, x1, z1, y = 0) {
   b.box(x0, y, z0, x1, y + 0.47, z1, null);
 }
 
+// Infirmary bed: metal frame, white mattress, pillow at the -z end.
+export function bed(b, x0, z0, x1, z1, y = 0) {
+  for (const [cx, cz] of [[x0, z0], [x1 - 0.05, z0], [x0, z1 - 0.05], [x1 - 0.05, z1 - 0.05]]) {
+    b.box(cx, y, cz, cx + 0.05, y + 0.45, cz + 0.05, 'metal', NC);
+  }
+  b.box(x0, y + 0.4, z0, x1, y + 0.47, z1, 'metal', NC);
+  b.box(x0 + 0.03, y + 0.47, z0 + 0.03, x1 - 0.03, y + 0.6, z1 - 0.03, 'fridge', NC);
+  b.box(x0 + 0.15, y + 0.6, z0 + 0.08, x1 - 0.15, y + 0.7, z0 + 0.45, 'counter', NC);
+  b.box(x0, y, z0 - 0.04, x1, y + 1.0, z0, 'metal', NC); // headboard
+  b.box(x0, y, z0 - 0.04, x1, y + 0.7, z1, null);
+}
+
 // Row of toilet stalls. Local: back wall at z = 0, stalls open toward +z.
 export function stallRow(b, x, z, rot, count, y = 0) {
   const p = placer(b, x, z, rot, y);

@@ -30,6 +30,7 @@ export class Player {
     this.spawnPoint = null;
     this.suited = false;
     this.suit = 100; // hazard suit integrity, percent
+    this.speedScale = 1; // slower while pushing a bin
     this.shake = 0;
     // When set ({ x, y, z }), the camera turns smoothly to look at this point.
     this.lookTarget = null;
@@ -78,7 +79,7 @@ export class Player {
     const len = Math.hypot(wx, wz);
     if (len > 1) { wx /= len; wz /= len; }
     const running = input.down('ShiftLeft') || input.down('ShiftRight');
-    const speed = running ? RUN : WALK;
+    const speed = (running ? RUN : WALK) * this.speedScale;
     const k = 1 - Math.exp(-(this.grounded ? 14 : 3) * dt);
     this.vel.x += (wx * speed - this.vel.x) * k;
     this.vel.z += (wz * speed - this.vel.z) * k;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createGoobMaterial, goobTime } from './goobMaterial.js';
+import { sfx } from '../core/sound.js';
 
 // Tuning. Volumes are liters.
 export const GOOB = {
@@ -157,6 +158,7 @@ export class GoobSystem {
       if (Math.random() < dt * 25) this.emitParticle(center, particleTarget);
       if (blob.volume <= 0.02) {
         this.blobs.delete(id);
+        sfx.squelch(center);
         for (let i = 0; i < 6; i++) this.emitParticle(center, particleTarget);
       }
     }

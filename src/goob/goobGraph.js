@@ -75,6 +75,17 @@ export class GoobGraph {
       }
     }
 
+    // A spot on each side of every doorway, so rooms always connect through
+    // their doors however the grid happens to line up.
+    for (const door of world.doors) {
+      const y = door.pivot.position.y;
+      for (const side of [-0.5, 0.5]) {
+        const x = door.axis === 'z' ? door.x + side : door.x;
+        const z = door.axis === 'x' ? door.z + side : door.z;
+        if (!this.blocked(x, y, z)) floorNodes.push(this.addNode(x, y, z));
+      }
+    }
+
     // Up the stairs
     const s = BUILDING.stairs;
     const ramp = this.collision.ramps[0];
