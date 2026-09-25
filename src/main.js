@@ -105,7 +105,7 @@ function goToTitle() {
 function endChapter({ title, text, hint } = {}) {
   state = 'ended';
   if (document.pointerLockElement) document.exitPointerLock();
-  document.getElementById('tbc-title').textContent = title ?? 'To be continued';
+  document.getElementById('tbc-heading').textContent = title ?? 'To be continued';
   document.getElementById('tbc-text').textContent = text ?? '';
   document.getElementById('tbc-hint').textContent = hint ?? '';
   showScreen('tbc');
@@ -308,7 +308,8 @@ async function runStartupSimulation() {
   }
   // ?click=id1,id2 clicks buttons by id (for testing menus).
   for (const id of (params.get('click') ?? '').split(',').filter(Boolean)) {
-    document.getElementById(id)?.click();
+    // Click the button itself, like a player would.
+    document.querySelector(`button#${id}`)?.click();
     console.log(`[click] ${id} -> state ${state}, visible screen: ${Object.keys(screens).find((k) => !screens[k].hidden) ?? 'none'}`);
     await simulate(0.2);
   }
