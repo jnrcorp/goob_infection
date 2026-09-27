@@ -15,6 +15,9 @@ const SHOE = 0.06; // THIGH + SHIN + SHOE = HIP
 const SEAT_HIP = 0.5;
 const SHOULDER_Y = HIP + 0.52;
 const NECK_Y = HIP + 0.64;
+const SHOULDER_X = 0.19;
+const UPPER = 0.3;  // shoulder to elbow
+const FORE = 0.3;   // elbow to fingertips
 
 const GOOB_COLOR = 0x4cd62e;
 const INFECTED_SKIN = 0x86b262;
@@ -175,7 +178,7 @@ export class Person {
     // Arms: shoulder cap, sleeves, mitten hands with a thumb.
     this.arms = [-1, 1].map((side) => {
       const shoulder = new THREE.Group();
-      shoulder.position.set(side * 0.19, SHOULDER_Y, 0);
+      shoulder.position.set(side * SHOULDER_X, SHOULDER_Y, 0);
       const upper = new Parts();
       upper.add(sphere(0.056), cloth);
       upper.add(limb(0.06, 0.31, 0.052), cloth);
@@ -258,6 +261,33 @@ export class Person {
     this.t = rand(4) * 10;
     this.walkPhase = 0;
     this.blinkIn = 1 + rand(5) * 3;
+    // Free space (meters from the body's center) in front and to each side,
+    // kept up to date by the NPC. Arms are pulled in to fit (see fitArms).
+    this.room = { front: Infinity, left: Infinity, right: Infinity };
+  }
+
+  // Pull the arms in so the hands stay on this side of nearby walls: reaching
+  // arms swing down toward the body and bend at the elbow; arms flung out to
+  // the side come in.
+  fitArms() {
+    const room = this.room;
+    const margin = 0.06; // keep hands this far off the wall
+    for (const arm of this.arms) {
+      const sh = arm.shoulder.rotation;
+      const el = arm.elbow.rotation;
+      // Forward: rotation.x < 0 swings the arm forward.
+      const front = () => UPPER * Math.sin(Math.max(0, Math.min(Math.PI / 2, -sh.x)))
+        + FORE * Math.sin(Math.max(0, Math.min(Math.PI / 2, -(sh.x + el.x))));
+      for (let i = 0; i < 8 && front() > room.front - margin; i++) {
+        sh.x *= 0.8;
+        el.x = Math.max(-2.2, Math.min(el.x, -0.6) * 1.15);
+      }
+      // Sideways: rotation.z swings the arm out (away from the body) on its side.
+      const out = arm.side * sh.z;
+      const sideRoom = arm.side > 0 ? room.right : room.left;
+      const reach = () => SHOULDER_X + (UPPER + FORE) * Math.sin(Math.max(0, Math.min(Math.PI / 2, arm.side * sh.z)));
+      if (out > 0) for (let i = 0; i < 8 && reach() > sideRoom - margin; i++) sh.z *= 0.75;
+    }
   }
 
   addHair(parts, hairMat, style, rand) {
@@ -435,5 +465,7 @@ export class Person {
     if (this.talking) mouthOpen = 1 + Math.abs(Math.sin(t * 11)) * 2.8;
     else if (this.infected) mouthOpen = 2.6 + Math.sin(t * 1.3) * 0.6;
     this.mouth.scale.y = mouthOpen;
+
+    this.fitArms();
   }
 }

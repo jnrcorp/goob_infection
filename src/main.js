@@ -172,6 +172,9 @@ cast.setEnv({
     if (params.has('report')) console.log(`[report] hit by ${npc.name} at ${npc.pos.x.toFixed(2)}, ${npc.pos.z.toFixed(2)}`);
     if (!params.has('peaceful')) chapter.hurtPlayer(npc);
   },
+  // Everyone stands still while Dale's on the intercom (after the freezer
+  // is locked).
+  hold: () => chapter.state === 'DALE_CALL',
   canOpenDoors: () => difficulty().infectedOpenDoors,
   canAttack: () => difficulty().infectedAttack,
   openDoorsNear: (npc) => world.openDoorsNear(npc),
@@ -386,7 +389,7 @@ window.addEventListener('keydown', (e) => {
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
 // V cycles the graphics preset (for comparing), G removes all goob,
 // K cures everyone (during the cure objective), L marks every file as found,
-// I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
+// P saves a checkpoint now (autosave), I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
@@ -417,12 +420,26 @@ if (at?.length >= 3 && at.every(Number.isFinite)) {
   player.pitch = THREE.MathUtils.degToRad(at[4] ?? 0);
   player.updateCamera();
 }
-// ?npcat=Name,x,y,z: put a coworker somewhere (testing).
+// ?npcat=Name,x,y,z[,yawDegrees]: put a coworker somewhere, facing that way
+// (0 = +z) (testing).
 const npcAt = params.get('npcat')?.split(',');
 if (npcAt) {
   const npc = cast.all.find((n) => n.name === npcAt[0]);
   if (npc) {
     npc.pos.set(Number(npcAt[1]), Number(npcAt[2]), Number(npcAt[3]));
+    npc.home.copy(npc.pos);
+    npc.path = null;
+    if (npcAt[4] !== undefined) npc.yaw = THREE.MathUtils.degToRad(Number(npcAt[4]));
+    // ?npcfreeze: they stay put (to look at a pose).
+    if (params.has('npcfreeze')) npc.frozen = true;
+  }
+}
+// ?crowd=N,x,y,z: put N coworkers on exactly the same spot (testing that
+// they push apart).
+const crowd = params.get('crowd')?.split(',').map(Number);
+if (crowd) {
+  for (const npc of cast.all.filter((n) => !n.seated).slice(0, crowd[0])) {
+    npc.pos.set(crowd[1], crowd[2], crowd[3]);
     npc.home.copy(npc.pos);
     npc.path = null;
   }
@@ -549,6 +566,15 @@ async function runStartupSimulation() {
     console.log(`[report] goob volume by area: ${JSON.stringify(byFloor)}`);
     const walking = cast.all.filter((n) => n.mode === 'returning');
     console.log(`[report] cured: ${cast.all.filter((n) => n.cured).length}, still walking home: ${walking.map((n) => `${n.name} (${n.pos.x.toFixed(1)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(1)})`).join(', ') || 'none'}`);
+    // The closest two people standing on the same floor (should never overlap).
+    let closest = null;
+    for (const a of cast.all) for (const b of cast.all) {
+      if (a === b || Math.abs(a.pos.y - b.pos.y) > 1 || (a.seated && b.seated)) continue;
+      const d = Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z);
+      if (!closest || d < closest.d) closest = { d, a: a.name, b: b.name };
+    }
+    console.log(`[report] everyone: ${cast.all.map((n) => `${n.name}@${n.pos.x.toFixed(2)},${n.pos.z.toFixed(2)}`).join(' ')}`);
+    if (closest) console.log(`[report] closest two people: ${closest.a} and ${closest.b}, ${closest.d.toFixed(2)} m apart`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
   }
@@ -558,6 +584,9 @@ async function runStartupSimulation() {
     document.querySelector(`button#${id}`)?.click();
     console.log(`[click] ${id} -> state ${state}, visible screen: ${Object.keys(screens).find((k) => !screens[k].hidden) ?? 'none'}`);
     await simulate(0.2);
+  }
+  if (params.has('click') && params.has('report')) {
+    console.log(`[report] after clicks, open doors: ${world.doors.filter((d) => d.isOpen).map((d) => d.label).join(', ') || 'none'}`);
   }
 }
 
@@ -628,6 +657,10 @@ function step(dt) {
     if (vacuum.infinite) vacuum.empty();
     hud.toast(vacuum.infinite ? 'Debug: infinite vacuum tank' : 'Debug: normal vacuum tank', 1.5);
   }
+  if (active && debug && input.wasPressed('KeyP') && chapter.outbreak) {
+    chapter.saveCheckpoint();
+    hud.toast('Debug: checkpoint saved', 1.5);
+  }
   if (active && debug && input.wasPressed('KeyL')) {
     for (const f of chapter.files) f.found = true;
     updateFilesButton();
@@ -651,7 +684,6 @@ function step(dt) {
     gameTime += worldDt;
     dialogue.update(dt, input);
     player.update(dt, input, controlling);
-    world.outbreak = chapter.outbreak;
     world.update(worldDt, player);
     cast.update(worldDt, player);
     goob.update(worldDt, gameTime);

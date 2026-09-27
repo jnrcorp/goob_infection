@@ -222,7 +222,7 @@ export function createCast(ctx, props) {
     },
     update(dt, player) {
       for (const npc of all) npc.update(dt, player);
-      separate(all, dt);
+      separate(all);
     },
   };
 }
@@ -302,22 +302,41 @@ function trophy(ctx, seat) {
   part(new THREE.BoxGeometry(0.13, 0.015, 0.015), gold, 0.14);
 }
 
-// Infected crowding the same spot get nudged apart.
-const PERSONAL_SPACE = 0.55;
-function separate(npcs, dt) {
-  for (let i = 0; i < npcs.length; i++) {
-    const a = npcs[i];
-    if (!a.infected) continue;
-    for (let j = i + 1; j < npcs.length; j++) {
-      const b = npcs[j];
-      if (!b.infected || Math.abs(a.pos.y - b.pos.y) > 1) continue;
-      const dx = b.pos.x - a.pos.x;
-      const dz = b.pos.z - a.pos.z;
-      const d = Math.hypot(dx, dz);
-      if (d >= PERSONAL_SPACE || d < 1e-4) continue;
-      const push = Math.min((PERSONAL_SPACE - d) * 0.5, 1.5 * dt);
-      a.move((-dx / d) * push, (-dz / d) * push);
-      b.move((dx / d) * push, (dz / d) * push);
+// Nobody walks through anybody: people standing or walking keep a body's
+// width apart (0.6 m, shoulder to shoulder). Overlaps are pushed apart
+// completely each frame, a few passes so crowds settle; walls still stop
+// them (move() collides). Someone seated stays put and only the other one
+// moves.
+const PERSONAL_SPACE = 0.6;
+const SEPARATE_PASSES = 3;
+function separate(npcs) {
+  const moved = new Set();
+  for (let pass = 0; pass < SEPARATE_PASSES; pass++) {
+    let any = false;
+    for (let i = 0; i < npcs.length; i++) {
+      const a = npcs[i];
+      for (let j = i + 1; j < npcs.length; j++) {
+        const b = npcs[j];
+        if (a.seated && b.seated) continue;
+        if (Math.abs(a.pos.y - b.pos.y) > 1) continue;
+        const dx = b.pos.x - a.pos.x;
+        const dz = b.pos.z - a.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d >= PERSONAL_SPACE) continue;
+        const overlap = PERSONAL_SPACE - d;
+        // Exactly on top of each other: split in a direction that depends on
+        // the pair, so a whole stack fans out instead of lining up.
+        const angle = (i * 2.399 + j * 1.3) % (Math.PI * 2);
+        const nx = d > 1e-4 ? dx / d : Math.cos(angle);
+        const nz = d > 1e-4 ? dz / d : Math.sin(angle);
+        const shareA = a.seated ? 0 : b.seated ? 1 : 0.5;
+        const shareB = 1 - shareA;
+        if (shareA) { a.move(-nx * overlap * shareA, -nz * overlap * shareA); moved.add(a); }
+        if (shareB) { b.move(nx * overlap * shareB, nz * overlap * shareB); moved.add(b); }
+        any = true;
+      }
     }
+    if (!any) break;
   }
+  for (const npc of moved) npc.syncBody();
 }

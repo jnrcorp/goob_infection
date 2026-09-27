@@ -41,6 +41,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `K` cures everyone (during the cure objective, to test the ending).
   - `R` (while pushing a biohazard bin) sends it straight to the secure freezer.
   - `I` toggles an infinite vacuum tank (it never fills, so you never have to empty it).
+  - `P` saves a checkpoint (and the autosave) right now, once the outbreak has started.
   - `L` marks every file as found (during the investigation, it sends Victoria to the boardroom).
 - URL options:
   - `?debug` starts with the readout on.

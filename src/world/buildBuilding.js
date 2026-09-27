@@ -11,6 +11,9 @@ const WALL_T = 0.2;
 const FIXTURE_SPACING = 3.5;
 const LIGHT_SPACING = 6.5;
 const LIGHT = { color: 0xfff1d8, intensity: 9, range: 10, decay: 1.2 };
+// Scales every room light (including rooms with their own intensity).
+const LIGHT_BRIGHTNESS = 0.75;
+const LIGHT_DROP = 1; // meters below the ceiling fixture that each light sits
 const CEILING_TILE = 0.6; // ceiling grid (see the ceiling surface): fixtures line up with it
 const SEAM_OVERLAP = 0.01; // floor/ceiling pieces overlap by this much
 const CASING = 0.07;       // door and window frame width
@@ -29,10 +32,7 @@ const FILL = {
 };
 
 // Afternoon sun from the south-west (the parking lot side), through the windows.
-const SUN = { color: 0xfff0d8, intensity: 2.4, direction: [-0.55, 0.65, -0.52], center: [18, 0, 8], extent: 46 };
-
-// After the spill, the lights in these rooms flicker.
-const FLICKER_ROOMS = new Set(['dock', 'freezer']);
+const SUN = { color: 0xfff0d8, intensity: 1.9, direction: [-0.55, 0.65, -0.52], center: [18, 0, 8], extent: 46 };
 
 const tmpColor = new THREE.Color();
 
@@ -163,12 +163,9 @@ export function buildBuilding(baseCtx) {
         if (Math.hypot(npc.pos.x - d.x, npc.pos.z - d.z) < 0.9) d.openFrom(npc.pos);
       }
     },
-    // After the spill (set from main): some lights flicker.
-    outbreak: false,
     // 'none' | 'sun' | 'all' (the quality preset's shadows). Without shadows
     // the sun would shine through walls, so on Low it only lights the outdoors.
     shadows: 'none',
-    time: 0,
 
     setShadows(mode, renderer) {
       this.shadows = mode;
@@ -187,11 +184,10 @@ export function buildBuilding(baseCtx) {
     },
 
     update(dt, player) {
-      this.time += dt;
       for (const d of doors) d.update(dt, player);
       elevator.update(dt, player);
       props.canister.goob.rotation.y += dt * 0.6;
-      lights.update(player.pos, this.outbreak ? FLICKER_ROOMS : null, this.time);
+      lights.update(player.pos);
 
       const area = this.areaAt(player.pos);
       const target = FILL[area] ?? FILL['1F'];
@@ -364,11 +360,11 @@ function addLights(spots, room, rects, y) {
   }
   for (const [x, z] of points) {
     spots.push({
-      room: room.id,
-      phase: Math.random() * 100,
-      pos: new THREE.Vector3(x, y - 0.3, z),
+      // A meter below the fixture: right under the ceiling, the light made a
+      // glaring hot spot on the tiles above you.
+      pos: new THREE.Vector3(x, y - LIGHT_DROP, z),
       color: new THREE.Color(room.lightColor ?? LIGHT.color),
-      intensity: room.lightIntensity ?? LIGHT.intensity,
+      intensity: (room.lightIntensity ?? LIGHT.intensity) * LIGHT_BRIGHTNESS,
       range: room.lightRange ?? LIGHT.range,
     });
   }
@@ -407,8 +403,7 @@ class LightPool {
     this.lights.forEach((light, i) => { light.visible = i < n; });
   }
 
-  // flicker: room ids whose lights flicker (after the spill), or null.
-  update(pos, flicker, time) {
+  update(pos) {
     // Lights on other floors count as further away: they're behind slabs.
     for (const s of this.spots) {
       s.score = Math.hypot(s.pos.x - pos.x, s.pos.z - pos.z) + Math.abs(s.pos.y - pos.y) * 2.5;
@@ -423,7 +418,7 @@ class LightPool {
       light.position.copy(s.pos);
       light.color.copy(s.color);
       const fade = Math.min(1, Math.max(0, (cutoff - s.score) / POOL_FADE));
-      light.intensity = s.intensity * fade * (flicker?.has(s.room) ? flickerLevel(time, s.phase) : 1);
+      light.intensity = s.intensity * fade;
       light.distance = s.range;
       light.shadow.camera.far = s.range;
     });
@@ -449,15 +444,6 @@ function buildStairs(b, collision, f) {
   collision.addRamp({
     minX: f.x0, maxX: f.x1, minZ: f.z0, maxZ: f.z1, yLow: f.yLow, yHigh: f.yHigh, rises: f.rises, offset: rise / 2,
   });
-}
-
-// A failing fluorescent tube: mostly on, with a slight hum and every few
-// seconds a burst of stutters.
-function flickerLevel(time, phase) {
-  const t = time + phase;
-  const burst = Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1.3);
-  if (burst > 0.7 && Math.sin(t * 31) * Math.sin(t * 17.3) > 0.1) return 0.12;
-  return 0.92 + Math.sin(t * 50) * 0.04;
 }
 
 // Sky dome: a vertical gradient that follows the player (seen outdoors and

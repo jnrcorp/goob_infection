@@ -8,6 +8,11 @@ const STEP = 0.45;
 const RADIUS = 0.25;
 const HEIGHT = 1.75;
 
+const ROOM_CHECK = 0.1;  // seconds between measuring the room around them
+const ROOM_RANGE = 1.2;  // meters: further than any arm reaches
+const tmpOrigin = new THREE.Vector3();
+const tmpDir = new THREE.Vector3();
+
 const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 // A coworker: a Person plus simple behavior (sit, stand, patrol a route,
@@ -215,8 +220,10 @@ export class NPC {
 
   update(dt, player) {
     let moving = false;
-    const targets = this.brain ? null : this.path ?? (this.mode === 'route' ? this.def.route : null);
-    if (this.brain) moving = this.brain.update(dt);
+    // frozen: a test option; hold: a story moment where everyone waits.
+    const still = this.frozen || !!this.env?.hold?.();
+    const targets = still ? null : this.brain ? null : this.path ?? (this.mode === 'route' ? this.def.route : null);
+    if (this.brain && !still) moving = this.brain.update(dt);
 
     if (targets && !this.talking) {
       if (this.pause > 0) {
@@ -264,16 +271,45 @@ export class NPC {
       else this.turnTowards(toPlayer, dt);
     }
 
+    // How much room there is around them, so arms don't reach through walls.
+    this.roomCheckIn = (this.roomCheckIn ?? Math.random() * ROOM_CHECK) - dt;
+    if (this.roomCheckIn <= 0) {
+      this.roomCheckIn = ROOM_CHECK;
+      this.measureRoom();
+    }
+
     person.pose = moving ? 'walk' : this.seated ? this.mode : 'stand';
     person.talking = this.talking;
-    person.root.position.copy(this.pos);
-    person.root.rotation.y = this.yaw;
     person.update(dt, this.brain?.state === 'chase' ? INFECTED.chaseSpeed : this.speed);
+    this.syncBody();
+  }
 
+  // Model and collider follow pos and yaw (also after being pushed apart
+  // from someone; see separate() in cast.js).
+  syncBody() {
+    this.person.root.position.copy(this.pos);
+    this.person.root.rotation.y = this.yaw;
     const c = this.collider;
     c.minX = this.pos.x - RADIUS; c.maxX = this.pos.x + RADIUS;
     c.minZ = this.pos.z - RADIUS; c.maxZ = this.pos.z + RADIUS;
     c.minY = this.pos.y; c.maxY = this.pos.y + HEIGHT;
+  }
+
+  // Distance to the nearest wall or shut door in front and to each side, at
+  // arm height (for the Person's reach; see Person.fitArms). Seated people
+  // are at their desks, well away from walls.
+  measureRoom() {
+    const room = this.person.room;
+    if (this.seated) {
+      room.front = room.left = room.right = Infinity;
+      return;
+    }
+    const origin = tmpOrigin.set(this.pos.x, this.pos.y + 1.2, this.pos.z);
+    const s = Math.sin(this.yaw);
+    const c = Math.cos(this.yaw);
+    room.front = this.collision.raycastWalls(origin, tmpDir.set(s, 0, c), ROOM_RANGE);
+    room.right = this.collision.raycastWalls(origin, tmpDir.set(c, 0, -s), ROOM_RANGE);
+    room.left = this.collision.raycastWalls(origin, tmpDir.set(-c, 0, s), ROOM_RANGE);
   }
 
   arrive(targets) {

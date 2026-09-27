@@ -462,6 +462,105 @@ html, body {
   font-size: clamp(32px, 5.8vw, 58px);
 }
 
+/* "Goob" on the title screen is warped and creepy: the letters melt (an
+   SVG distortion filter, #goob-warp in index.html) and each one sways on its
+   own slow, uneven cycle, so the word never quite settles. */
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.goob-letters {
+  display: inline-block;
+  filter: url(#goob-warp);
+}
+
+.goob-letters span {
+  display: inline-block;
+  transform-origin: 50% 90%;
+  animation: goob-sway calc(3.7s + var(--i) * 1.3s) ease-in-out calc(var(--i) * -2.1s) infinite;
+}
+
+@keyframes goob-sway {
+  0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
+  23% { transform: translateY(0.03em) skewX(-5deg) scaleY(1.05); }
+  51% { transform: translateY(-0.02em) skewX(3deg) scaleY(0.97); }
+  78% { transform: translateY(0.04em) skewX(-2deg) scaleY(1.07); }
+}
+
+/* "Goob" on the title screen drips: each drip hangs from the bottom of the
+   letters, slowly stretches, lets a droplet fall, and pulls back up.
+   --x: where along the word, --len: how far it stretches, --t: cycle
+   length, --d: offset so they don't move in step. */
+.goob-word {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.22em; /* room for the drips above the next line */
+}
+
+.goob-word .drip {
+  position: absolute;
+  left: var(--x);
+  top: 0.84em;
+  width: 0.11em;
+  margin-left: -0.055em;
+  height: var(--len);
+  border-radius: 0 0 0.05em 0.05em;
+  background: currentColor;
+  transform-origin: top;
+  animation: drip-stretch var(--t) ease-in-out var(--d) infinite;
+}
+
+/* The rounded bulb at the end of the drip. */
+.goob-word .drip::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.05em;
+  width: 0.17em;
+  height: 0.17em;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+/* The droplet that falls off. */
+.goob-word .drip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 0.12em;
+  height: 0.15em;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: currentColor;
+  opacity: 0;
+  transform: translateX(-50%);
+  animation: drip-fall var(--t) ease-in var(--d) infinite;
+}
+
+@keyframes drip-stretch {
+  0% { transform: scaleY(0.25); }
+  55% { transform: scaleY(1); }
+  62% { transform: scaleY(0.85); }
+  100% { transform: scaleY(0.25); }
+}
+
+@keyframes drip-fall {
+  0%, 54% { opacity: 0; transform: translate(-50%, 0); }
+  56% { opacity: 1; transform: translate(-50%, 0); }
+  70% { opacity: 1; transform: translate(-50%, 0.3em); }
+  73%, 100% { opacity: 0; transform: translate(-50%, 0.36em); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goob-letters span { animation: none; }
+  .goob-word .drip { animation: none; transform: scaleY(0.7); }
+  .goob-word .drip::after { animation: none; }
+}
+
 .screen p {
   margin: 0;
   font-size: 19px;

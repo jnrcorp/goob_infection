@@ -690,6 +690,8 @@ export class Chapter1 {
       npcs: this.cast.all.map((n) => ({ x: n.pos.x, y: n.pos.y, z: n.pos.z, yaw: n.yaw, cured: n.cured })),
       tapes: this.tapes.map((t) => t.taken),
       files: this.files.map((f) => f.found),
+      // Each door: 0 shut, or which way it swung open (1 / -1).
+      doors: this.world.doors.map((d) => Math.sign(d.target)),
     };
     if (autosave) this.onCheckpoint?.(this.checkpoint);
   }
@@ -724,6 +726,13 @@ export class Chapter1 {
     else this.antidoteProp.setVisible(true);
     this.goob.restore(c.goob);
     this.hauler.restore(c.bins);
+    // Doors as they were (older saves didn't record them: leave them be).
+    c.doors?.forEach((open, i) => {
+      const door = this.world.doors[i];
+      if (!door) return;
+      if (open) door.setOpen(open);
+      else door.reset();
+    });
     if (c.freezerSealed) this.sealFreezer();
     this.world.elevator.jam();
     if (!c.elevatorJammed) this.world.elevator.repair();

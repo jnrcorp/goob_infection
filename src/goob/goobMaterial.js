@@ -5,8 +5,8 @@ export const goobTime = { value: 0 };
 
 // Green goob that wobbles slowly in place. The rim glows where you see it
 // edge-on (a cheap stand-in for light scattering inside it), and the surface
-// normals churn slowly so the shading crawls. The wobble phase comes from each instance's position,
-// so neighboring blobs don't pulse in sync.
+// normals churn slowly so the shading crawls. The wobble phase comes from
+// each instance's position, so neighboring blobs don't pulse in sync.
 export function createGoobMaterial({ color = 0x2cb814, emissive = 0x0c4205, amplitude = 0.07 } = {}) {
   const material = new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: 1 });
   material.onBeforeCompile = (shader) => {

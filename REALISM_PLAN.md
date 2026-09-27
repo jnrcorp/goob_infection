@@ -77,7 +77,7 @@ The preset is picked automatically the first time from a short frame-time probe.
 - **Ceiling lights** become recessed troffers: an emissive panel, plus the `LightPool` of the nearest real lights. Wall-washing comes from light placement rather than a flat ambient.
 - **Ambient fill.** Replace the flat ambient with a `HemisphereLight` (cool ceiling, warm floor bounce), tuned per floor. B1 is dimmer and cooler; 3F is warmer and executive.
 - **Daylight** through windows from a directional sun (shadowed at Medium and High). Where daylight hits, it lights the floor and furniture.
-- **After the spill**, a few lights near the freezer flicker and the goob adds a green glow. It stays bright overall, so the tone doesn't shift to horror.
+- **After the spill**, the goob adds a green glow. It stays bright overall, so the tone doesn't shift to horror.
 - Remove the fog, or keep it only very faint outdoors for distance.
 
 ## Coworkers (refined stylized)
@@ -125,7 +125,7 @@ After each milestone: a performance check at Low on an integrated-GPU-class sett
 1. **Renderer and presets: done.** PS1 code removed. There's a Graphics button (Auto/Low/Medium/High) on the title and pause screens; Auto steps down under 40 fps. `?quality=` forces a preset.
 2. **Textures: done**, generated on the GPU at load (instant, so no worker or cache needed). Roughness is packed into the color texture's alpha. Everything is capped at 1024 (no 2048).
 3. **Lighting: mostly done.**
-   - Done: troffers on the ceiling grid, per-area hemisphere fill, afternoon sun with shadows (Medium/High), a sky dome, flickering dock/freezer lights after the spill, and lights that fade at the edge of the pool.
+   - Done: troffers on the ceiling grid, per-area hemisphere fill, afternoon sun with shadows (Medium/High) a sky dome, and lights that fade at the edge of the pool.
    - Dropped: ceiling-light shadows (they jumped as lights were reassigned).
 4. **Detail: partly done.**
    - Done: rounded furniture, new office chairs, monitors, keyboards, desk clutter, plants, sofas, door and window frames, facade panels, grass, curbs and cars.
@@ -135,6 +135,7 @@ After each milestone: a performance check at Low on an integrated-GPU-class sett
    - Done: the goob shader (wet clear coat, rim glow, churning highlights), the vacuum and sprayer, the visor and the Inter font.
    - Still to do: the particle upgrade and the FOV setting.
 
+- **Flickering dock/freezer lights: removed.** Their 50 Hz shimmer and cut-outs read as constant flicker.
 - **Reflections: removed.** Glossy PBR highlights and environment reflections made rooms look washed out and flickered as lights changed over; every surface is matte (Lambert, with normal maps) instead.
 - **Ambient occlusion: removed.** GTAO made blocky, shimmering dark patches under desks and tables. The soft contact shadows handle that at every preset.
 
