@@ -48,7 +48,8 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
   - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE`, `CURE` or `INVESTIGATE`. Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
   - `?grab=N` starts you pushing biohazard bin N (with `?stage=SECURE`); `?binat=N,x,y,z` places bin N.
-  - `?car=1` starts with the working elevator car on 2F (0 = 1F).
+  - `?car=2` starts with the working elevator car on 2F (0 = B1, 1 = 1F, 3 = 3F).
+  - `?callto=N` sends the elevator to floor N right away (0 = B1, 1 = 1F, 2 = 2F, 3 = 3F).
   - `?filecheck` logs whether each collectible file rests on something or is buried in furniture.
   - `?goobspots` shows every spot goob can spread to, and logs how they connect.
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).

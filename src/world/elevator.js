@@ -93,6 +93,14 @@ export class Elevator {
         use: () => this.request(i),
       });
 
+      // Threshold plate filling the doorway (the wall's thickness) between
+      // the landing floor and the car, so you can't see down the shaft.
+      // A hair above the floor so it doesn't flicker against it.
+      const sill = new THREE.Mesh(new THREE.BoxGeometry(def.doorW + 0.1, 0.2, z0 - (z - 0.12)), materials.get('metal'));
+      sill.position.set(def.doorAt, fy - 0.096, (z - 0.12 + z0) / 2);
+      scene.add(sill);
+      collision.addBox(def.doorAt - hw - 0.05, fy - 0.2, z - 0.12, def.doorAt + hw + 0.05, fy + 0.004, z0);
+
       // Floor display above the doors (every landing shows the same thing).
       const display = new THREE.Mesh(new THREE.PlaneGeometry(DISPLAY_W, DISPLAY_H), this.displayMaterial);
       display.position.set(def.doorAt, fy + 2.31, z - 0.13);
@@ -101,6 +109,27 @@ export class Elevator {
 
       return { left, right, collider, fy };
     });
+
+    // Inside the car: a front wall with a doorway lined up with the landing
+    // doors, car doors that slide with them, and a floor display above.
+    const fz = z0 + 0.03;
+    const wallH = CAR_HEIGHT - 0.1;
+    const leftW = def.doorAt - hw - x0;
+    const rightW = x1 - (def.doorAt + hw);
+    add(new THREE.BoxGeometry(leftW, wallH, 0.03), steel, x0 + leftW / 2, wallH / 2, fz);
+    add(new THREE.BoxGeometry(rightW, wallH, 0.03), steel, x1 - rightW / 2, wallH / 2, fz);
+    add(new THREE.BoxGeometry(def.doorW, wallH - 2.2, 0.03), steel, def.doorAt, 2.2 + (wallH - 2.2) / 2, fz);
+    this.carDoors = {
+      left: add(new THREE.BoxGeometry(hw, 2.2, 0.04), steel, def.doorAt - hw / 2, 1.1, z0 + 0.07),
+      right: add(new THREE.BoxGeometry(hw, 2.2, 0.04), steel, def.doorAt + hw / 2, 1.1, z0 + 0.07),
+    };
+    // Closed car doors block the doorway while the car is between floors.
+    this.carDoorCollider = collision.addBox(def.doorAt - hw, 0, z0 + 0.03, def.doorAt + hw, 2.2, z0 + 0.11);
+    this.carDoorCollider.wall = true;
+    const inside = add(new THREE.PlaneGeometry(DISPLAY_W, DISPLAY_H), this.displayMaterial, def.doorAt, 2.45, fz + 0.02);
+    inside.rotation.y = 0; // faces into the car (+z)
+
+    this.syncCar();
     this.syncDoors();
     this.updateDisplay();
   }
@@ -251,6 +280,10 @@ export class Elevator {
     this.floorCollider.maxY = this.carY;
     this.ceilingCollider.minY = this.carY + CAR_HEIGHT - 0.1;
     this.ceilingCollider.maxY = this.carY + CAR_HEIGHT;
+    if (this.carDoorCollider) {
+      this.carDoorCollider.minY = this.carY;
+      this.carDoorCollider.maxY = this.carY + 2.2;
+    }
   }
 
   syncDoors() {
@@ -263,5 +296,11 @@ export class Elevator {
       // Half-open jammed doors still leave a gap wide enough to squeeze through.
       d.collider.enabled = f < (this.jammed ? 0.5 : 0.85);
     });
+    // The car doors open and close with the landing doors of the floor the
+    // car is at (they're shut while it moves).
+    const f = this.phase === 'moving' ? 0 : this.open[this.current];
+    this.carDoors.left.position.x = this.def.doorAt - hw / 2 - f * travel;
+    this.carDoors.right.position.x = this.def.doorAt + hw / 2 + f * travel;
+    this.carDoorCollider.enabled = f < (this.jammed ? 0.5 : 0.85);
   }
 }

@@ -23,8 +23,6 @@ export const FLYERS = [
   { x: 35.85, y: 1.6, z: 3, facing: 'w', person: 0 },      // loading dock east wall
 ];
 
-// How many files it takes to work out that Victoria is behind it.
-export const FILES_NEEDED = 6;
 
 // Collectible files, found lying around the building. `kind` sets the look:
 // 'folder' (manila), 'paper' (white printout), 'note' (yellow sticky note).
@@ -78,6 +76,9 @@ export const FILES = [
     body: `Next month's rotation:\n\nThe new kid on 2F. The one Dale calls "champ."\nReliable. Keeps to themselves. Nobody would notice for a week.\n\nOrder the gold plaque.\n\n— V`,
   },
 ];
+
+// You have to find every file before you can confront Victoria.
+export const FILES_NEEDED = FILES.length;
 
 // What Victoria says when you confront her, and the two endings.
 export const CONFRONTATION = [

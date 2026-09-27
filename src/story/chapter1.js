@@ -747,9 +747,11 @@ export class Chapter1 {
     });
     this.tapes.forEach((t, i) => { t.taken = c.tapes[i]; });
     this.files.forEach((f, i) => { f.found = !!c.files?.[i]; });
-    if (c.state === 'CONFRONT') this.sendVictoriaToBoardroom();
+    // Saves from when fewer files were needed go back to investigating.
+    const state = c.state === 'CONFRONT' && this.filesFound < FILES_NEEDED ? 'INVESTIGATE' : c.state;
+    if (state === 'CONFRONT') this.sendVictoriaToBoardroom();
     this.outbreak = true;
-    this.setState(c.state, this.objectiveFor(c.state), false);
+    this.setState(state, this.objectiveFor(state), false);
     this.fx.fade(1, 0);
     this.fx.fade(0, 0.8);
     return true;

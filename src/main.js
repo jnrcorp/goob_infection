@@ -344,6 +344,8 @@ if (params.has('car') && !world.elevator.jammed) {
 // ?binat=N,x,y,z: put biohazard bin N somewhere (testing).
 const binAt = params.get('binat')?.split(',').map(Number);
 if (binAt) chapter.hauler.place(chapter.hauler.bins[binAt[0]], binAt[1], binAt[2], binAt[3]);
+// ?callto=N: send the (working) elevator to floor N at load (0 = B1).
+if (params.has('callto')) world.elevator.request(Number(params.get('callto')));
 // ?grab=N: start pushing biohazard bin N (with ?stage=SECURE).
 if (params.has('grab') && chapter.state === 'SECURE') chapter.hauler.grab(chapter.hauler.bins[Number(params.get('grab'))]);
 if (params.has('shot')) {
