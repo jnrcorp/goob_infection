@@ -6,6 +6,7 @@ import { INFECTED } from '../npc/infectedBrain.js';
 import { createDuctTape } from '../world/pickups.js';
 import { BinHauler } from './hauling.js';
 import { sfx } from '../core/sound.js';
+import { difficulty } from '../core/settings.js';
 import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, CHOICES, ENDINGS } from './lore.js';
 import { createFiles, createFlyers } from '../world/loreProps.js';
 
@@ -34,7 +35,18 @@ const FREEZER_LOCKED = 'Hazard suit required beyond this point.';
 const FREEZER_SEALED = 'Locked tight. The goob stays in there.';
 const FREEZER_AREA = { x0: 31, z0: 17, x1: 36, z1: 24 };
 const BRIEFING_RANGE = 2.8;
-const VENT_SEEDS = 6; // of the 1F vents
+// Where goob starts out: most on 1F where it spilled, less the farther you
+// get from it. { area: [spots, volume each] }. Inside it comes out of vents;
+// outside it's puddles on the ground.
+const OUTBREAK_SEEDS = {
+  '1F': [6, 2],
+  'B1': [3, 1.5],
+  '2F': [3, 1.5],
+  '3F': [2, 1],
+  Outside: [2, 1],
+};
+// Top to bottom, for the HUD's by-floor breakdown.
+const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
 const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE']);
 const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'INVESTIGATE'];
@@ -225,6 +237,7 @@ export class Chapter1 {
         tank: this.vacuum.equipped ? this.vacuum.tank : null,
         capacity: VACUUM.capacity,
         cleaned: this.goob.cleanedPercent,
+        breakdown: this.floorBreakdown(),
       });
     }
 
@@ -341,18 +354,47 @@ export class Chapter1 {
   // starts spreading.
   startOutbreak() {
     for (const npc of this.cast.all) if (!npc.infected) npc.infect();
-    // Goob only starts out on 1F (inside the main building); it reaches the
-    // other floors by spreading up and down the stairwell.
-    const vents = this.graph.nodes
-      .filter((n) => n.kind === 'vent' && n.pos.y > -0.5 && n.pos.y < 3.5 && n.pos.x > 0)
-      .sort(() => Math.random() - 0.5);
-    for (const node of vents.slice(0, VENT_SEEDS)) this.goob.spawn(node, 2);
+    // Goob starts on every floor, most of it on 1F (see OUTBREAK_SEEDS).
+    for (const [area, [count, volume]] of Object.entries(OUTBREAK_SEEDS)) {
+      const kind = area === 'Outside' ? 'floor' : 'vent';
+      const spots = this.graph.nodes
+        .filter((n) => n.kind === kind && this.areaOf(n) === area)
+        .sort(() => Math.random() - 0.5);
+      for (const node of spots.slice(0, count)) this.goob.spawn(node, volume);
+    }
     this.world.elevator.jam();
     const car = this.world.elevator.carFloorPoint;
     if (!this.elevatorSpot) this.elevatorSpot = this.graph.addHidingSpot(car.x, car.y, car.z, 'elevator');
     this.goob.spawn(this.elevatorSpot, 1.5);
     this.goob.spreading = true;
     this.outbreak = true;
+  }
+
+  // Which area a goob spot is in (spots don't move, so it's worked out once).
+  areaOf(node) {
+    node.area ??= this.world.areaAt(node.pos);
+    return node.area;
+  }
+
+  // Share of what's left in each area, in percent: goob by volume during the
+  // cleanup, infected coworkers during the cure. Null when the difficulty
+  // doesn't show it, or there's nothing to count.
+  floorBreakdown() {
+    if (!difficulty().floorBreakdown) return null;
+    const totals = Object.fromEntries(AREAS.map((a) => [a, 0]));
+    let title;
+    if (this.state === 'GET_VACUUM' || this.state === 'CLEANUP') {
+      title = 'Goob by floor';
+      for (const blob of this.goob.blobs.values()) totals[this.areaOf(blob.node)] += blob.volume;
+    } else if (this.state === 'CURE') {
+      title = 'Infected by floor';
+      for (const npc of this.cast.all) if (npc.infected) totals[this.world.areaAt(npc.pos)] += 1;
+    } else {
+      return null;
+    }
+    const sum = Object.values(totals).reduce((a, b) => a + b, 0);
+    if (sum <= 0) return null;
+    return { title, rows: AREAS.map((area) => ({ area, percent: (totals[area] / sum) * 100 })) };
   }
 
   // ---------- Cleanup ----------

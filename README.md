@@ -30,7 +30,7 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 
 WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: R sends it straight to the secure freezer, Q lets go. With the antidote: hold F to spray. J opens the files you've found (also on the pause screen); 1 and 2 pick an answer when a conversation offers a choice.
 
-The title screen has Continue (the autosave), Difficulty and Volume. Settings and the autosave are kept in the browser (`localStorage`).
+The title screen has Continue (the autosave), Difficulty and Volume. On Easy and Normal the HUD shows how the remaining goob (during the cleanup) and the infected coworkers (during the cure) are split across B1, 1F, 2F, 3F and outside. Settings and the autosave are kept in the browser (`localStorage`).
 
 ## Debugging
 
@@ -51,7 +51,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Settings an
   - `?goobspots` shows every spot goob can spread to, and logs how they connect.
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
   - `?difficulty=hard` (or `easy`, `normal`) plays on that difficulty without changing your saved choice.
-  - `?report=Hank` logs which doors are open, your suit integrity, and where that coworker is after the simulation, plus who lands each hit.
+  - `?report=Hank` logs which doors are open, your suit integrity, goob volume by area, and where that coworker is after the simulation, plus who lands each hit.
   - `?npcat=Hank,x,y,z` places a coworker (testing).
   - `?sim=seconds` fast-forwards the game at load.
   - `?shot` skips the title screen.

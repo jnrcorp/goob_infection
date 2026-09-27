@@ -130,6 +130,13 @@ export function buildBuilding(baseCtx) {
       return index;
     },
 
+    // The area for per-floor tallies: 'B1', '1F', '2F', '3F', or 'Outside'.
+    areaAt(pos) {
+      const floorIndex = this.floorIndexAt(pos.y);
+      const room = rooms.find((r) => r.floorIndex === floorIndex && r.rects.some((rect) => inRect(rect, pos.x, pos.z)));
+      return room?.outdoor ? 'Outside' : BUILDING.floors[floorIndex].id;
+    },
+
     locationAt(pos) {
       const floorIndex = this.floorIndexAt(pos.y);
       const floorId = BUILDING.floors[floorIndex].id;

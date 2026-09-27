@@ -4,21 +4,24 @@
 export const DIFFICULTIES = {
   easy: {
     label: 'Easy',
-    description: "Infected coworkers follow you around, but they never attack.",
+    description: "Infected coworkers follow you around, but they never attack. The HUD shows how much is left on each floor.",
     infectedOpenDoors: false,
     infectedAttack: false,
+    floorBreakdown: true, // HUD shows where the goob / infected are, by floor
   },
   normal: {
     label: 'Normal',
-    description: "Infected coworkers attack, but can't open doors.",
+    description: "Infected coworkers attack, but can't open doors. The HUD shows how much is left on each floor.",
     infectedOpenDoors: false,
     infectedAttack: true,
+    floorBreakdown: true,
   },
   hard: {
     label: 'Hard',
-    description: 'Infected coworkers attack, and shove doors open to get to you.',
+    description: "Infected coworkers attack and shove doors open, and the HUD won't tell you where they are.",
     infectedOpenDoors: true,
     infectedAttack: true,
+    floorBreakdown: false,
   },
 };
 

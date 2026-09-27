@@ -11,7 +11,7 @@ Based on `GAME_DESIGN.md` and the design Q&A. Chapter 2 is out of scope.
 | Objectives | Boss NPC walks over and briefs you, then an on-screen objective line |
 | Building | 2F open-plan office, stairs + elevator, 1F locker room, loading dock + freezer, break room, bathrooms |
 | Spill cinematic | Stays in first person: slow motion, camera shake, you watch coworkers turn |
-| Spread area | Whole building. Goob starts on 1F and creeps up the stairs and elevator shaft |
+| Spread area | Whole building. Goob starts on every floor, most on 1F and less the farther away (see `OUTBREAK_SEEDS`), then keeps spreading |
 | Spread rule | Each uncleaned puddle keeps growing and budding. Anything you vacuum is gone for good |
 | Spread failure | None. More spread just means more to clean and a harder level |
 | Hiding spots | Vents, under desks, ceilings, bathroom stalls, elevator shaft, and so on |

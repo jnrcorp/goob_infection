@@ -13,7 +13,6 @@ import { GoobGraph } from './goob/goobGraph.js';
 import { GoobSystem } from './goob/goobSystem.js';
 import { Navigation } from './npc/navigation.js';
 import { Spill } from './story/spill.js';
-import { BUILDING } from './world/building.js';
 import { Chapter1 } from './story/chapter1.js';
 import { Input } from './core/input.js';
 import { DIFFICULTIES, VOLUMES, settings, saveSettings, difficulty } from './core/settings.js';
@@ -101,7 +100,6 @@ cast.setEnv({
   openDoorsNear: (npc) => world.openDoorsNear(npc),
 });
 let gameTime = 0;
-const BUILDING_FLOOR_IDS = BUILDING.floors.map((f) => f.id);
 let lastStep = 0; // footstep counter for sounds
 
 // ---------- Menus ----------
@@ -446,10 +444,10 @@ async function runStartupSimulation() {
     console.log(`[report] bins ${bins}; elevator car at y ${world.elevator.carY.toFixed(2)}`);
     const byFloor = {};
     for (const blob of goob.blobs.values()) {
-      const id = BUILDING_FLOOR_IDS[world.floorIndexAt(blob.node.pos.y)];
-      byFloor[id] = (byFloor[id] ?? 0) + 1;
+      const id = chapter.areaOf(blob.node);
+      byFloor[id] = Math.round(((byFloor[id] ?? 0) + blob.volume) * 10) / 10;
     }
-    console.log(`[report] goob blobs by floor: ${JSON.stringify(byFloor)}`);
+    console.log(`[report] goob volume by area: ${JSON.stringify(byFloor)}`);
     const walking = cast.all.filter((n) => n.mode === 'returning');
     console.log(`[report] cured: ${cast.all.filter((n) => n.cured).length}, still walking home: ${walking.map((n) => `${n.name} (${n.pos.x.toFixed(1)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(1)})`).join(', ') || 'none'}`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);

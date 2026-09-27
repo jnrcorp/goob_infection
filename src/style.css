@@ -189,6 +189,39 @@ html, body {
   animation: blink 0.6s steps(2, start) infinite;
 }
 
+#floor-breakdown {
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 64px 110px 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.breakdown-bar {
+  height: 10px;
+  border: 2px solid var(--goob);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.breakdown-bar i {
+  display: block;
+  height: 100%;
+  background: var(--goob);
+}
+
+.breakdown-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-row.clear {
+  opacity: 0.45;
+}
+
 #tank-text,
 #cleaned-text {
   font-variant-numeric: tabular-nums;

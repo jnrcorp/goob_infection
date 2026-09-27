@@ -16,6 +16,9 @@ export class Hud {
       tankFill: document.getElementById('tank-fill'),
       tankText: document.getElementById('tank-text'),
       cleaned: document.getElementById('cleaned-text'),
+      breakdown: document.getElementById('floor-breakdown'),
+      breakdownTitle: document.getElementById('floor-breakdown-title'),
+      breakdownRows: document.getElementById('floor-breakdown-rows'),
     };
     this.cache = {};
     this.toastTime = 0;
@@ -40,7 +43,8 @@ export class Hud {
     const el = this.el;
     el.goob.hidden = !info;
     if (!info) return;
-    const { suit, tank, capacity, cleaned } = info;
+    const { suit, tank, capacity, cleaned, breakdown } = info;
+    this.setBreakdown(breakdown);
     const suitText = `${Math.ceil(suit)}%`;
     if (this.cache.suit !== suitText) {
       this.cache.suit = suitText;
@@ -64,6 +68,34 @@ export class Hud {
       this.cache.cleaned = cleanedText;
       el.cleaned.textContent = cleanedText;
     }
+  }
+
+  // Where what's left is, by floor: { title, rows: [{ area, percent }] } or null.
+  setBreakdown(breakdown) {
+    const el = this.el;
+    const key = breakdown ? `${breakdown.title}|${breakdown.rows.map((r) => Math.round(r.percent)).join(',')}` : '';
+    if (this.cache.breakdown === key) return;
+    this.cache.breakdown = key;
+    el.breakdown.hidden = !breakdown;
+    if (!breakdown) return;
+    el.breakdownTitle.textContent = breakdown.title;
+    el.breakdownRows.replaceChildren(...breakdown.rows.map(({ area, percent }) => {
+      const row = document.createElement('div');
+      row.className = 'breakdown-row';
+      row.classList.toggle('clear', percent < 0.5);
+      const name = document.createElement('span');
+      name.textContent = area;
+      const bar = document.createElement('div');
+      bar.className = 'breakdown-bar';
+      const fill = document.createElement('i');
+      fill.style.width = `${percent}%`;
+      bar.append(fill);
+      const value = document.createElement('span');
+      value.className = 'breakdown-value';
+      value.textContent = `${Math.round(percent)}%`;
+      row.append(name, bar, value);
+      return row;
+    }));
   }
 
   toast(text, seconds = 3) {
