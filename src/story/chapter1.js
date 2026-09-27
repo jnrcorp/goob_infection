@@ -6,6 +6,8 @@ import { INFECTED } from '../npc/infectedBrain.js';
 import { createDuctTape } from '../world/pickups.js';
 import { BinHauler } from './hauling.js';
 import { sfx } from '../core/sound.js';
+import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, CHOICES, ENDINGS } from './lore.js';
+import { createFiles, createFlyers } from '../world/loreProps.js';
 
 // Chapter 1 story flow:
 // INTRO → BRIEFING → TO_LOCKERS → TO_FREEZER → SPILL → GET_VACUUM → CLEANUP
@@ -21,10 +23,12 @@ const OBJECTIVES = {
   GET_VACUUM: 'Grab the containment vacuum beside the freezer door.',
   CLEANUP: 'Vacuum up all the goob. Empty the tank into yellow biohazard bins.',
   LAST_TANK: 'Empty your tank into a biohazard bin.',
-  SECURE: (loaded) => `Wheel the biohazard bins into the secure freezer (${loaded}/${BIN_COUNT}). The elevator works again.`,
+  SECURE: (loaded) => `Put the biohazard bins in the secure freezer (${loaded}/${BIN_COUNT}): grab one with E, press R to send it.`,
   LOCK_FREEZER: 'Lock the secure freezer.',
   GET_ANTIDOTE: 'Get the antidote from the infirmary, next to the elevator on 1F.',
   CURE: (cured, total) => `Cure everyone: hold F to spray the antidote (${cured}/${total} cured).`,
+  INVESTIGATE: (found) => `Something's wrong at Goob Co. Find out where goob really comes from: read the files around the building (${Math.min(found, FILES_NEEDED)}/${FILES_NEEDED}). J shows what you've found.`,
+  CONFRONT: 'Confront Victoria, the CEO, in the 3F boardroom.',
 };
 const FREEZER_LOCKED = 'Hazard suit required beyond this point.';
 const FREEZER_SEALED = 'Locked tight. The goob stays in there.';
@@ -33,7 +37,9 @@ const BRIEFING_RANGE = 2.8;
 const VENT_SEEDS = 6; // of the 1F vents
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
 const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE']);
-const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE'];
+const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'INVESTIGATE'];
+// Where Victoria waits to be confronted: head of the boardroom table.
+const VICTORIA_BOARDROOM = { x: 22.55, y: 8, z: 4 };
 
 const HANK_WATCHING = [
   'Careful carrying that thing. Nice and slow.',
@@ -42,10 +48,10 @@ const HANK_WATCHING = [
 
 export class Chapter1 {
   constructor({
-    ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph, vacuum, antidote, spill,
+    ctx, world, player, cast, hud, dialogue, reader, interactions, fx, goob, graph, vacuum, antidote, spill,
     sightIgnore, onEnd, onBreach,
   }) {
-    Object.assign(this, { world, player, cast, hud, dialogue, fx, goob, graph, vacuum, antidote, spill, onEnd, onBreach });
+    Object.assign(this, { world, player, cast, hud, dialogue, reader, fx, goob, graph, vacuum, antidote, spill, onEnd, onBreach });
     this.outbreak = false;
     this.checkpoint = null;
     this.token = 0;
@@ -100,6 +106,12 @@ export class Chapter1 {
       use: () => this.lockFreezer(),
     };
     antidote.onCure = (npc) => this.cureNpc(npc);
+    this.victoria = cast.all.find((n) => n.name === 'Victoria');
+    this.files = createFiles(ctx, FILES, {
+      canRead: () => !this.busy,
+      onRead: (item) => this.readFile(item),
+    });
+    createFlyers(ctx.scene, FLYERS);
     for (const npc of cast.all) npc.onTalk = (n) => this.talkTo(n);
   }
 
@@ -110,7 +122,7 @@ export class Chapter1 {
 
   // True while the player shouldn't be able to move or interact.
   get inputLocked() {
-    return this.busy || this.dialogue.active;
+    return this.busy || this.dialogue.active || this.reader.active;
   }
 
   // Game speed (slow motion during the spill).
@@ -126,6 +138,7 @@ export class Chapter1 {
     const o = OBJECTIVES[state];
     if (state === 'SECURE') return o(this.hauler.loadedCount);
     if (state === 'CURE') return o(this.curedCount, this.cast.all.length);
+    if (state === 'INVESTIGATE') return o(this.filesFound);
     return o ?? null;
   }
 
@@ -144,6 +157,7 @@ export class Chapter1 {
     this.rack.vacuum.visible = true;
     this.antidoteProp.setVisible(true);
     for (const tape of this.tapes) tape.taken = false;
+    for (const f of this.files) f.found = false;
     this.outbreak = false;
     this.checkpoint = null;
     this.hud.setGoob(null);
@@ -185,6 +199,7 @@ export class Chapter1 {
     if (step >= 5) for (const bin of this.hauler.bins) this.hauler.load(bin);
     if (step >= 6) this.sealFreezer();
     if (step >= 7) this.equipAntidote();
+    if (step >= 8) for (const npc of this.cast.all) npc.cure(CURED_LINES[npc.name] ?? CURED_LINES.default);
     this.setState(state, this.objectiveFor(state), false);
     // Checkpoint for retrying, but not an autosave: skipping ahead shouldn't
     // overwrite a real saved game.
@@ -265,6 +280,10 @@ export class Chapter1 {
   async talkTo(npc) {
     if (npc === this.cast.boss && this.state === 'INTRO') {
       this.startBriefing();
+      return;
+    }
+    if (npc === this.victoria && this.state === 'CONFRONT') {
+      this.confront();
       return;
     }
     if (this.dialogue.active || this.busy) return;
@@ -408,10 +427,17 @@ export class Chapter1 {
   }
 
   lockFreezer() {
-    const p = this.player.pos;
     const a = FREEZER_AREA;
-    if (p.x > a.x0 && p.x < a.x1 && p.z > a.z0 && p.z < a.z1) {
+    const inside = (p) => p.x > a.x0 && p.x < a.x1 && p.z > a.z0 && p.z < a.z1 && p.y > -1 && p.y < 3;
+    if (inside(this.player.pos)) {
       this.hud.toast('Step out of the freezer first.', 2);
+      return;
+    }
+    // Nobody gets locked in with the goob, infected or not.
+    const trapped = this.cast.all.filter((npc) => inside(npc.pos));
+    if (trapped.length) {
+      const who = trapped.length === 1 ? `${trapped[0].name} is` : `${trapped.length} people are`;
+      this.hud.toast(`${who} still in the freezer. Get them out before you lock it.`, 3);
       return;
     }
     this.sealFreezer();
@@ -466,14 +492,63 @@ export class Chapter1 {
     sfx.intercom();
     await this.dialogue.play(DALE_THANKS.map((text) => ({ speaker: 'Dale (intercom)', text })));
     if (token !== this.token) return;
-    this.busy = true;
-    await this.fx.fade(1, 1.5);
+    // Everyone's fine. Except something isn't.
+    this.setState('INVESTIGATE', this.objectiveFor('INVESTIGATE'));
+    this.saveCheckpoint();
+    this.checkInvestigation();
+  }
+
+  // ---------- The truth about goob ----------
+
+  get filesFound() {
+    return this.files.filter((f) => f.found).length;
+  }
+
+  async readFile(item) {
+    item.found = true;
+    sfx.pickup();
+    this.onFileFound?.(item.file);
+    await this.reader.open(item.file);
+    this.hud.toast(`File found (${this.filesFound}/${this.files.length}). Press J to reread your files.`, 2.5);
+    if (this.state === 'INVESTIGATE') this.hud.setObjective(this.objectiveFor('INVESTIGATE'));
+    this.checkInvestigation();
+  }
+
+  // Enough files read after the cure: time to see Victoria.
+  checkInvestigation() {
+    if (this.state !== 'INVESTIGATE' || this.filesFound < FILES_NEEDED) return;
+    this.setState('CONFRONT', OBJECTIVES.CONFRONT);
+    this.hud.toast("It all points to one person. Victoria's waiting in the 3F boardroom.", 4);
+    this.sendVictoriaToBoardroom();
+    this.saveCheckpoint();
+  }
+
+  sendVictoriaToBoardroom() {
+    const v = this.victoria;
+    v.path = null;
+    v.onArrive = null;
+    v.mode = 'stand';
+    v.pos.set(VICTORIA_BOARDROOM.x, VICTORIA_BOARDROOM.y, VICTORIA_BOARDROOM.z);
+    v.yaw = -Math.PI / 2; // facing down the table, toward the door
+  }
+
+  async confront() {
+    const token = this.token;
+    const v = this.victoria;
+    v.talking = true;
+    this.player.lookTarget = v.headPoint;
+    const lines = CONFRONTATION.map((text) => ({ speaker: 'Victoria', text }));
+    const choice = await this.dialogue.play(lines, CHOICES);
     if (token !== this.token) return;
-    this.onEnd?.({
-      title: 'Chapter 1 complete',
-      text: 'The goob is locked away and everyone is cured. The Mars delivery, however, is very late.',
-      hint: 'Thanks for playing! Chapter 2 is on its way.',
-    });
+    const ending = ENDINGS[choice];
+    await this.dialogue.play([{ speaker: 'Victoria', text: ending.victoria }]);
+    if (token !== this.token) return;
+    v.talking = false;
+    this.player.lookTarget = null;
+    this.busy = true;
+    await this.fx.fade(1, 1.8);
+    if (token !== this.token) return;
+    this.onEnd?.({ title: ending.title, text: ending.text, hint: 'Thanks for playing! Chapter 2 is on its way.' });
   }
 
   // ---------- Getting hurt ----------
@@ -527,6 +602,7 @@ export class Chapter1 {
       elevatorJammed: this.world.elevator.jammed,
       npcs: this.cast.all.map((n) => ({ x: n.pos.x, y: n.pos.y, z: n.pos.z, yaw: n.yaw, cured: n.cured })),
       tapes: this.tapes.map((t) => t.taken),
+      files: this.files.map((f) => f.found),
     };
     if (autosave) this.onCheckpoint?.(this.checkpoint);
   }
@@ -582,6 +658,8 @@ export class Chapter1 {
       }
     });
     this.tapes.forEach((t, i) => { t.taken = c.tapes[i]; });
+    this.files.forEach((f, i) => { f.found = !!c.files?.[i]; });
+    if (c.state === 'CONFRONT') this.sendVictoriaToBoardroom();
     this.outbreak = true;
     this.setState(c.state, this.objectiveFor(c.state), false);
     this.fx.fade(1, 0);

@@ -22,13 +22,13 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 - `src/player/`: first-person controller, the held vacuum and antidote sprayer.
 - `src/npc/`: blocky coworker model and animation, NPC behavior, the cast (who's where and what they say), infected AI (`infectedBrain.js`, tuning in `INFECTED`) and pathfinding.
 - `src/goob/`: the goob spot network (`goobGraph.js`), blobs and spreading (`goobSystem.js`, tuning in `GOOB`), bins and the vacuum rack.
-- `src/story/`: chapter 1's story flow (`chapter1.js`), the spill cinematic, and wheeling bins to the freezer.
-- `src/ui/`: HUD, dialogue box, fades and the suit visor.
+- `src/story/`: chapter 1's story flow (`chapter1.js`), the spill cinematic, wheeling bins to the freezer, and the dark lore (`lore.js`: missing-person flyers, the collectible files, Victoria's confrontation and the two endings).
+- `src/ui/`: HUD, dialogue box (with numbered choices), the file reader, fades and the suit visor.
 - `GAME_DESIGN.md`, `PLAN.md`: design and implementation plan.
 
 ## Controls
 
-WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: Q lets go. With the antidote: hold F to spray.
+WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: R sends it straight to the secure freezer, Q lets go. With the antidote: hold F to spray. J opens the files you've found (also on the pause screen); 1 and 2 pick an answer when a conversation offers a choice.
 
 The title screen has Continue (the autosave), Difficulty and Volume. Settings and the autosave are kept in the browser (`localStorage`).
 
@@ -40,12 +40,14 @@ The title screen has Continue (the autosave), Difficulty and Volume. Settings an
   - `2` toggles dithering.
   - `G` removes all goob (to skip the cleanup).
   - `K` cures everyone (during the cure objective, to test the ending).
+  - `L` marks every file as found (during the investigation, it sends Victoria to the boardroom).
 - URL options:
   - `?debug` starts with the readout on.
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
-  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE` or `CURE`. Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
+  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE`, `CURE` or `INVESTIGATE`. Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
   - `?grab=N` starts you pushing biohazard bin N (with `?stage=SECURE`); `?binat=N,x,y,z` places bin N.
   - `?car=1` starts with the working elevator car on 2F (0 = 1F).
+  - `?filecheck` logs whether each collectible file rests on something or is buried in furniture.
   - `?goobspots` shows every spot goob can spread to, and logs how they connect.
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
   - `?difficulty=hard` (or `easy`, `normal`) plays on that difficulty without changing your saved choice.

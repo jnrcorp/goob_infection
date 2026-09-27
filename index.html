@@ -46,7 +46,13 @@
     <div id="dialogue" hidden>
       <div id="dialogue-speaker"></div>
       <p id="dialogue-text"></p>
+      <div id="dialogue-choices" hidden></div>
       <div class="more">[E]</div>
+    </div>
+    <div id="paper" hidden>
+      <h3 id="paper-title"></h3>
+      <p id="paper-body"></p>
+      <div class="paper-close">[E] Put it down · J: all files</div>
     </div>
   </div>
   <div id="flash"></div>
@@ -62,14 +68,30 @@
     </nav>
     <p class="difficulty-note" id="difficulty-note"></p>
     <p class="hint">WASD move · Mouse look · E interact · Shift run · Space jump · Esc pause<br>
-      Vacuum: left mouse suck · right mouse blast · F antidote · Q let go of a bin</p>
+      Vacuum: left mouse suck · right mouse blast · F antidote · R send bin to freezer · Q let go of a bin · J files</p>
   </section>
 
   <section id="pause" class="screen dim-screen" hidden>
     <h2>Paused</h2>
     <nav class="menu" aria-label="Pause menu">
       <button id="pause-resume" type="button">Resume</button>
+      <button id="pause-files" type="button">Files (0/12)</button>
       <button id="pause-title" type="button">Quit to title</button>
+    </nav>
+  </section>
+
+  <section id="files" class="screen dim-screen files-screen" hidden>
+    <h2>Files</h2>
+    <p class="hint" id="files-count"></p>
+    <div class="files-layout">
+      <nav class="menu files-list" id="files-list" aria-label="Found files"></nav>
+      <article class="files-reader" id="files-reader">
+        <h3 id="files-reader-title"></h3>
+        <p id="files-reader-body"></p>
+      </article>
+    </div>
+    <nav class="menu" aria-label="Files">
+      <button id="files-back" type="button">Back to the game</button>
     </nav>
   </section>
 

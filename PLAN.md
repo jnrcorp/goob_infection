@@ -144,6 +144,15 @@ Each milestone ends in something you can play.
 - Goob spreads everywhere, including outside; more vents, two more bins, more duct tape.
 - Lights: a pool of the 24 nearest lights follows you, so the bigger building costs no more to draw.
 
+## Expansion: dark lore (done)
+
+- **The secret**: goob is made from people. "Employee of the Month" winners get "transferred" to the vats in B1; the Mars shipments carry away what's left. Champ is next on the rotation. Creepy, PG-13.
+- **Things you notice**: missing-person flyers for the five transferred employees (Gary, Denise, Phil, Rosa, Ken), taped up around the building and outside.
+- **Collectible files**: 12 papers (folders, printouts, sticky notes) on desks and counters on every floor. E picks one up and reads it; J (or Files on the pause screen) rereads any you've found.
+- **New final objective**: after Dale's thank-you, **INVESTIGATE** (find 6 of the 12 files), then **CONFRONT** Victoria in the 3F boardroom. Her speech ends with a choice (1/2): **expose Goob Co.** or **keep quiet**, each with its own ending card.
+- Found files are saved in checkpoints and the autosave.
+- R sends the bin you're pushing straight to the secure freezer.
+
 ## Still open (answer any time; defaults in brackets)
 
 - ~~Player name and company name~~: you're **Champ** (what Dale calls you), at Goob Co. Every desk has a nameplate; yours is gold, with a trophy.

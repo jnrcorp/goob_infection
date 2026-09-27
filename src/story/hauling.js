@@ -41,7 +41,7 @@ export class BinHauler {
     this.carried = bin;
     bin.collider.enabled = false;
     this.player.speedScale = 0.65;
-    this.hud.toast('Push the bin into the secure freezer. Q lets go.', 3);
+    this.hud.toast('R sends the bin to the secure freezer. Q lets go.', 3);
   }
 
   drop() {
@@ -79,6 +79,11 @@ export class BinHauler {
     if (!bin) return;
     if (active && input.wasPressed('KeyQ')) {
       this.drop();
+      return;
+    }
+    // R: send the bin straight to the freezer, from anywhere.
+    if (active && input.wasPressed('KeyR')) {
+      this.load(bin);
       return;
     }
     // Roll along in front of you, stopping short of walls.

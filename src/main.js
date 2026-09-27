@@ -21,12 +21,14 @@ import { startAudio, setVolume, setMuted, setListener, setLoops, sfx } from './c
 import { saveGame, loadGame, clearSave } from './core/save.js';
 import { Hud } from './ui/hud.js';
 import { Dialogue } from './ui/dialogue.js';
+import { Reader } from './ui/reader.js';
 import { ScreenFx } from './ui/screenFx.js';
 
 const canvas = document.getElementById('game');
 const screens = {
   title: document.getElementById('title'),
   pause: document.getElementById('pause'),
+  files: document.getElementById('files'),
   ready: document.getElementById('ready'),
   breached: document.getElementById('breached'),
   tbc: document.getElementById('tbc'),
@@ -43,6 +45,7 @@ const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 90);
 const input = new Input(canvas);
 const hud = new Hud();
 const dialogue = new Dialogue();
+const reader = new Reader();
 const fx = new ScreenFx();
 const collision = new CollisionWorld();
 const materials = createMaterials(ps1.renderer.capabilities.getMaxAnisotropy());
@@ -75,7 +78,7 @@ const vacuum = new Vacuum({ viewmodel, hud, scene, collision, sightIgnore });
 const antidote = new Antidote({ viewmodel, hud, scene, collision, sightIgnore });
 const spill = new Spill({ scene, materials, player, camera, viewmodel, goob, fx, hud, world, cast });
 const chapter = new Chapter1({
-  ctx, world, player, cast, hud, dialogue, interactions, fx, goob, graph: goobGraph, vacuum, antidote, spill,
+  ctx, world, player, cast, hud, dialogue, reader, interactions, fx, goob, graph: goobGraph, vacuum, antidote, spill,
   sightIgnore, onEnd: endChapter, onBreach: suitBreached,
 });
 // Every checkpoint is also the autosave.
@@ -140,6 +143,7 @@ input.onLockChange = (locked) => {
     showScreen(null);
   } else if (state === 'playing') {
     state = 'paused';
+    updateFilesButton();
     showScreen('pause');
   }
 };
@@ -165,7 +169,45 @@ document.getElementById('menu-continue').addEventListener('click', () => {
   if (saved) chapter.restoreCheckpoint(saved);
   beginPlay();
 });
-document.getElementById('pause-resume').addEventListener('click', () => input.lock());
+document.getElementById('pause-resume').addEventListener('click', () => beginPlay());
+
+// ---------- Files screen (J in game, or from the pause menu) ----------
+function showFiles() {
+  const list = document.getElementById('files-list');
+  const found = chapter.files.filter((f) => f.found);
+  document.getElementById('files-count').textContent = `${found.length} of ${chapter.files.length} found`;
+  list.innerHTML = '';
+  const titleEl = document.getElementById('files-reader-title');
+  const bodyEl = document.getElementById('files-reader-body');
+  const show = (file) => {
+    titleEl.textContent = file.title;
+    bodyEl.textContent = file.body;
+  };
+  if (!found.length) {
+    titleEl.textContent = 'Nothing yet';
+    bodyEl.textContent = 'Files you find lying around the building (folders, printouts, sticky notes) are kept here.';
+  }
+  for (const item of found) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = item.file.title;
+    button.addEventListener('click', () => show(item.file));
+    button.addEventListener('focus', () => show(item.file));
+    list.appendChild(button);
+  }
+  if (found.length) show(found[found.length - 1].file);
+  state = 'files';
+  if (document.pointerLockElement) document.exitPointerLock();
+  showScreen('files');
+}
+
+function updateFilesButton() {
+  const found = chapter.files.filter((f) => f.found).length;
+  document.getElementById('pause-files').textContent = `Files (${found}/${chapter.files.length})`;
+}
+chapter.onFileFound = updateFilesButton;
+document.getElementById('pause-files').addEventListener('click', showFiles);
+document.getElementById('files-back').addEventListener('click', () => beginPlay());
 
 // Difficulty button on the title screen: switches between the options and
 // remembers the choice.
@@ -249,7 +291,7 @@ window.addEventListener('keydown', (e) => {
 // ---------- Debug ----------
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
 // 1 toggles vertex wobble, 2 toggles dithering, G removes all goob,
-// K cures everyone (during the cure objective).
+// K cures everyone (during the cure objective), L marks every file as found.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
@@ -307,6 +349,15 @@ if (params.has('shot')) {
   showScreen(null);
 } else {
   goToTitle();
+}
+// ?filecheck: is every file resting on something, and not buried in furniture?
+if (params.has('filecheck')) {
+  for (const { file } of chapter.files) {
+    const { x, y, z } = file.at;
+    const ground = collision.groundAt(x, z, y + 0.3, 0.02, 0.6);
+    const buried = collision.pointInside(new THREE.Vector3(x, y + 0.02, z));
+    console.log(`[report] file ${file.id}: rests on ${ground.toFixed(2)} (placed at ${y}), ${buried ? 'BURIED' : 'clear'}`);
+  }
 }
 if (params.has('goobspots')) {
   const positions = goobGraph.nodes.flatMap((n) => [n.pos.x, n.pos.y + 0.1, n.pos.z]);
@@ -401,6 +452,7 @@ async function runStartupSimulation() {
     console.log(`[report] goob blobs by floor: ${JSON.stringify(byFloor)}`);
     const walking = cast.all.filter((n) => n.mode === 'returning');
     console.log(`[report] cured: ${cast.all.filter((n) => n.cured).length}, still walking home: ${walking.map((n) => `${n.name} (${n.pos.x.toFixed(1)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(1)})`).join(', ') || 'none'}`);
+    console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
   }
   // ?click=id1,id2 clicks buttons by id (for testing menus).
@@ -470,11 +522,25 @@ function step(dt) {
   if (active && debug && input.wasPressed('KeyK') && chapter.state === 'CURE') {
     for (const npc of cast.all) if (npc.infected) chapter.cureNpc(npc);
   }
+  if (active && debug && input.wasPressed('KeyL')) {
+    for (const f of chapter.files) f.found = true;
+    updateFilesButton();
+    chapter.checkInvestigation();
+    hud.toast('Debug: all files found', 1.5);
+  }
+  // J: your files (not while reading one, or mid-conversation).
+  if (state === 'playing' && active && input.wasPressed('KeyJ') && !dialogue.active) {
+    if (reader.active) reader.close();
+    showFiles();
+  }
+
+  // Reading a file pauses the world (the coworkers wait politely).
+  if (state === 'playing' && reader.active) reader.update(input);
 
   // The world only runs while playing; menus and the pause screen freeze it.
   // The world runs at the chapter's time scale (slow motion in the spill);
   // the story, camera and screen effects run in real time.
-  if (state === 'playing') {
+  if (state === 'playing' && !reader.active) {
     const worldDt = dt * chapter.timeScale;
     gameTime += worldDt;
     dialogue.update(dt, input);
