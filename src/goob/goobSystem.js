@@ -25,6 +25,8 @@ export class GoobSystem {
     this.collision = collision;
     this.blobs = new Map(); // node id -> blob
     this.spreading = false;
+    // Multiplies how fast goob grows and spreads (set per difficulty).
+    this.spreadSpeed = () => 1;
     this.collected = 0;
 
     const geometry = new THREE.IcosahedronGeometry(0.5, 1);
@@ -114,7 +116,7 @@ export class GoobSystem {
 
   update(dt, time) {
     goobTime.value = time;
-    if (this.spreading) this.spread(dt);
+    if (this.spreading) this.spread(dt * this.spreadSpeed());
     this.updateParticles(dt);
     this.draw();
   }
@@ -134,8 +136,8 @@ export class GoobSystem {
     for (const node of newBlobs) this.spawn(node, GOOB.budVolume);
   }
 
-  // Vacuum: pull goob from every blob inside the cone in front of the nozzle
-  // that the nozzle can see. Returns liters removed (at most `limit`).
+  // Vacuum: pull goob from every blob inside the cone in front of the nozzle,
+  // even ones hidden behind furniture (but not behind walls). Returns liters removed (at most `limit`).
   suck(origin, forward, range, cosAngle, rate, dt, limit, particleTarget) {
     let removed = 0;
     const toBlob = this.tmp.t;
@@ -147,8 +149,12 @@ export class GoobSystem {
       if (dist > range + this.radius(blob) || dist < 1e-3) continue;
       toBlob.divideScalar(dist);
       if (toBlob.dot(forward) < cosAngle) continue;
-      // Line of sight; colliders around the blob itself (a desk) don't block.
-      if (this.collision.raycast(origin, toBlob, dist - 0.05, this.graph.passable, center) < dist - 0.05) continue;
+      // The vacuum is strong enough to pull goob out from under desks, from
+      // behind shelves and out of vents, so furniture doesn't block it and
+      // every blob can be reached wherever it spreads. Walls, shut doors and
+      // the ceiling (the floor above) still do.
+      if (center.y > origin.y + 1.5) continue;
+      if (this.collision.raycastWalls(origin, toBlob, dist - 0.05) < dist - 0.05) continue;
 
       const falloff = 1 - 0.5 * Math.min(1, dist / range);
       const take = Math.min(blob.volume, rate * falloff * dt, limit - removed);

@@ -46,6 +46,7 @@ export class Door {
     this.collider = axis === 'x'
       ? collision.addBox(x - w / 2, y, z - 0.05, x + w / 2, y + h, z + 0.05)
       : collision.addBox(x - 0.05, y, z - w / 2, x + 0.05, y + h, z + w / 2);
+    this.collider.wall = true; // a shut door blocks the vacuum like a wall
     this.openCollider = collision.addBox(0, y, 0, 0, y + h, 0);
     this.openCollider.enabled = false;
     this.panelLength = pw;

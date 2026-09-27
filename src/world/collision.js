@@ -55,6 +55,18 @@ export class CollisionWorld {
     return best;
   }
 
+  // Distance along the ray to the nearest enabled wall (or shut door), or
+  // maxT. Furniture doesn't count.
+  raycastWalls(origin, dir, maxT) {
+    let best = maxT;
+    for (const b of this.boxes) {
+      if (!b.enabled || !b.wall) continue;
+      const t = rayBox(origin, dir, b);
+      if (t !== null && t < best) best = t;
+    }
+    return best;
+  }
+
   // Highest walkable surface under a footprint (half-size r) that's at most
   // `step` above height y: box tops and ramps. -Infinity if none.
   groundAt(x, z, y, r, step, ignore = new Set()) {

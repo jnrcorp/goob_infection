@@ -30,7 +30,7 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 
 WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: R sends it straight to the secure freezer, Q lets go. With the antidote: hold F to spray. J opens the files you've found (also on the pause screen); 1 and 2 pick an answer when a conversation offers a choice.
 
-The title screen has Continue (the autosave), Difficulty and Volume. On Easy and Normal the HUD shows how the remaining goob (during the cleanup) and the infected coworkers (during the cure) are split across B1, 1F, 2F, 3F and outside. Settings and the autosave are kept in the browser (`localStorage`).
+The title screen has Continue (the autosave), Difficulty and Volume. Goob spreads at a quarter speed on Easy, 60% on Normal and full speed on Hard (`goobSpread` in `src/core/settings.js`). On Easy and Normal the HUD shows how the remaining goob (during the cleanup) and the infected coworkers (during the cure) are split across B1, 1F, 2F, 3F and outside. Settings and the autosave are kept in the browser (`localStorage`).
 
 ## Debugging
 
@@ -40,6 +40,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. On Easy and
   - `2` toggles dithering.
   - `G` removes all goob (to skip the cleanup).
   - `K` cures everyone (during the cure objective, to test the ending).
+  - `I` toggles an infinite vacuum tank (it never fills, so you never have to empty it).
   - `L` marks every file as found (during the investigation, it sends Victoria to the boardroom).
 - URL options:
   - `?debug` starts with the readout on.

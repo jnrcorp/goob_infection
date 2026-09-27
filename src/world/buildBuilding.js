@@ -166,9 +166,14 @@ function buildWall(ctx, floor, spec, doors) {
   // Wall tops are never seen (floors, ceilings and sills cover them) and would
   // flicker against the floor above, so pieces skip their top face by default.
   const wallOpts = spec.showTop ? {} : { noTop: true };
-  const piece = (s0, s1, yb, yt, m, opts = wallOpts, th = t) => (alongX
-    ? b.box(s0, y0 + yb, c - th, s1, y0 + yt, c + th, m, opts)
-    : b.box(c - th, y0 + yb, s0, c + th, y0 + yt, s1, m, opts));
+  // Colliders are tagged as walls, which the vacuum can't pull goob through.
+  const piece = (s0, s1, yb, yt, m, opts = wallOpts, th = t) => {
+    const collider = alongX
+      ? b.box(s0, y0 + yb, c - th, s1, y0 + yt, c + th, m, opts)
+      : b.box(c - th, y0 + yb, s0, c + th, y0 + yt, s1, m, opts);
+    if (collider) collider.wall = true;
+    return collider;
+  };
 
   const openings = (spec.openings ?? [])
     .map((o) => ({ ...o, s0: o.at - o.w / 2, s1: o.at + o.w / 2 }))

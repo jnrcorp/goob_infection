@@ -4,24 +4,27 @@
 export const DIFFICULTIES = {
   easy: {
     label: 'Easy',
-    description: "Infected coworkers follow you around, but they never attack. The HUD shows how much is left on each floor.",
+    description: "Goob spreads very slowly. Infected coworkers follow you around, but never attack. The HUD shows what's left on each floor.",
     infectedOpenDoors: false,
     infectedAttack: false,
     floorBreakdown: true, // HUD shows where the goob / infected are, by floor
+    goobSpread: 0.25,     // how fast goob grows and spreads (1 = full speed)
   },
   normal: {
     label: 'Normal',
-    description: "Infected coworkers attack, but can't open doors. The HUD shows how much is left on each floor.",
+    description: "Goob spreads slowly. Infected coworkers attack, but can't open doors. The HUD shows what's left on each floor.",
     infectedOpenDoors: false,
     infectedAttack: true,
     floorBreakdown: true,
+    goobSpread: 0.6,
   },
   hard: {
     label: 'Hard',
-    description: "Infected coworkers attack and shove doors open, and the HUD won't tell you where they are.",
+    description: "Goob spreads fast. Infected coworkers attack and shove doors open, and the HUD won't tell you where anything is.",
     infectedOpenDoors: true,
     infectedAttack: true,
     floorBreakdown: false,
+    goobSpread: 1,
   },
 };
 

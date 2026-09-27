@@ -25,7 +25,7 @@ const OBJECTIVES = {
   CLEANUP: 'Vacuum up all the goob. Empty the tank into yellow biohazard bins.',
   LAST_TANK: 'Empty your tank into a biohazard bin.',
   SECURE: (loaded) => `Put the biohazard bins in the secure freezer (${loaded}/${BIN_COUNT}): grab one with E, press R to send it.`,
-  LOCK_FREEZER: 'Lock the secure freezer.',
+  LOCK_FREEZER: 'Close and lock the secure freezer.',
   GET_ANTIDOTE: 'Get the antidote from the infirmary, next to the elevator on 1F.',
   CURE: (cured, total) => `Cure everyone: hold F to spray the antidote (${cured}/${total} cured).`,
   INVESTIGATE: (found) => `Something's wrong at Goob Co. Find out where goob really comes from: read the files around the building (${Math.min(found, FILES_NEEDED)}/${FILES_NEEDED}). J shows what you've found.`,
@@ -112,9 +112,11 @@ export class Chapter1 {
       enabled: () => this.state === 'GET_ANTIDOTE' && !this.busy,
       onUse: () => this.takeAntidote(),
     });
+    // Locking takes over the door only while it's open: a shut freezer door
+    // still opens normally, so you can always get back in before it's sealed.
     this.freezerDoor.override = {
-      enabled: () => this.state === 'LOCK_FREEZER' && !this.busy,
-      label: 'Lock the secure freezer',
+      enabled: () => this.state === 'LOCK_FREEZER' && !this.busy && this.freezerDoor.isOpen && !this.lockingFreezer,
+      label: 'Close and lock the secure freezer',
       use: () => this.lockFreezer(),
     };
     antidote.onCure = (npc) => this.cureNpc(npc);
@@ -179,6 +181,7 @@ export class Chapter1 {
     this.player.lookTarget = null;
     this.fx.setVisor(false);
     this.freezerDoor.locked = FREEZER_LOCKED;
+    this.lockingFreezer = false;
     this.managerDoor.setOpen(-1);
     this.setState('INTRO', OBJECTIVES.INTRO, false);
 
@@ -220,6 +223,7 @@ export class Chapter1 {
 
   update(dt, input, active) {
     this.runTimers(dt);
+    this.updateFreezerLock();
     this.spill.update(dt);
     this.hauler.update(dt, input, active && !this.inputLocked);
 
@@ -236,6 +240,7 @@ export class Chapter1 {
         suit: this.player.suit,
         tank: this.vacuum.equipped ? this.vacuum.tank : null,
         capacity: VACUUM.capacity,
+        infinite: this.vacuum.infinite,
         cleaned: this.goob.cleanedPercent,
         breakdown: this.floorBreakdown(),
       });
@@ -249,8 +254,8 @@ export class Chapter1 {
 
   setState(state, objective, announce = true) {
     this.state = state;
-    this.hud.setObjective(objective ?? null);
-    if (announce && objective) this.hud.toast('New objective', 2);
+    if (announce && objective) this.hud.announceObjective(objective);
+    else this.hud.setObjective(objective ?? null);
   }
 
   // Run fn after a delay in game time, unless the chapter restarts first.
@@ -482,7 +487,34 @@ export class Chapter1 {
       this.hud.toast(`${who} still in the freezer. Get them out before you lock it.`, 3);
       return;
     }
-    this.sealFreezer();
+    const door = this.freezerDoor;
+    if (door.playerInDoorway(this.player)) {
+      this.hud.toast('Step out of the doorway first.', 2);
+      return;
+    }
+    const blocking = this.cast.all.find((npc) => door.playerInDoorway({ pos: npc.pos }));
+    if (blocking) {
+      this.hud.toast(`${blocking.name} is in the doorway.`, 2);
+      return;
+    }
+    // Swing it shut; it locks once it's fully closed (see updateFreezerLock).
+    door.toggle(this.player);
+    this.lockingFreezer = true;
+  }
+
+  // The freezer only locks once the door is actually shut. If someone steps
+  // into the doorway and it swings back open, locking is called off.
+  updateFreezerLock() {
+    if (!this.lockingFreezer) return;
+    const door = this.freezerDoor;
+    if (door.isOpen) {
+      this.lockingFreezer = false;
+      this.hud.toast('Keep clear of the door while it closes.', 2.5);
+      return;
+    }
+    if (door.angle !== 0) return; // still swinging shut
+    this.lockingFreezer = false;
+    door.locked = FREEZER_SEALED;
     sfx.lock();
     this.hud.toast('Freezer locked.', 2);
     const token = this.token;
@@ -661,6 +693,7 @@ export class Chapter1 {
     this.checkpoint = c;
     this.token++;
     this.busy = false;
+    this.lockingFreezer = false;
     this.dialogue.close();
     this.spill.reset();
     this.hud.toast('', 0);

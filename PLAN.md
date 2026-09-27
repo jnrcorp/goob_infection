@@ -60,7 +60,7 @@ The game autosaves on each state change and every time you empty the tank.
 - Progress = collected ÷ (collected + remaining). This can drop while goob spreads, which is intentional.
 
 ### Vacuum
-- Left mouse button sucks in a short cone. It pulls blobs in and fills the tank.
+- Left mouse button sucks in a cone (4 m, 28°). It pulls blobs in and fills the tank. Furniture doesn't block it, so goob under desks, behind shelves or in vents can always be reached; walls, shut doors and the ceiling do.
 - Right mouse button blows. It knocks back and stuns infected coworkers for about 3 seconds, and costs a little tank goob or has a cooldown.
 - When the tank is full, suction stops. The HUD pulses and you head to a biohazard bin (at least 2 per floor).
 
@@ -112,7 +112,7 @@ Each milestone ends in something you can play.
    - The goob gets into 14 floor vents; 6 random ones start with goob. It also hides on ceilings and under desks.
    - Goob never spreads through walls, and a shut door stops it spreading between rooms (closing doors is a way to contain it). Blobs are drawn no bigger than the space around them.
    - The elevator jams on 1F with goob inside, so the stairs are the only way up.
-   - The vacuum hangs beside the freezer door. Tank: 30 L. Four biohazard bins, two per floor.
+   - The vacuum hangs beside the freezer door. Tank: 45 L (was 30 L). Four biohazard bins, two per floor.
    - Coworkers turn green and shamble around (not hostile yet: that's milestone 4).
    - Cleaning up everything ends on a "Goob contained" card for now.
 4. ✅ **Infected**: infection transformation, chase AI and pathfinding, suit damage, blow mode, duct tape, game over.

@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { sfx } from '../core/sound.js';
 
 export const VACUUM = {
-  capacity: 30,      // liters in the tank
-  range: 3.2,        // meters
-  coneDegrees: 24,   // half-angle of the suction cone
+  capacity: 45,      // liters in the tank
+  range: 4,          // meters
+  coneDegrees: 28,   // half-angle of the suction cone
   rate: 6,           // liters per second at close range
   blowRange: 3.8,    // meters
   blowDegrees: 38,   // half-angle of the blast
@@ -56,7 +56,7 @@ export class Vacuum {
   }
 
   get full() {
-    return this.tank >= VACUUM.capacity - 1e-3;
+    return !this.infinite && this.tank >= VACUUM.capacity - 1e-3;
   }
 
   // Empty the tank; returns how much was in it.
@@ -90,9 +90,10 @@ export class Vacuum {
       this.noisy = 0.5;
       const removed = goob.suck(
         camera.position, forward, VACUUM.range, Math.cos(THREE.MathUtils.degToRad(VACUUM.coneDegrees)),
-        VACUUM.rate, dt, VACUUM.capacity - this.tank, this.nozzleWorld,
+        VACUUM.rate, dt, this.infinite ? Infinity : VACUUM.capacity - this.tank, this.nozzleWorld,
       );
-      this.tank = Math.min(VACUUM.capacity, this.tank + removed);
+      // An infinite tank (debug) never fills, so never needs emptying.
+      if (!this.infinite) this.tank = Math.min(VACUUM.capacity, this.tank + removed);
     }
 
     this.viewmodel.updateVacuum(dt, {

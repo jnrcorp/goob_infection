@@ -67,6 +67,7 @@ html, body {
   padding: 6px 14px;
   background: rgba(0, 0, 0, 0.65);
   text-align: center;
+  transition: top 0.5s;
 }
 
 #objective {
@@ -77,8 +78,44 @@ html, body {
   color: var(--goob);
 }
 
-#objective::before {
+#objective::before,
+#objective-fly::before {
   content: "\25B6\00a0";
+}
+
+/* A new objective first appears big in the middle of the screen, then
+   shrinks and slides into its place under the location (see Hud). */
+#objective-fly {
+  position: absolute;
+  color: var(--goob);
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+#objective-fly.pop {
+  animation: objective-pop 0.35s ease-out;
+}
+
+@keyframes objective-pop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#objective-kicker {
+  position: absolute;
+  left: 50%;
+  padding: 2px 14px;
+  transform: translate(-50%, -100%);
+  background: var(--goob);
+  color: #0b2a06;
+  text-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: opacity 0.3s;
+}
+
+#objective-kicker.gone {
+  opacity: 0;
 }
 
 #dialogue {

@@ -69,6 +69,7 @@ const goobGraph = new GoobGraph(collision, goobPassable, {
   people: new Set(peopleColliders),
 }).build(world);
 const goob = new GoobSystem(scene, goobGraph, collision);
+goob.spreadSpeed = () => difficulty().goobSpread;
 
 // Infected walk through each other but not through doors (they can't open
 // them), and see through each other and past open door panels.
@@ -289,7 +290,8 @@ window.addEventListener('keydown', (e) => {
 // ---------- Debug ----------
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
 // 1 toggles vertex wobble, 2 toggles dithering, G removes all goob,
-// K cures everyone (during the cure objective), L marks every file as found.
+// K cures everyone (during the cure objective), L marks every file as found,
+// I toggles an infinite vacuum tank.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
@@ -519,6 +521,11 @@ function step(dt) {
   }
   if (active && debug && input.wasPressed('KeyK') && chapter.state === 'CURE') {
     for (const npc of cast.all) if (npc.infected) chapter.cureNpc(npc);
+  }
+  if (active && debug && input.wasPressed('KeyI')) {
+    vacuum.infinite = !vacuum.infinite;
+    if (vacuum.infinite) vacuum.empty();
+    hud.toast(vacuum.infinite ? 'Debug: infinite vacuum tank' : 'Debug: normal vacuum tank', 1.5);
   }
   if (active && debug && input.wasPressed('KeyL')) {
     for (const f of chapter.files) f.found = true;
