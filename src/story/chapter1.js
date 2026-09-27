@@ -30,7 +30,7 @@ const FREEZER_LOCKED = 'Hazard suit required beyond this point.';
 const FREEZER_SEALED = 'Locked tight. The goob stays in there.';
 const FREEZER_AREA = { x0: 31, z0: 17, x1: 36, z1: 24 };
 const BRIEFING_RANGE = 2.8;
-const VENT_SEEDS = 6;
+const VENT_SEEDS = 6; // of the 1F vents
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
 const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE']);
 const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE'];
@@ -322,7 +322,11 @@ export class Chapter1 {
   // starts spreading.
   startOutbreak() {
     for (const npc of this.cast.all) if (!npc.infected) npc.infect();
-    const vents = this.graph.nodes.filter((n) => n.kind === 'vent').sort(() => Math.random() - 0.5);
+    // Goob only starts out on 1F (inside the main building); it reaches the
+    // other floors by spreading up and down the stairwell.
+    const vents = this.graph.nodes
+      .filter((n) => n.kind === 'vent' && n.pos.y > -0.5 && n.pos.y < 3.5 && n.pos.x > 0)
+      .sort(() => Math.random() - 0.5);
     for (const node of vents.slice(0, VENT_SEEDS)) this.goob.spawn(node, 2);
     this.world.elevator.jam();
     const car = this.world.elevator.carFloorPoint;
@@ -561,8 +565,12 @@ export class Chapter1 {
     if (!c.elevatorJammed) this.world.elevator.repair();
     const car = this.world.elevator.carFloorPoint;
     if (!this.elevatorSpot) this.elevatorSpot = this.graph.addHidingSpot(car.x, car.y, car.z, 'elevator');
+    // Anyone the checkpoint doesn't cover is infected where they stand (so the
+    // chapter can always be finished).
+    for (const npc of this.cast.all.slice(c.npcs.length)) if (!npc.infected) npc.infect();
     c.npcs.forEach((s, i) => {
       const npc = this.cast.all[i];
+      if (!npc) return;
       npc.pos.set(s.x, s.y, s.z);
       npc.yaw = s.yaw;
       if (s.cured) {

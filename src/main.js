@@ -13,6 +13,7 @@ import { GoobGraph } from './goob/goobGraph.js';
 import { GoobSystem } from './goob/goobSystem.js';
 import { Navigation } from './npc/navigation.js';
 import { Spill } from './story/spill.js';
+import { BUILDING } from './world/building.js';
 import { Chapter1 } from './story/chapter1.js';
 import { Input } from './core/input.js';
 import { DIFFICULTIES, VOLUMES, settings, saveSettings, difficulty } from './core/settings.js';
@@ -93,9 +94,11 @@ cast.setEnv({
     if (!params.has('peaceful')) chapter.hurtPlayer(npc);
   },
   canOpenDoors: () => difficulty().infectedOpenDoors,
+  canAttack: () => difficulty().infectedAttack,
   openDoorsNear: (npc) => world.openDoorsNear(npc),
 });
 let gameTime = 0;
+const BUILDING_FLOOR_IDS = BUILDING.floors.map((f) => f.id);
 let lastStep = 0; // footstep counter for sounds
 
 // ---------- Menus ----------
@@ -390,6 +393,12 @@ async function runStartupSimulation() {
     console.log(`[report] open doors: ${open.join(', ') || 'none'}; suit ${Math.ceil(player.suit)}%`);
     const bins = chapter.hauler.bins.map((b, i) => `${i}: y ${b.group.position.y.toFixed(2)}`).join(', ');
     console.log(`[report] bins ${bins}; elevator car at y ${world.elevator.carY.toFixed(2)}`);
+    const byFloor = {};
+    for (const blob of goob.blobs.values()) {
+      const id = BUILDING_FLOOR_IDS[world.floorIndexAt(blob.node.pos.y)];
+      byFloor[id] = (byFloor[id] ?? 0) + 1;
+    }
+    console.log(`[report] goob blobs by floor: ${JSON.stringify(byFloor)}`);
     const walking = cast.all.filter((n) => n.mode === 'returning');
     console.log(`[report] cured: ${cast.all.filter((n) => n.cured).length}, still walking home: ${walking.map((n) => `${n.name} (${n.pos.x.toFixed(1)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(1)})`).join(', ') || 'none'}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);

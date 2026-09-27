@@ -118,7 +118,7 @@ Each milestone ends in something you can play.
 4. ✅ **Infected**: infection transformation, chase AI and pathfinding, suit damage, blow mode, duct tape, game over.
    - Infected notice you by sight (14 m, in front of them), by hearing you run or use the vacuum nearby, or when you're right next to them.
    - They chase at 2.3 m/s (you walk 3.4, run 5.6) and path around walls and up/down the stairs.
-   - Difficulty (title screen, remembered): on **Normal** infected can't open doors, so a shut door stops them; on **Hard** they shove doors open.
+   - Difficulty (title screen, remembered): on **Easy** infected follow you but never attack; on **Normal** infected can't open doors, so a shut door stops them; on **Hard** they shove doors open.
    - At most two lunge at once. Each hit costs 10% suit integrity. They're dazed for a few seconds after the spill.
    - Right mouse blasts them back and stuns them for 3 seconds.
    - 10 rolls of duct tape around the building each patch 35%.
@@ -133,6 +133,16 @@ Each milestone ends in something you can play.
    6. **Saving**: autosave to the browser at each story step, each tank emptied, each bin loaded and each cure. The title screen shows **Continue** when there's a save.
    7. **Sound**: all synthesized: office hum, vacuum suck and blast, antidote spray, goob squelch, moans, suit breathing, footsteps, doors, bins, elevator, UI blips; volume setting on the title screen.
    8. **Tuning** from playtesting.
+
+## Expansion: more areas (done)
+
+- **B1 basement**: server room, goob lab, vat room, halls. **3F executive floor**: CEO's office, boardroom, records room, executive lounge.
+- One switchback stairwell serves B1–3F; the elevator has a button per floor.
+- **Outside**: parking lot (through the front doors) and loading yard with the Mars truck (through a door in the dock).
+- **1F mail room**, **2F copy room and IT closet**.
+- 13 new coworkers (Mo, Carla, Victoria the CEO, Martin, Rex, Lorraine, Chip, Dr. Pell, Ivo, Terry, Sal, Dwayne), all part of the outbreak and the cure.
+- Goob spreads everywhere, including outside; more vents, two more bins, more duct tape.
+- Lights: a pool of the 24 nearest lights follows you, so the bigger building costs no more to draw.
 
 ## Still open (answer any time; defaults in brackets)
 

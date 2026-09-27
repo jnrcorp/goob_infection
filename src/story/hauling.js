@@ -4,6 +4,7 @@ import * as THREE from 'three';
 const FREEZER = { x0: 31.3, z0: 17.3, x1: 35.7, z1: 23.7, maxY: 1 };
 const SLOTS = [
   { x: 31.9, z: 17.85 }, { x: 32.8, z: 17.85 }, { x: 33.7, z: 17.85 }, { x: 34.6, z: 17.85 },
+  { x: 32.35, z: 18.85 }, { x: 34.15, z: 18.85 },
 ];
 const HOLD_DISTANCE = 0.95; // how far in front of you a bin rolls
 const BIN_RADIUS = 0.36;

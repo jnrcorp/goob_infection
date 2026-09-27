@@ -29,7 +29,7 @@ const EYE = 1.55;
 export class InfectedBrain {
   constructor(npc, env) {
     this.npc = npc;
-    this.env = env; // { player, nav, collision, sightIgnore, isHostile, onHit, isNoisy, attackers, canOpenDoors }
+    this.env = env; // { player, nav, collision, sightIgnore, isHostile, onHit, isNoisy, attackers, canOpenDoors, canAttack }
     this.reset(4 + Math.random() * 3);
   }
 
@@ -97,7 +97,9 @@ export class InfectedBrain {
           }
         }
         if (sameLevel && dist < INFECTED.attackRange && env.isHostile() && this.canReachPlayer()) {
-          if (env.attackers() < INFECTED.maxAttackers) {
+          if (!env.canAttack()) {
+            this.facePlayer(dt); // Easy: just loom at arm's length, moaning
+          } else if (env.attackers() < INFECTED.maxAttackers) {
             this.state = 'windup';
             this.timer = INFECTED.windup;
             sfx.lunge(npc.pos);

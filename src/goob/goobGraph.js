@@ -34,10 +34,11 @@ export class GoobGraph {
     this.nodes = [];
   }
 
-  addNode(x, y, z, normal = NORMALS.floor, kind = 'floor') {
+  // reach: how far this spot links to neighbors (bigger where spots are sparse).
+  addNode(x, y, z, normal = NORMALS.floor, kind = 'floor', reach = LINK) {
     const node = {
       id: this.nodes.length, pos: new THREE.Vector3(x, y, z), normal: normal.clone(), kind,
-      links: [], doorsTo: new Map(), clearance: 1,
+      links: [], doorsTo: new Map(), clearance: 1, reach,
     };
     this.nodes.push(node);
     return node;
@@ -65,11 +66,12 @@ export class GoobGraph {
     for (const room of world.rooms) {
       const y = BUILDING.floors[room.floorIndex].y;
       const rects = room.goobRect ? [room.goobRect] : room.rects;
+      const spacing = room.goobSpacing ?? SPACING; // wider outdoors: fewer spots
       for (const r of rects) {
-        for (const x of spread(r.x0 + INSET, r.x1 - INSET)) {
-          for (const z of spread(r.z0 + INSET, r.z1 - INSET)) {
+        for (const x of spread(r.x0 + INSET, r.x1 - INSET, spacing)) {
+          for (const z of spread(r.z0 + INSET, r.z1 - INSET, spacing)) {
             if (this.blocked(x, y, z)) continue;
-            floorNodes.push(this.addNode(x, y, z));
+            floorNodes.push(this.addNode(x, y, z, NORMALS.floor, 'floor', spacing * 1.5));
           }
         }
       }
@@ -86,11 +88,11 @@ export class GoobGraph {
       }
     }
 
-    // Up the stairs
-    const s = BUILDING.stairs;
-    const ramp = this.collision.ramps[0];
-    for (let z = s.z0 + 0.6; z < s.z1; z += 1.3) {
-      floorNodes.push(this.addNode((s.x0 + s.x1) / 2, ramp.heightAt(z), z));
+    // Up and down every stair flight
+    for (const ramp of this.collision.ramps) {
+      for (let z = ramp.minZ + 0.6; z < ramp.maxZ; z += 1.3) {
+        floorNodes.push(this.addNode((ramp.minX + ramp.maxX) / 2, ramp.heightAt(z), z));
+      }
     }
 
     this.linkFloors(floorNodes);
@@ -108,7 +110,7 @@ export class GoobGraph {
       hiding.push(this.addNode((big.x0 + big.x1) / 2 + 0.7, y, (big.z0 + big.z1) / 2 + 0.4, NORMALS.ceiling, 'ceiling'));
     }
     for (const d of world.props.desks) {
-      hiding.push(this.addNode(d.deskX, 4, d.deskZ, NORMALS.floor, 'desk'));
+      hiding.push(this.addNode(d.deskX, d.y, d.deskZ, NORMALS.floor, 'desk'));
     }
     for (const node of hiding) this.linkHidingSpot(node);
     for (const node of this.nodes) this.measureClearance(node);
@@ -151,12 +153,13 @@ export class GoobGraph {
   blocked(x, y, z) {
     const p = new THREE.Vector3(x, y + 0.3, z);
     if (this.collision.pointInside(p, this.passable)) return true;
-    return this.collision.ramps.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ && r.heightAt(z) > y + 0.3);
+    return this.collision.ramps.some((r) => r.contains(x, z) && r.relevant(y) && r.heightAt(z) > y + 0.3);
   }
 
   linkFloors(nodes) {
     // Spatial hash so each spot only checks its neighbors.
-    const cell = (v) => Math.floor(v / LINK);
+    const cellSize = Math.max(...nodes.map((n) => n.reach));
+    const cell = (v) => Math.floor(v / cellSize);
     const grid = new Map();
     for (const n of nodes) {
       const key = `${cell(n.pos.x)},${cell(n.pos.z)}`;
@@ -169,7 +172,7 @@ export class GoobGraph {
       for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
           for (const b of grid.get(`${cx + i},${cz + j}`) ?? []) {
-            if (b.id <= a.id || a.pos.distanceTo(b.pos) > LINK || Math.abs(a.pos.y - b.pos.y) > 1.2) continue;
+            if (b.id <= a.id || a.pos.distanceTo(b.pos) > Math.max(a.reach, b.reach) || Math.abs(a.pos.y - b.pos.y) > 1.2) continue;
             if (this.canSee(a, b)) this.link(a, b);
           }
         }
@@ -227,10 +230,10 @@ export class GoobGraph {
   }
 }
 
-// Evenly spaced values from a to b, about SPACING apart (at least one).
-function spread(a, b) {
+// Evenly spaced values from a to b, about `spacing` apart (at least one).
+function spread(a, b, spacing = SPACING) {
   if (b <= a) return [(a + b) / 2];
-  const count = Math.max(1, Math.round((b - a) / SPACING) + 1);
+  const count = Math.max(1, Math.round((b - a) / spacing) + 1);
   if (count === 1) return [(a + b) / 2];
   return Array.from({ length: count }, (_, i) => a + (b - a) * (i / (count - 1)));
 }

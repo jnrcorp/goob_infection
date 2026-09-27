@@ -136,8 +136,12 @@ export function createCast(ctx, props) {
     },
     // 1F
     { name: 'Rhonda', x: 19, y: 0, z: 7.2, yaw: Math.PI, mode: 'type', look: look(0x9a4f9e, 'black', 3, 'dark'), lines: [
-      'Front doors lock after hours, hon. Deliveries go out the dock.',
+      "Front doors go out to the parking lot, hon. Deliveries go out the dock.",
       'Locker room is the first door on the left down the hall.',
+    ] },
+    { name: 'Mo', x: 22.2, y: 0, z: 7.8, yaw: Math.PI, mode: 'stand', look: look(0x7d5a3a, 'khaki', 2, 'black'), lines: [
+      'Mail room. Every package here says FRAGILE: GOOB. None of them are goob. I checked.',
+      "If Mars sends a reply, I'll let you know.",
     ] },
     {
       name: 'Earl', x: 2, y: 0, z: 11.5, mode: 'route',
@@ -159,6 +163,49 @@ export function createCast(ctx, props) {
     { name: 'Hank', x: 30.5, y: 0, z: 8.5, yaw: -Math.PI / 2, mode: 'stand', look: look(0xd88a2d, 'navy', 3, 'dark'), lines: [
       "Shuttle crate's ready. Just needs the goob. Freezer's in the back corner.",
       "Freezer won't open for you without a hazard suit. Rules.",
+    ] },
+    // 2F copy room
+    { name: 'Carla', x: 22.7, y: y2, z: 8.9, yaw: Math.PI, mode: 'stand', look: look(0x4f7ea8, 'black', 0, 'blond'), lines: [
+      'The copier makes a noise like a goob. I think it is lonely.',
+      'Paper jam in tray three. There is always a paper jam in tray three.',
+    ] },
+    // 3F executives
+    { name: 'Victoria', ...seated(props.ceoDesk, 8), mode: 'type', look: look(0x1f1f28, 'black', 5, 'dark', { tie: 0x6cff4a }), lines: [
+      'Goob Co. is going interplanetary, and you are the tip of the spear. Do not drop the spear.',
+      'My door is always open. Metaphorically. Please knock.',
+    ] },
+    { name: 'Martin', ...seated(props.assistantDesk, 8), mode: 'type', look: look(0xdcdcd0, 'navy', 4, 'brown', { tie: 0x2a4a8a }), lines: [
+      'Ms. Victoria is in back-to-back meetings until 2031.',
+      'Can I get you a water? The fancy water. It has a lemon in it.',
+    ] },
+    { name: 'Rex', x: 17.75, y: 8, z: 2.65, yaw: 0, mode: 'sit', look: look(0x2a2a3a, 'charcoal', 1, 'grey', { tie: 0x8a1a1a }), lines: [
+      'Q3 goob synergy is up forty percent. I do not know what that means either.',
+    ] },
+    { name: 'Lorraine', x: 20.25, y: 8, z: 5.35, yaw: Math.PI, mode: 'sit', look: look(0x5a2a4a, 'black', 3, 'black'), lines: [
+      'If this is about the Mars delivery, I have concerns. Mostly about Mars.',
+    ] },
+    { name: 'Chip', x: 21.5, y: 8, z: 17.5, yaw: Math.PI / 2, mode: 'stand', look: look(0xf0e0a0, 'khaki', 4, 'blond'), lines: [
+      "Executive lounge, my friend. The coffee here costs more than your car. It's free, though.",
+    ] },
+    // B1
+    { name: 'Dr. Pell', x: 21, y: -4, z: 19.5, yaw: Math.PI, mode: 'stand', look: look(0xf4f4f0, 'charcoal', 0, 'grey'), lines: [
+      'This is where we make goob. How? Trade secret. Also, we do not fully know.',
+      'Goob is completely safe. In the vats. Behind glass. Far away.',
+    ] },
+    { name: 'Ivo', ...seated(props.labDesk, -4), mode: 'type', look: look(0xf4f4f0, 'navy', 2, 'brown'), lines: [
+      'Batch 7 is humming again. Batches should not hum.',
+    ] },
+    { name: 'Terry', ...seated(props.serverDesk, -4), mode: 'type', look: look(0x3a3a3a, 'black', 4, 'red'), lines: [
+      'Have you tried turning the goob off and on again?',
+      'The servers run hot down here. The goob likes it. Everything down here is about what the goob likes.',
+    ] },
+    // Outside
+    { name: 'Sal', x: 5, y: 0, z: -1.7, yaw: Math.PI, mode: 'stand', look: look(0x8a6a4a, 'navy', 3, 'dark'), lines: [
+      "Just getting some air. Air that isn't goob-adjacent.",
+    ] },
+    { name: 'Dwayne', x: 45.5, y: 0, z: 6.2, yaw: Math.PI, mode: 'stand', look: look(0xc0582a, 'navy', 5, 'black'), lines: [
+      "I drive the truck to the launch site. The rocket does the rest. Mostly the rocket.",
+      "Load's late. Take your time. No, don't take your time.",
     ] },
   ];
 
@@ -189,19 +236,22 @@ const DESK_TOP = 0.76;
 // Put a desk nameplate on every desk that belongs to someone, a gold one and a
 // small trophy on yours, and plates on Dale's desk and the reception counter.
 function addNameplates(ctx, props) {
-  const floorY = 4;
   const owners = [
     ...DESK_WORKERS.map((w) => [w.seat, w.name]),
     ...Object.entries(AWAY_DESKS).map(([name, seat]) => [seat, name]),
   ];
-  for (const [seat, name] of owners) deskPlate(ctx, props.desks[seat], floorY, name.toUpperCase(), PLATE);
+  for (const [seat, name] of owners) deskPlate(ctx, props.desks[seat], name.toUpperCase(), PLATE);
 
   const mine = props.desks[PLAYER_SEAT];
-  deskPlate(ctx, mine, floorY, PLAYER_NAME.toUpperCase(), CHAMP_PLATE, { w: 0.44, h: 0.1 });
-  trophy(ctx, mine, floorY);
+  deskPlate(ctx, mine, PLAYER_NAME.toUpperCase(), CHAMP_PLATE, { w: 0.44, h: 0.1 });
+  trophy(ctx, mine);
 
-  // Dale's plate faces visitors across the desk, not his own chair.
-  deskPlate(ctx, props.managerDesk, floorY, 'DALE · MANAGER', PLATE, { w: 0.5, lz: -0.34, back: true });
+  // Managers' plates face visitors across the desk, not their own chair.
+  deskPlate(ctx, props.managerDesk, 'DALE · MANAGER', PLATE, { w: 0.5, lz: -0.34, back: true });
+  deskPlate(ctx, props.ceoDesk, 'VICTORIA · CEO', PLATE, { w: 0.5, lz: -0.34, back: true });
+  deskPlate(ctx, props.assistantDesk, 'MARTIN · EXECUTIVE ASSISTANT', PLATE, { w: 0.62, lz: -0.34, back: true });
+  deskPlate(ctx, props.labDesk, 'DR. IVO', PLATE);
+  deskPlate(ctx, props.serverDesk, 'TERRY · IT', PLATE);
 
   // Rhonda's sits on the reception counter, facing the front door.
   const reception = new THREE.Group();
@@ -212,16 +262,16 @@ function addNameplates(ctx, props) {
 }
 
 // A group at the desk, turned so local +z points at the desk's chair side.
-function deskFrame(ctx, seat, floorY) {
+function deskFrame(ctx, seat) {
   const g = new THREE.Group();
-  g.position.set(seat.deskX, floorY + DESK_TOP, seat.deskZ);
+  g.position.set(seat.deskX, seat.y + DESK_TOP, seat.deskZ);
   g.rotation.y = (seat.rot & 3) * (Math.PI / 2);
   ctx.scene.add(g);
   return g;
 }
 
-function deskPlate(ctx, seat, floorY, text, style, { w = 0.38, h = 0.09, lz = 0.34, back = false } = {}) {
-  const g = deskFrame(ctx, seat, floorY);
+function deskPlate(ctx, seat, text, style, { w = 0.38, h = 0.09, lz = 0.34, back = false } = {}) {
+  const g = deskFrame(ctx, seat);
   plate(ctx, g, 0.5, lz, text, style, { w, h, back });
 }
 
@@ -237,8 +287,8 @@ function plate(ctx, parent, lx, lz, text, style, { w = 0.38, h = 0.09, back = fa
 }
 
 // A little gold "World's Okayest Employee" trophy by your monitor.
-function trophy(ctx, seat, floorY) {
-  const g = deskFrame(ctx, seat, floorY);
+function trophy(ctx, seat) {
+  const g = deskFrame(ctx, seat);
   const gold = ctx.materials.get('trophy');
   const dark = ctx.materials.get('plastic');
   const part = (geo, mat, y) => {

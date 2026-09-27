@@ -43,21 +43,28 @@ export class Elevator {
     add(new THREE.BoxGeometry(0.03, CAR_HEIGHT - 0.1, d), steel, x1 - 0.02, (CAR_HEIGHT - 0.1) / 2, cz);
     add(new THREE.BoxGeometry(w, CAR_HEIGHT - 0.1, 0.03), steel, cx, (CAR_HEIGHT - 0.1) / 2, z1 - 0.02);
     add(new THREE.BoxGeometry(w - 0.2, 0.05, 0.05), materials.get('metal'), cx, 0.95, z1 - 0.08);
-    const panel = add(new THREE.BoxGeometry(0.03, 0.4, 0.25), materials.get('plastic'), x1 - 0.05, 1.2, z0 + 0.45);
-    const b1 = add(new THREE.BoxGeometry(0.02, 0.06, 0.06), materials.get('light'), x1 - 0.07, 1.3, z0 + 0.45);
-    const b2 = add(new THREE.BoxGeometry(0.02, 0.06, 0.06), materials.get('light'), x1 - 0.07, 1.1, z0 + 0.45);
+    // Control panel on the side wall: one button per floor, top floor highest.
+    const n = this.floors.length;
+    const spacing = 0.13;
+    add(new THREE.BoxGeometry(0.03, spacing * n + 0.12, 0.25), materials.get('plastic'), x1 - 0.05, 1.2, z0 + 0.45);
+    const name = (i) => def.floorNames?.[i] ?? `${i + 1}F`;
+    this.floors.forEach((_, i) => {
+      const y = 1.2 + (i - (n - 1) / 2) * spacing;
+      const button = add(new THREE.BoxGeometry(0.03, 0.08, 0.1), materials.get('light'), x1 - 0.075, y, z0 + 0.45);
+      interactions.add({
+        mesh: button,
+        label: () => {
+          if (this.jammed) return 'Out of service';
+          if (this.phase === 'moving') return 'Elevator moving…';
+          return i === this.current ? `${name(i)} (you're here)` : `Go to ${name(i)}`;
+        },
+        use: () => this.request(i),
+      });
+    });
 
     this.floorCollider = collision.addBox(x0, 0, z0, x1, 0, z1);
     this.ceilingCollider = collision.addBox(x0, 0, z0, x1, 0, z1);
     this.syncCar();
-
-    const floorName = (i) => `${i + 1}F`;
-    const other = () => (this.current + 1) % this.floors.length;
-    interactions.add({
-      mesh: [panel, b1, b2],
-      label: () => (this.jammed ? 'Out of service' : this.phase === 'moving' ? 'Elevator moving…' : `Go to ${floorName(other())}`),
-      use: () => this.request(other()),
-    });
 
     // Shaft doors and call buttons on each floor
     const hw = def.doorW / 2;
@@ -96,14 +103,15 @@ export class Elevator {
     this.syncDoors();
   }
 
-  // Breaks down: returns to the ground floor and stays there with its doors
-  // jammed open. Buttons stop working.
+  // Breaks down: returns to the ground floor (y 0) and stays there with its
+  // doors jammed open. Buttons stop working.
   jam() {
-    this.current = this.target = 0;
-    this.carY = this.floors[0];
+    const ground = Math.max(0, this.floors.indexOf(0));
+    this.current = this.target = ground;
+    this.carY = this.floors[ground];
     this.phase = 'jammed';
     this.open.fill(0);
-    this.open[0] = 0.8;
+    this.open[ground] = 0.8;
     this.syncCar();
     this.syncDoors();
   }

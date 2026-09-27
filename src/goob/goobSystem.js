@@ -4,7 +4,7 @@ import { sfx } from '../core/sound.js';
 
 // Tuning. Volumes are liters.
 export const GOOB = {
-  maxBlobs: 150,        // the building never holds more blobs than this
+  maxBlobs: 240,        // the building never holds more blobs than this
   maxVolume: 4,         // a blob stops growing here
   growRate: 0.1,        // liters per second while spreading
   budAt: 3,             // a blob this big can spread to a neighboring spot

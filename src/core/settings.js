@@ -1,15 +1,24 @@
 // Player settings, remembered in the browser between visits.
 
+// Listed in the order the title-screen button cycles through them.
 export const DIFFICULTIES = {
+  easy: {
+    label: 'Easy',
+    description: "Infected coworkers follow you around, but they never attack.",
+    infectedOpenDoors: false,
+    infectedAttack: false,
+  },
   normal: {
     label: 'Normal',
-    description: "Infected coworkers can't open doors.",
+    description: "Infected coworkers attack, but can't open doors.",
     infectedOpenDoors: false,
+    infectedAttack: true,
   },
   hard: {
     label: 'Hard',
-    description: 'Infected coworkers shove doors open to get to you.',
+    description: 'Infected coworkers attack, and shove doors open to get to you.',
     infectedOpenDoors: true,
+    infectedAttack: true,
   },
 };
 

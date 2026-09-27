@@ -48,7 +48,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Settings an
   - `?car=1` starts with the working elevator car on 2F (0 = 1F).
   - `?goobspots` shows every spot goob can spread to, and logs how they connect.
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
-  - `?difficulty=hard` (or `normal`) plays on that difficulty without changing your saved choice.
+  - `?difficulty=hard` (or `easy`, `normal`) plays on that difficulty without changing your saved choice.
   - `?report=Hank` logs which doors are open, your suit integrity, and where that coworker is after the simulation, plus who lands each hit.
   - `?npcat=Hank,x,y,z` places a coworker (testing).
   - `?sim=seconds` fast-forwards the game at load.

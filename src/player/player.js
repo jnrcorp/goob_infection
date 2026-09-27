@@ -137,7 +137,7 @@ export class Player {
       else p.z = d > 0 ? b.minZ - RADIUS - SKIN : b.maxZ + RADIUS + SKIN;
     }
     for (const r of this.collision.ramps) {
-      if (p.x < r.minX || p.x > r.maxX || p.z < r.minZ || p.z > r.maxZ) continue;
+      if (!r.contains(p.x, p.z) || !r.relevant(p.y)) continue;
       if (r.heightAt(p.z) > p.y + STEP) {
         p[axis] -= d;
         break;
@@ -164,7 +164,7 @@ export class Player {
       if (b.enabled && b.maxY <= p.y + STEP && b.maxY > best && this.overlapsXZ(b, RADIUS * 0.8)) best = b.maxY;
     }
     for (const r of this.collision.ramps) {
-      if (p.x < r.minX || p.x > r.maxX || p.z < r.minZ || p.z > r.maxZ) continue;
+      if (!r.contains(p.x, p.z) || !r.relevant(p.y)) continue;
       const h = r.heightAt(p.z);
       if (h <= p.y + STEP && h > best) best = h;
     }

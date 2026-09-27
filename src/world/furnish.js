@@ -42,8 +42,14 @@ export function furnish({ builder: b, scene, materials }) {
   couch(b, 14.55, 3.2, 3, 2.4);
   plant(b, 14.5, 0.5);
   plant(b, 23.5, 0.5);
-  plant(b, 23.5, 9.4);
-  sign(scene, 'GOOB CO.', 22, 2.0, 9.88, 's', { w: 2.6, h: 0.7, ...LOGO });
+  plant(b, 14.6, 9.3);
+  sign(scene, 'GOOB CO.', 15.8, 2.0, 9.88, 's', { w: 2.6, h: 0.7, ...LOGO });
+
+  // Mail room (lobby corner)
+  shelf(b, 23.3, 6.4, 23.9, 9.6, 2, rng);
+  counter(b, 21.3, 6.2, 23.0, 6.8);
+  b.box(21.4, 0, 8.6, 22.2, 0.9, 9.6, 'cardboard'); // mail cart
+  sign(scene, 'MAIL', 20.88, 2.55, 8, 'w', { w: 0.8, h: 0.28 });
 
   // Corridor
   b.box(8.5, 1.0, 10.1, 8.7, 1.5, 10.25, 'red', NC);
@@ -173,10 +179,175 @@ export function furnish({ builder: b, scene, materials }) {
   sign(scene, 'STAIRS', 11.88, y + 2.5, 22.5, 'w', { w: 1.0, h: 0.28 });
   sign(scene, '2F', 14.88, y + 2.2, 22.5, 'w', { w: 0.6, h: 0.4 });
 
+  // Copy room
+  b.box(21.8, y, 7.2, 23.6, y + 1.05, 8.2, 'plastic', { shadow: true }); // copier
+  b.box(21.75, y + 1.05, 7.15, 23.65, y + 1.1, 8.25, 'desk', NC);
+  shelf(b, 18.3, 10.3, 20.5, 10.9, 1.6, rng, y);
+  counter(b, 23.3, 8.6, 23.9, 10.6, y);
+  sign(scene, 'COPY ROOM', 17.88, y + 2.5, 9, 'w', { w: 1.2, h: 0.28 });
+
+  // IT closet
+  for (const z of [11.4, 13.2]) serverRack(b, 23.1, z, 23.9, z + 1.5, y);
+  shelf(b, 20.3, 15.2, 22.5, 15.8, 2, rng, y);
+  sign(scene, 'IT', 19.88, y + 2.5, 13.5, 'w', { w: 0.5, h: 0.28 });
+
+  furnishBasement(b, scene, rng, out);
+  furnishExecutive(b, scene, out);
+  furnishOutdoors(b, scene, rng);
+
   // Air vent grilles, low on the walls.
   for (const v of BUILDING.vents) vent(b, v);
 
   return out;
+}
+
+// A rack of blinking servers (screens as status lights).
+function serverRack(b, x0, z0, x1, z1, y) {
+  b.box(x0, y, z0, x1, y + 2.1, z1, 'plastic', { shadow: true });
+  const alongZ = z1 - z0 > x1 - x0;
+  for (let h = 0.3; h < 2; h += 0.35) {
+    if (alongZ) b.box(x0 - 0.01, y + h, z0 + 0.1, x0, y + h + 0.08, z1 - 0.1, 'screen', { collide: false, boxUV: true });
+    else b.box(x0 + 0.1, y + h, z0 - 0.01, x1 - 0.1, y + h + 0.08, z0, 'screen', { collide: false, boxUV: true });
+  }
+}
+
+// B1: server room, goob lab, vat room, halls.
+function furnishBasement(b, scene, rng, out) {
+  const y = -4;
+  // Server room: rows of racks, Terry's desk at the far end.
+  for (const x of [5, 7.5, 10]) {
+    serverRack(b, x - 0.3, 14, x + 0.3, 16.1, y);
+    serverRack(b, x - 0.3, 16.4, x + 0.3, 18.5, y);
+  }
+  out.serverDesk = desk(b, 7.5, 20.1, 2, y);
+  sign(scene, 'SERVER ROOM', 2.88, y + 2.5, 17, 'w', { w: 1.4, h: 0.28 });
+
+  // Goob lab: two bench islands, a wall bench, specimen jars, Dr. Ivo's desk.
+  counter(b, 20, 16.5, 22, 18.5, y);
+  counter(b, 20, 20.5, 22, 22.5, y);
+  counter(b, 23.3, 14, 23.9, 23, y);
+  for (const [x, z] of [[20.4, 17], [21.5, 18], [20.6, 21.9], [23.6, 15], [23.6, 17.2], [23.6, 20.4], [23.6, 22.3]]) {
+    b.box(x - 0.1, y + 0.9, z - 0.1, x + 0.1, y + 1.2, z + 0.1, 'glass', NC);
+    b.box(x - 0.07, y + 0.9, z - 0.07, x + 0.07, y + 0.9 + 0.05 + rng() * 0.2, z + 0.07, 'goob', NC);
+  }
+  out.labDesk = desk(b, 19.2, 14.2, 0, y);
+  sign(scene, 'GOOB LAB', 21, y + 2.55, 12.88, 's', { w: 1.2, h: 0.28, ...LOGO });
+  sign(scene, 'AUTHORIZED PERSONNEL ONLY', 21, y + 2.25, 12.88, 's', { w: 2, h: 0.2, ...DANGER });
+
+  // Vat room: steel vats of goob.
+  for (const z of [16.4, 18.4, 21.2]) {
+    b.box(15.25, y, z, 16.95, y + 1.6, z + 1.6, 'steel', { shadow: true });
+    b.box(15.35, y + 1.6, z + 0.1, 16.85, y + 1.63, z + 1.5, 'goob', NC);
+  }
+  sign(scene, 'VAT ROOM', 18.12, y + 2.5, 20, 'e', { w: 1.1, h: 0.28 });
+
+  // Halls: pipes along the ceiling, a few old crates.
+  b.box(0.2, y + 2.7, 10.3, 23.8, y + 2.85, 10.45, 'metal', NC);
+  b.box(0.2, y + 2.55, 10.6, 23.8, y + 2.7, 10.75, 'red', NC);
+  crate(b, 1.2, 22.8, 0.9, 0.9, y);
+  crate(b, 2.3, 23.1, 0.7, 0.6, y);
+  sign(scene, 'B1', 14.88, y + 2.2, 22.5, 'w', { w: 0.6, h: 0.4 });
+}
+
+// 3F: CEO's office, boardroom, lounge, records room, reception.
+function furnishExecutive(b, scene, out) {
+  const y = 8;
+  // CEO's office
+  out.ceoDesk = desk(b, 4, 4, 3, y);
+  couch(b, 8.5, 7.2, 0, 2.4, y);
+  plant(b, 9.4, 0.6, y);
+  plant(b, 0.6, 7.4, y);
+  cabinet(b, 0.45, 1.2, 1, y);
+  cabinet(b, 0.45, 1.8, 1, y);
+  sign(scene, 'CEO', 10.12, y + 2.5, 4.5, 'e', { w: 0.6, h: 0.28, ...LOGO });
+
+  // Reception alcove outside the CEO's office
+  out.assistantDesk = desk(b, 12, 3, 0, y);
+  plant(b, 13.4, 0.6, y);
+
+  // Boardroom: long table, chairs down both sides.
+  table(b, 19, 4, 6, 1.6, y);
+  for (let x = 16.5; x <= 21.6; x += 1.25) {
+    chair(b, x, 2.65, 2, y);
+    chair(b, x, 5.35, 0, y);
+  }
+  chair(b, 22.55, 4, 1, y);
+  sign(scene, 'BOARDROOM', 13.88, y + 2.5, 5, 'w', { w: 1.3, h: 0.28 });
+
+  // Executive lounge: bar, couches, a coffee table.
+  counter(b, 23, 15, 23.8, 20, y);
+  couch(b, 19.5, 23.2, 0, 2.6, y);
+  couch(b, 15.8, 20.5, 3, 2.2, y);
+  table(b, 19.5, 21, 1.1, 1.1, y);
+  plant(b, 23.4, 23.4, y);
+  sign(scene, 'LOUNGE', 21, y + 2.55, 12.88, 's', { w: 1, h: 0.28 });
+
+  // Records room: rows of shelves.
+  shelf(b, 1, 18.5, 11, 19.1, 2.2, createRng(9), y);
+  shelf(b, 1, 21, 11, 21.6, 2.2, createRng(10), y);
+  sign(scene, 'RECORDS', 6, y + 2.55, 15.88, 's', { w: 1.1, h: 0.28 });
+
+  // Executive floor hall
+  plant(b, 0.6, 8.6, y);
+  couch(b, 0.55, 14.6, 3, 2.2, y);
+  sign(scene, '3F', 14.88, y + 2.2, 14, 'w', { w: 0.6, h: 0.4 });
+}
+
+// Parking lot and loading yard.
+function furnishOutdoors(b, scene, rng) {
+  // Parking lot: painted stalls in two rows, some cars, lamp posts, a bench.
+  for (let x = -6; x <= 34; x += 2.8) {
+    b.plane(x - 0.05, -8, x + 0.05, -3, 0.03, 'fridge');
+    b.plane(x - 0.05, -15, x + 0.05, -10, 0.03, 'fridge');
+  }
+  const cars = [[-4.6, -5.5, 'red'], [1, -5.5, 'steel'], [6.6, -5.5, 'suit'], [23.4, -5.5, 'plastic'],
+    [-1.8, -12.5, 'steel'], [9.4, -12.5, 'red'], [15, -12.5, 'plastic'], [29, -12.5, 'suit']];
+  for (const [x, z, color] of cars) car(b, x, z, color);
+  for (const x of [2, 16, 30]) lampPost(b, x, -9);
+  bench(b, 4.5, -0.8, 6.5, -0.4);
+  sign(scene, 'GOOB CO.', 19, 3.1, -0.12, 's', { w: 3.2, h: 0.8, ...LOGO });
+  sign(scene, 'VISITOR PARKING', 14, 1.9, -15.88, 'n', { w: 2.2, h: 0.35 });
+
+  // Loading yard: the delivery truck, dumpsters, pallets, lamps.
+  truck(b, scene);
+  for (const z of [22, 24.2]) b.box(47.6, 0, z, 49.6, 1.4, z + 1.8, 'plant', { shadow: true });
+  for (const [x, z] of [[40, -10], [42, -10], [44, 20]]) {
+    pallet(b, x, z, 1.2, 1.0);
+    crate(b, x, z, 0.9, 0.7 + rng() * 0.4, 0.14);
+  }
+  for (const z of [-8, 10, 24]) lampPost(b, 42.5, z);
+  b.plane(36.2, 14.7, 38, 16.3, 0.04, 'hazard');
+  sign(scene, 'DELIVERIES', 36.12, 2.6, 15.5, 'e', { w: 1.4, h: 0.3, ...HAZARD });
+}
+
+// Parked car, pointing along z: body, cabin, wheels.
+function car(b, x, z, color) {
+  b.box(x - 0.9, 0.3, z - 2.1, x + 0.9, 1.0, z + 2.1, color, { shadow: true });
+  b.box(x - 0.8, 1.0, z - 1.0, x + 0.8, 1.55, z + 1.1, 'glass', NC);
+  b.box(x - 0.8, 1.55, z - 1.0, x + 0.8, 1.6, z + 1.1, color, NC);
+  for (const [dx, dz] of [[-0.95, -1.4], [0.75, -1.4], [-0.95, 1.2], [0.75, 1.2]]) {
+    b.box(x + dx, 0, z + dz, x + dx + 0.2, 0.55, z + dz + 0.6, 'rubber', NC);
+  }
+}
+
+// Tall sodium lamp.
+function lampPost(b, x, z) {
+  b.box(x - 0.1, 0, z - 0.1, x + 0.1, 6, z + 0.1, 'metal');
+  b.box(x - 0.1, 5.9, z - 0.8, x + 0.1, 6, z + 0.1, 'metal', NC);
+  b.box(x - 0.25, 5.8, z - 1.1, x + 0.25, 5.9, z - 0.6, 'light', NC);
+}
+
+// The Mars delivery truck, backed up to the yard.
+function truck(b, scene) {
+  b.box(38.5, 0.9, 2, 46.5, 4.1, 4.6, 'fridge', { shadow: true }); // trailer
+  b.box(46.6, 0.6, 2.1, 49, 3.2, 4.5, 'red', { shadow: true });    // cab
+  b.box(48.95, 2, 2.3, 49.02, 2.9, 4.3, 'glass', NC);
+  for (const x of [39.5, 44.5, 47.8]) {
+    b.box(x - 0.45, 0, 1.85, x + 0.45, 0.9, 2.05, 'rubber', NC);
+    b.box(x - 0.45, 0, 4.55, x + 0.45, 0.9, 4.75, 'rubber', NC);
+  }
+  b.box(38.5, 0, 2, 49, 0.9, 4.6, null);
+  sign(scene, 'GOOB CO. · MARS EXPRESS', 42.5, 2.6, 4.62, 'n', { w: 5, h: 0.6, ...LOGO });
 }
 
 // A 50x30 cm grille standing 3 cm off the wall.

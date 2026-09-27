@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { shadowMaterials, boxShadowGeometry } from '../render/shadows.js';
 
 const SHADOW = '__shadow';
-const FLOOR_LEVELS = [0, 4];
+const FLOOR_LEVELS = [-4, 0, 4, 8];
 
 // Collects static boxes and planes, adds their colliders, and merges all
 // geometry that shares a material into one mesh (a few draw calls total).

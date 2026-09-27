@@ -2,7 +2,9 @@
 // works after closing the tab.
 
 const KEY = 'goob-infection.save';
-const VERSION = 1;
+// Bump when the world changes shape (rooms, cast, bins): older saves are
+// ignored rather than restored into a building they don't match.
+const VERSION = 2;
 
 export function saveGame(checkpoint) {
   try {

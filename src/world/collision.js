@@ -12,17 +12,33 @@ export class CollisionWorld {
     return box;
   }
 
-  // A ramp rising along +z from y0 at minZ to y1 at maxZ (used for stairs).
-  addRamp({ minX, maxX, minZ, maxZ, y0, y1, offset = 0 }) {
+  // A ramp for a stair flight, running along z from yLow to yHigh.
+  // rises: 'n' climbs toward +z, 's' toward -z. Several flights can share the
+  // same xz area on different floors, so a ramp only counts for things whose
+  // height is near its own (see relevant()).
+  addRamp({ minX, maxX, minZ, maxZ, yLow, yHigh, rises = 'n', offset = 0 }) {
     const ramp = {
-      minX, maxX, minZ, maxZ,
+      minX, maxX, minZ, maxZ, yLow, yHigh,
       heightAt(z) {
-        const t = (z - minZ) / (maxZ - minZ);
-        return Math.min(y1, y0 + offset + t * (y1 - y0));
+        let t = (z - minZ) / (maxZ - minZ);
+        if (rises === 's') t = 1 - t;
+        return Math.min(yHigh, yLow + offset + t * (yHigh - yLow));
+      },
+      contains(x, z) {
+        return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
+      },
+      // Is something standing at height y on this flight's floors?
+      relevant(y) {
+        return y > yLow - 1 && y < yHigh + 0.5;
       },
     };
     this.ramps.push(ramp);
     return ramp;
+  }
+
+  // The ramp under (x, z) for something at height y, if any.
+  rampAt(x, z, y) {
+    return this.ramps.find((r) => r.contains(x, z) && r.relevant(y)) ?? null;
   }
 
   // Distance along the ray to the nearest enabled box, or maxT if none is closer.
@@ -48,7 +64,7 @@ export class CollisionWorld {
       if (x + r > b.minX && x - r < b.maxX && z + r > b.minZ && z - r < b.maxZ) best = b.maxY;
     }
     for (const ramp of this.ramps) {
-      if (x < ramp.minX || x > ramp.maxX || z < ramp.minZ || z > ramp.maxZ) continue;
+      if (!ramp.contains(x, z) || !ramp.relevant(y)) continue;
       const h = ramp.heightAt(z);
       if (h <= y + step && h > best) best = h;
     }

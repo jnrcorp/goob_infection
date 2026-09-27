@@ -56,7 +56,7 @@ export function desk(b, x, z, rot = 0, y = 0) {
   p(-0.22, 0.76, -0.05, 0.22, 0.785, 0.12, 'plastic', NC);
   const seat = p.point(0, 0.75);
   chair(b, seat.x, seat.z, rot, y);
-  return { ...seat, rot, deskX: x, deskZ: z };
+  return { ...seat, rot, deskX: x, deskZ: z, y };
 }
 
 // Four desks around a cross of cubicle partitions. Returns seat positions.
