@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { ps1ify } from '../render/ps1.js';
 import { toTexture } from '../render/textures.js';
 import { MISSING } from '../story/lore.js';
 
@@ -13,14 +12,14 @@ const LOOK = {
 // surfaces. A faint pulse makes them findable. { canRead(file), onRead(file) }.
 export function createFiles(ctx, files, { canRead, onRead }) {
   const { scene, interactions } = ctx;
-  const glowMat = ps1ify(new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.35, depthWrite: false }));
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.35, depthWrite: false });
   const pickMat = new THREE.MeshBasicMaterial({ visible: false });
   return files.map((file, i) => {
     const look = LOOK[file.kind];
     const group = new THREE.Group();
     group.position.set(file.at.x, file.at.y + 0.004, file.at.z);
     group.rotation.y = (i * 1.7) % Math.PI;
-    const mat = ps1ify(new THREE.MeshLambertMaterial({ color: look.color, emissive: look.color, emissiveIntensity: 0.25 }));
+    const mat = new THREE.MeshLambertMaterial({ color: look.color, emissive: look.color, emissiveIntensity: 0.25 });
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(look.w, look.h, look.d), mat);
     mesh.position.y = look.h / 2;
     // A soft halo just above it, so it catches the eye.
@@ -58,7 +57,7 @@ export function createFlyers(scene, spots) {
     map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
     const mesh = new THREE.Mesh(
       new THREE.PlaneGeometry(0.42, 0.56),
-      ps1ify(new THREE.MeshLambertMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.2 }))
+      new THREE.MeshLambertMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.15 })
     );
     mesh.position.set(s.x, s.y, s.z);
     mesh.rotation.y = FACING[s.facing];

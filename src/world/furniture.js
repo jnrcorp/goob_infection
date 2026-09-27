@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { ps1ify } from '../render/ps1.js';
 import { toTexture } from '../render/textures.js';
 
 // Furniture made of boxes. Each piece is described in local coordinates and
@@ -22,6 +21,18 @@ export function placer(b, x, z, rot = 0, y = 0) {
     const [bx, bz] = r(lx1, lz1);
     return b.box(x + Math.min(ax, bx), y + ly0, z + Math.min(az, bz), x + Math.max(ax, bx), y + ly1, z + Math.max(az, bz), mat, opts);
   };
+  // Rounded-edge version of box (same arguments, then the edge radius).
+  box.round = (lx0, ly0, lz0, lx1, ly1, lz1, mat, radius, opts) => {
+    const [ax, az] = r(lx0, lz0);
+    const [bx, bz] = r(lx1, lz1);
+    return b.roundBox(x + Math.min(ax, bx), y + ly0, z + Math.min(az, bz), x + Math.max(ax, bx), y + ly1, z + Math.max(az, bz), mat, radius, opts);
+  };
+  // Any geometry, built around its own origin in local coordinates, placed at
+  // local (lx, ly, lz) and turned with the rest of the piece.
+  box.shape = (geometry, lx, ly, lz, mat) => {
+    const [ax, az] = r(lx, lz);
+    b.shape(geometry, mat, x + ax, y + ly, z + az, (rot & 3) * Math.PI / 2);
+  };
   box.point = (lx, lz) => {
     const [ax, az] = r(lx, lz);
     return { x: x + ax, z: z + az };
@@ -29,14 +40,53 @@ export function placer(b, x, z, rot = 0, y = 0) {
   return box;
 }
 
-// Office chair. Backrest on local +z.
+// Office chair: five-star base on casters, gas lift, padded seat and back,
+// and armrests. Backrest on local +z.
 export function chair(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-0.24, 0.44, -0.24, 0.24, 0.52, 0.24, 'chair', NC);
-  p(-0.24, 0.52, 0.2, 0.24, 1.02, 0.26, 'chair', NC);
-  p(-0.03, 0.1, -0.03, 0.03, 0.44, 0.03, 'metal', NC);
-  p(-0.3, 0.04, -0.04, 0.3, 0.1, 0.04, 'metal', NC);
-  p(-0.04, 0.04, -0.3, 0.04, 0.1, 0.3, 'metal', NC);
+  for (let k = 0; k < 5; k++) {
+    const a = k * Math.PI * 2 / 5 + 0.3;
+    const leg = new THREE.BoxGeometry(0.3, 0.035, 0.045);
+    leg.translate(0.15, 0, 0);
+    leg.rotateY(a);
+    p.shape(leg, 0, 0.075, 0, 'plastic');
+    const caster = new THREE.SphereGeometry(0.03, 8, 6);
+    p.shape(caster, Math.cos(a) * 0.29, 0.03, -Math.sin(a) * 0.29, 'rubber');
+  }
+  p.shape(new THREE.CylinderGeometry(0.045, 0.06, 0.06, 12), 0, 0.09, 0, 'plastic');
+  p.shape(new THREE.CylinderGeometry(0.022, 0.022, 0.32, 10), 0, 0.27, 0, 'steel');
+  p.round(-0.25, 0.42, -0.24, 0.25, 0.5, 0.25, 'chair', 0.04, NC);
+  p(-0.03, 0.44, 0.2, 0.03, 0.62, 0.24, 'plastic', NC);
+  p.round(-0.23, 0.58, 0.22, 0.23, 1.04, 0.28, 'chair', 0.05, NC);
+  for (const side of [-1, 1]) {
+    p(side * 0.25 - 0.015, 0.5, -0.02, side * 0.25 + 0.015, 0.66, 0.02, 'plastic', NC);
+    p.round(side * 0.25 - 0.035, 0.66, -0.14, side * 0.25 + 0.035, 0.69, 0.12, 'rubber', 0.012, NC);
+  }
+}
+
+// A few things people keep on their desks, picked from the desk's position.
+function deskClutter(p, x, z) {
+  const pick = (salt) => {
+    const v = Math.sin(x * 12.9898 + z * 78.233 + salt * 37.719) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  if (pick(1) < 0.7) {
+    const mug = new THREE.CylinderGeometry(0.04, 0.036, 0.1, 14);
+    p.shape(mug, -0.58 + pick(2) * 0.1, 0.81, -0.12 + pick(3) * 0.2, pick(4) < 0.5 ? 'fridge' : 'red');
+  }
+  if (pick(5) < 0.8) {
+    const stack = 1 + Math.floor(pick(6) * 4);
+    const paper = new THREE.BoxGeometry(0.21, 0.004 * stack, 0.3);
+    paper.rotateY(pick(7) * 0.5 - 0.25);
+    p.shape(paper, 0.52, 0.761 + 0.002 * stack, -0.05 + pick(8) * 0.15, 'fridge');
+  }
+  if (pick(9) < 0.45) {
+    p.round(-0.62, 0.76, -0.34, -0.42, 0.82, -0.18, 'plastic', 0.015, NC); // desk phone
+  }
+  if (pick(10) < 0.5) {
+    const holder = new THREE.CylinderGeometry(0.035, 0.035, 0.11, 12);
+    p.shape(holder, 0.66, 0.815, -0.3, 'metal');
+  }
 }
 
 // Desk with monitor at the back (-z) and a chair in front (+z).
@@ -44,16 +94,21 @@ export function chair(b, x, z, rot = 0, y = 0) {
 // center { deskX, deskZ }.
 export function desk(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-0.8, 0.72, -0.4, 0.8, 0.76, 0.4, 'desk', NC);
+  p.round(-0.8, 0.72, -0.4, 0.8, 0.76, 0.4, 'desk', 0.012, NC);
   p(-0.8, 0, -0.4, -0.76, 0.72, 0.4, 'plastic', NC);
   p(0.76, 0, -0.4, 0.8, 0.72, 0.4, 'plastic', NC);
   p(-0.76, 0.25, -0.4, 0.76, 0.72, -0.37, 'plastic', NC);
   p(-0.8, 0, -0.4, 0.8, 0.76, 0.4, null);
-  p(-0.26, 0.9, -0.3, 0.26, 1.22, -0.24, 'plastic', NC);
-  // Screen stands 2 cm proud of the casing so the two never flicker.
-  p(-0.23, 0.93, -0.24, 0.23, 1.19, -0.22, 'screen', { collide: false, boxUV: true });
-  p(-0.04, 0.76, -0.3, 0.04, 0.9, -0.26, 'plastic', NC);
-  p(-0.22, 0.76, -0.05, 0.22, 0.785, 0.12, 'plastic', NC);
+  // Thin-bezel monitor on a stand. The screen sits 2 mm proud of the casing
+  // so the two never flicker.
+  p.round(-0.29, 0.9, -0.3, 0.29, 1.24, -0.27, 'plastic', 0.01, NC);
+  p(-0.275, 0.915, -0.27, 0.275, 1.225, -0.268, 'screen', { collide: false, boxUV: true });
+  p(-0.025, 0.77, -0.32, 0.025, 0.95, -0.3, 'plastic', NC);
+  p.round(-0.12, 0.76, -0.38, 0.12, 0.775, -0.22, 'plastic', 0.006, NC);
+  // Keyboard and mouse.
+  p.round(-0.22, 0.76, -0.04, 0.22, 0.782, 0.11, 'plastic', 0.008, NC);
+  p.round(0.3, 0.76, 0.0, 0.36, 0.785, 0.1, 'plastic', 0.018, NC);
+  deskClutter(p, x, z);
   const seat = p.point(0, 0.75);
   chair(b, seat.x, seat.z, rot, y);
   return { ...seat, rot, deskX: x, deskZ: z, y };
@@ -73,20 +128,27 @@ export function pod(b, x, z, y = 0) {
 
 export function cabinet(b, x, z, rot = 0, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-0.25, 0, -0.3, 0.25, 1.3, 0.3, 'metal', { shadow: true });
+  p.round(-0.25, 0, -0.3, 0.25, 1.3, 0.3, 'metal', 0.01, { shadow: true });
   for (const h of [0.35, 0.75, 1.15]) p(-0.08, h, 0.3, 0.08, h + 0.03, 0.33, 'plastic', NC);
 }
 
+// Potted office plant: a tapered pot with a bushy clump of leaves.
 export function plant(b, x, z, y = 0) {
-  b.box(x - 0.2, y, z - 0.2, x + 0.2, y + 0.45, z + 0.2, 'pot', { shadow: true });
-  b.box(x - 0.3, y + 0.45, z - 0.3, x + 0.3, y + 1.0, z + 0.3, 'plant', NC);
-  b.box(x - 0.18, y + 0.95, z - 0.22, x + 0.2, y + 1.35, z + 0.16, 'plant', NC);
+  b.box(x - 0.2, y, z - 0.2, x + 0.2, y + 0.45, z + 0.2, null);
+  b.shape(new THREE.CylinderGeometry(0.21, 0.16, 0.45, 18), 'pot', x, y + 0.225, z);
+  b.shape(new THREE.CylinderGeometry(0.19, 0.19, 0.02, 18), 'concrete', x, y + 0.44, z);
+  const clumps = [[0, 0.72, 0, 0.3], [0.14, 0.95, 0.06, 0.22], [-0.12, 1.05, -0.05, 0.2], [0.02, 1.25, 0.1, 0.16], [-0.05, 0.88, 0.16, 0.2]];
+  for (const [dx, dy, dz, r] of clumps) {
+    const leaves = new THREE.IcosahedronGeometry(r, 1);
+    leaves.scale(1, 1.15, 1);
+    b.shape(leaves, 'plant', x + dx, y + dy, z + dz, dx * 7);
+  }
 }
 
 export function table(b, x, z, w, d, y = 0) {
-  b.box(x - w / 2, y + 0.72, z - d / 2, x + w / 2, y + 0.76, z + d / 2, 'desk', NC);
-  b.box(x - 0.05, y, z - 0.05, x + 0.05, y + 0.72, z + 0.05, 'metal', NC);
-  b.box(x - 0.3, y, z - 0.3, x + 0.3, y + 0.04, z + 0.3, 'metal', NC);
+  b.roundBox(x - w / 2, y + 0.72, z - d / 2, x + w / 2, y + 0.76, z + d / 2, 'desk', 0.015, NC);
+  b.shape(new THREE.CylinderGeometry(0.045, 0.045, 0.7, 12), 'steel', x, y + 0.37, z);
+  b.shape(new THREE.CylinderGeometry(0.28, 0.3, 0.03, 20), 'metal', x, y + 0.015, z);
   b.box(x - w / 2, y, z - d / 2, x + w / 2, y + 0.76, z + d / 2, null);
 }
 
@@ -99,7 +161,7 @@ export function chairsAround(b, x, z, w, d, y = 0) {
 
 export function counter(b, x0, z0, x1, z1, y = 0) {
   b.box(x0, y, z0, x1, y + 0.86, z1, 'wood', { shadow: true });
-  b.box(x0 - 0.02, y + 0.86, z0 - 0.02, x1 + 0.02, y + 0.9, z1 + 0.02, 'counter', NC);
+  b.roundBox(x0 - 0.02, y + 0.86, z0 - 0.02, x1 + 0.02, y + 0.9, z1 + 0.02, 'counter', 0.01, NC);
 }
 
 export function sinks(b, x0, z0, x1, z1, y = 0) {
@@ -272,10 +334,21 @@ export function hazmatSuitProp(scene, materials, x, y, z, rot) {
 // Couch with the backrest on local +z.
 export function couch(b, x, z, rot, len, y = 0) {
   const p = placer(b, x, z, rot, y);
-  p(-len / 2, 0, -0.4, len / 2, 0.45, 0.4, 'cubicle', { shadow: true });
-  p(-len / 2, 0.45, 0.2, len / 2, 0.9, 0.4, 'cubicle', NC);
-  p(-len / 2, 0.45, -0.4, -len / 2 + 0.15, 0.65, 0.4, 'cubicle', NC);
-  p(len / 2 - 0.15, 0.45, -0.4, len / 2, 0.65, 0.4, 'cubicle', NC);
+  p(-len / 2, 0, -0.4, len / 2, 0.3, 0.4, null);
+  p.round(-len / 2, 0.08, -0.4, len / 2, 0.3, 0.4, 'cubicle', 0.05, { collide: false, shadow: true });
+  // Seat cushions, back cushion and arms.
+  const inner = len - 0.3;
+  const n = Math.max(1, Math.round(inner / 0.7));
+  for (let i = 0; i < n; i++) {
+    const c0 = -inner / 2 + (i * inner) / n;
+    p.round(c0 + 0.005, 0.3, -0.38, c0 + inner / n - 0.005, 0.45, 0.2, 'cubicle', 0.06, NC);
+  }
+  p.round(-len / 2 + 0.15, 0.3, 0.2, len / 2 - 0.15, 0.9, 0.4, 'cubicle', 0.08, NC);
+  p.round(-len / 2, 0.3, -0.4, -len / 2 + 0.15, 0.65, 0.4, 'cubicle', 0.06, NC);
+  p.round(len / 2 - 0.15, 0.3, -0.4, len / 2, 0.65, 0.4, 'cubicle', 0.06, NC);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    p(sx * (len / 2 - 0.08) - 0.02, 0, sz * 0.32 - 0.02, sx * (len / 2 - 0.08) + 0.02, 0.08, sz * 0.32 + 0.02, 'rubber', NC);
+  }
 }
 
 export function printer(b, x, z, rot = 0, y = 0) {
@@ -285,12 +358,13 @@ export function printer(b, x, z, rot = 0, y = 0) {
 }
 
 export function waterCooler(b, x, z, y = 0) {
-  b.box(x - 0.18, y, z - 0.18, x + 0.18, y + 1.0, z + 0.18, 'fridge', { shadow: true });
-  b.box(x - 0.13, y + 1.0, z - 0.13, x + 0.13, y + 1.4, z + 0.13, 'glass', NC);
+  b.roundBox(x - 0.18, y, z - 0.18, x + 0.18, y + 1.0, z + 0.18, 'fridge', 0.03, { shadow: true });
+  b.shape(new THREE.CylinderGeometry(0.13, 0.13, 0.4, 20), 'glass', x, y + 1.2, z);
 }
 
 export function bin(b, x, z, y = 0) {
-  b.box(x - 0.15, y, z - 0.15, x + 0.15, y + 0.4, z + 0.15, 'plastic', NC);
+  b.shape(new THREE.CylinderGeometry(0.15, 0.12, 0.4, 16, 1, true), 'plastic', x, y + 0.2, z);
+  b.shape(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 16), 'plastic', x, y + 0.005, z);
 }
 
 // Flat text sign. facing: which way the readable side points (n = +z, s = -z, e = +x, w = -x).
@@ -312,7 +386,7 @@ export function sign(scene, text, x, y, z, facing, { w = 1.6, h = 0.35, bg = '#1
   map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
-    ps1ify(new THREE.MeshLambertMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.35 }))
+    new THREE.MeshLambertMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.25 })
   );
   mesh.position.set(x, y, z);
   mesh.rotation.y = FACING[facing];

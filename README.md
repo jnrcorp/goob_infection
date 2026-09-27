@@ -17,7 +17,7 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 - `index.html`: page shell. The import map loads Three.js from the jsDelivr CDN, so there's no build step.
 - `src/main.js`: bootstrap and game loop.
 - `src/core/`: input, seeded random numbers, settings, autosave, and synthesized sound (`sound.js`).
-- `src/render/`: PS1 renderer (low-res target, vertex snapping, dithering), procedural textures, materials.
+- `src/render/`: the renderer (tone mapping and post effects: bloom, FXAA), quality presets (`quality.js`), procedural textures and materials.
 - `src/world/`: building data (`building.js`), the builder that turns it into geometry, collision, doors, elevator, furniture, interactions.
 - `src/player/`: first-person controller, the held vacuum and antidote sprayer.
 - `src/npc/`: blocky coworker model and animation, NPC behavior, the cast (who's where and what they say), infected AI (`infectedBrain.js`, tuning in `INFECTED`) and pathfinding.
@@ -36,8 +36,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
 
 - `` ` `` (backquote) toggles a readout with FPS and position. While it's on:
   - `N` toggles noclip (Space/C to fly up/down).
-  - `1` toggles PS1 vertex wobble (off by default, because it makes nearly-touching surfaces flicker).
-  - `2` toggles dithering.
+  - `V` cycles the graphics preset (Low / Medium / High), for comparing. It doesn't change your saved setting.
   - `G` removes all goob (to skip the cleanup).
   - `K` cures everyone (during the cure objective, to test the ending).
   - `R` (while pushing a biohazard bin) sends it straight to the secure freezer.
@@ -66,11 +65,9 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
 
 ## Tuning the look
 
-In `src/render/ps1.js`:
-- `PS1_HEIGHT` sets the render resolution (240 is authentic PS1; currently 960).
-- `MSAA_SAMPLES` sets anti-aliasing (0 = off, 4 = on).
-- `COLOR_LEVELS` sets the color steps per channel (31 is authentic PS1; 255 = full color). `DITHER_DEFAULT` turns the PS1 dither pattern on at startup.
-- `VERTEX_SNAP_DEFAULT` turns the PS1 vertex wobble on at startup, and `VERTEX_JITTER` sets how strong it is.
+Graphics presets (Low / Medium / High) are in `src/render/quality.js`: render scale, texture size, light count, shadows, bloom and anti-aliasing. The Graphics button on the title and pause screens picks one (Auto guesses from your GPU, and drops a level if play runs under 40 fps). `?quality=low` (or `medium`, `high`) forces one for this visit, and `?shadows=none` (or `sun`, `all`) overrides its sun shadows; headless tests should use `?quality=low`.
+
+In `src/render/renderer.js`: `EXPOSURE` (overall brightness) and `BLOOM` (glow strength, and how bright something has to be to glow). All surfaces are matte (diffuse-only `MeshLambertMaterial`, no reflections); textures and bump maps are generated in `src/render/surfaces.js`.
 
 Elsewhere:
 - `SIZE` in `src/render/textures.js` sets texture resolution (currently 128; 64 is chunkier).

@@ -19,7 +19,7 @@ export class NPC {
     this.def = def;
     this.name = def.name;
     this.collision = collision;
-    this.person = new Person(def.look);
+    this.person = new Person({ seed: def.name, ...def.look });
     scene.add(this.person.root);
     this.pos = new THREE.Vector3();
     this.home = new THREE.Vector3();

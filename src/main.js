@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { PS1Renderer, ps1Settings } from './render/ps1.js';
+import { GameRenderer } from './render/renderer.js';
+import { setContactShadowStrength } from './render/shadows.js';
+import { QUALITY_PRESETS, QUALITY_CHOICES, detectQuality, lowerQuality } from './render/quality.js';
 import { createMaterials } from './render/materials.js';
 import { CollisionWorld } from './world/collision.js';
 import { Interactions } from './world/interaction.js';
@@ -35,11 +37,16 @@ const screens = {
 };
 
 // ---------- Setup ----------
-const ps1 = new PS1Renderer(canvas);
+const gfx = new GameRenderer(canvas);
+// The quality preset to start with (see Graphics quality below).
+function initialQuality() {
+  const param = new URLSearchParams(location.search).get('quality');
+  if (QUALITY_PRESETS[param]) return param;
+  return settings.quality === 'auto' ? detectQuality(gfx.renderer) : settings.quality;
+}
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#3a4150');
-scene.fog = new THREE.Fog('#16181b', 10, 42);
-const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 90);
+scene.background = new THREE.Color('#9fb4c8');
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 120);
 
 const input = new Input(canvas);
 const hud = new Hud();
@@ -47,13 +54,70 @@ const dialogue = new Dialogue();
 const reader = new Reader();
 const fx = new ScreenFx();
 const collision = new CollisionWorld();
-const materials = createMaterials(ps1.renderer.capabilities.getMaxAnisotropy());
+const materials = createMaterials(gfx.renderer, QUALITY_PRESETS[initialQuality()]);
 const interactions = new Interactions(camera, collision, hud);
 const ctx = { scene, collision, materials, interactions, hud };
 const world = buildBuilding(ctx);
 const cast = createCast(ctx, world.props);
 const player = new Player(camera, collision);
 const viewmodel = new Viewmodel(materials);
+
+// ---------- Graphics quality ----------
+// 'auto' starts from a guess based on the GPU and steps down if the frame
+// rate can't keep up. ?quality=low|medium|high overrides it for this visit.
+const qualityParam = new URLSearchParams(location.search).get('quality');
+const qualityOverride = QUALITY_PRESETS[qualityParam] ? qualityParam : null;
+let autoQuality = detectQuality(gfx.renderer);
+function qualityName() {
+  const choice = qualityOverride ?? settings.quality;
+  return choice === 'auto' ? autoQuality : choice;
+}
+// ?shadows=none|sun|all, ?contactShadows=0..1, ?normalMaps=0|1 and ?msaa=0|4
+// override those parts of the preset (for tracking down rendering problems).
+const presetTweaks = {};
+for (const key of ['shadows', 'contactShadows', 'normalMaps', 'msaa']) {
+  const value = new URLSearchParams(location.search).get(key);
+  if (value === null) continue;
+  presetTweaks[key] = key === 'shadows' ? value : key === 'normalMaps' ? value === '1' : Number(value);
+}
+const tweakedPresets = new Map();
+function presetFor(name) {
+  if (!tweakedPresets.has(name)) tweakedPresets.set(name, { ...QUALITY_PRESETS[name], ...presetTweaks });
+  return tweakedPresets.get(name);
+}
+function applyQuality() {
+  const preset = presetFor(qualityName());
+  if (gfx.preset !== preset) gfx.applyPreset(preset);
+  world.lights.setCount(preset.lights);
+  world.setShadows(preset.shadows, gfx.renderer);
+  setContactShadowStrength(preset.contactShadows);
+  materials.regenerate(preset);
+}
+gfx.setup(scene, camera, viewmodel, presetFor(qualityName()));
+world.lights.setCount(presetFor(qualityName()).lights);
+world.setShadows(presetFor(qualityName()).shadows, gfx.renderer);
+setContactShadowStrength(presetFor(qualityName()).contactShadows);
+materials.regenerate(presetFor(qualityName()));
+
+// On Auto: if play runs under 40 fps for 5 seconds, drop a preset.
+const frameWatch = { time: 0, frames: 0 };
+function watchFrameRate(dt) {
+  if (state !== 'playing' || qualityOverride || settings.quality !== 'auto') {
+    frameWatch.time = frameWatch.frames = 0;
+    return;
+  }
+  frameWatch.time += dt;
+  frameWatch.frames += 1;
+  if (frameWatch.time < 5) return;
+  const fps = frameWatch.frames / frameWatch.time;
+  frameWatch.time = frameWatch.frames = 0;
+  const lower = lowerQuality(autoQuality);
+  if (fps >= 40 || !lower) return;
+  autoQuality = lower;
+  applyQuality();
+  showQuality();
+  hud.toast(`Graphics set to ${QUALITY_PRESETS[lower].label} to keep things smooth.`, 3);
+}
 
 // Spots link through doorways whether the door is open or not (a shut door
 // then blocks spreading or walking along that link), and people never block.
@@ -81,6 +145,17 @@ const spill = new Spill({ scene, materials, player, camera, viewmodel, goob, fx,
 const chapter = new Chapter1({
   ctx, world, player, cast, hud, dialogue, reader, interactions, fx, goob, graph: goobGraph, vacuum, antidote, spill,
   sightIgnore, onEnd: endChapter, onBreach: suitBreached,
+});
+
+// Everything solid casts and catches real shadows (when the preset has them):
+// people, doors, the elevator, props and goob. (The building's static
+// geometry sets this itself.)
+scene.traverse((o) => {
+  if (!o.isMesh || o.castShadow) return;
+  const m = Array.isArray(o.material) ? o.material[0] : o.material;
+  if (!m?.isMeshLambertMaterial || m.transparent) return;
+  o.castShadow = true;
+  o.receiveShadow = true;
 });
 // Every checkpoint is also the autosave.
 chapter.onCheckpoint = (checkpoint) => saveGame(checkpoint);
@@ -225,6 +300,24 @@ difficultyButton.addEventListener('click', () => {
 });
 showDifficulty();
 
+// Graphics button (title and pause screens): Auto, Low, Medium, High.
+const qualityButtons = [document.getElementById('menu-quality'), document.getElementById('pause-quality')];
+function showQuality() {
+  const label = settings.quality === 'auto'
+    ? `Auto (${QUALITY_PRESETS[autoQuality].label})`
+    : QUALITY_PRESETS[settings.quality].label;
+  for (const button of qualityButtons) button.textContent = `Graphics: ${label}`;
+}
+for (const button of qualityButtons) {
+  button.addEventListener('click', () => {
+    settings.quality = QUALITY_CHOICES[(QUALITY_CHOICES.indexOf(settings.quality) + 1) % QUALITY_CHOICES.length];
+    saveSettings();
+    applyQuality();
+    showQuality();
+  });
+}
+showQuality();
+
 // Volume button: steps through 0–100%.
 const volumeButton = document.getElementById('menu-volume');
 function showVolume() {
@@ -291,7 +384,7 @@ window.addEventListener('keydown', (e) => {
 
 // ---------- Debug ----------
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
-// 1 toggles vertex wobble, 2 toggles dithering, G removes all goob,
+// V cycles the graphics preset (for comparing), G removes all goob,
 // K cures everyone (during the cure objective), L marks every file as found,
 // I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
 // URL options:
@@ -401,7 +494,7 @@ if (params.has('goobspots')) {
 
 // ---------- Loop ----------
 function resize() {
-  ps1.setSize(window.innerWidth, window.innerHeight);
+  gfx.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   viewmodel.setAspect(camera.aspect);
@@ -470,9 +563,11 @@ async function runStartupSimulation() {
 
 runStartupSimulation().then(() => {
   clock.getDelta();
-  ps1.renderer.setAnimationLoop(() => {
-    step(Math.min(clock.getDelta(), 0.05));
-    ps1.render(scene, camera, viewmodel);
+  gfx.renderer.setAnimationLoop(() => {
+    const dt = clock.getDelta();
+    step(Math.min(dt, 0.05));
+    watchFrameRate(dt);
+    gfx.render();
     input.endFrame();
   });
 });
@@ -510,13 +605,15 @@ function step(dt) {
     player.noclip = !player.noclip;
     hud.toast(player.noclip ? 'Noclip on' : 'Noclip off', 1.5);
   }
-  if (active && debug && input.wasPressed('Digit1')) {
-    ps1Settings.vertexSnap = !ps1Settings.vertexSnap;
-    hud.toast(`Vertex wobble ${ps1Settings.vertexSnap ? 'on' : 'off'}`, 1.5);
-  }
-  if (active && debug && input.wasPressed('Digit2')) {
-    ps1.dither = !ps1.dither;
-    hud.toast(`Dithering ${ps1.dither ? 'on' : 'off'}`, 1.5);
+  if (active && debug && input.wasPressed('KeyV')) {
+    const names = Object.keys(QUALITY_PRESETS);
+    const next = names[(names.indexOf(qualityName()) + 1) % names.length];
+    gfx.applyPreset(QUALITY_PRESETS[next]);
+    world.lights.setCount(QUALITY_PRESETS[next].lights);
+    world.setShadows(QUALITY_PRESETS[next].shadows, gfx.renderer);
+    setContactShadowStrength(QUALITY_PRESETS[next].contactShadows);
+    materials.regenerate(QUALITY_PRESETS[next]);
+    hud.toast(`Debug: ${QUALITY_PRESETS[next].label} graphics (until the next settings change)`, 1.5);
   }
   if (active && debug && input.wasPressed('KeyG')) {
     goob.collected += goob.remaining;
@@ -554,6 +651,7 @@ function step(dt) {
     gameTime += worldDt;
     dialogue.update(dt, input);
     player.update(dt, input, controlling);
+    world.outbreak = chapter.outbreak;
     world.update(worldDt, player);
     cast.update(worldDt, player);
     goob.update(worldDt, gameTime);

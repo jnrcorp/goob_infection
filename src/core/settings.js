@@ -1,4 +1,5 @@
 // Player settings, remembered in the browser between visits.
+import { QUALITY_CHOICES } from '../render/quality.js';
 
 // Listed in the order the title-screen button cycles through them.
 export const DIFFICULTIES = {
@@ -35,11 +36,12 @@ export const settings = load();
 export const VOLUMES = [0, 0.25, 0.5, 0.75, 1];
 
 function load() {
-  const defaults = { difficulty: 'normal', volume: 0.75 };
+  const defaults = { difficulty: 'normal', volume: 0.75, quality: 'auto' };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');
     const merged = { ...defaults, ...saved };
     if (!DIFFICULTIES[merged.difficulty]) merged.difficulty = defaults.difficulty;
+    if (!QUALITY_CHOICES.includes(merged.quality)) merged.quality = defaults.quality;
     return merged;
   } catch {
     return defaults;

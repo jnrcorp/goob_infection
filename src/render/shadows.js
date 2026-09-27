@@ -33,6 +33,13 @@ export const shadowMaterials = {
 
 // Floor shadow for a rectangular footprint: an inner rect at full alpha,
 // then two rings fading to nothing FADE meters out.
+// Fade the baked contact shadows (0–1): with real
+// shadows on, they'd double up into dark puddles.
+export function setContactShadowStrength(k) {
+  shadowMaterials.box.opacity = STRENGTH * k;
+  shadowMaterials.round.opacity = 0.6 * k;
+}
+
 export function boxShadowGeometry(x0, z0, x1, z1, y) {
   const rings = [
     { grow: 0, alpha: 1 },

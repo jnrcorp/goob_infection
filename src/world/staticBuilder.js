@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { shadowMaterials, boxShadowGeometry } from '../render/shadows.js';
 
 const SHADOW = '__shadow';
@@ -39,6 +40,34 @@ export class StaticBuilder {
     return collider;
   }
 
+  // Like box(), but with its edges rounded off (furniture), so they catch
+  // the light.
+  roundBox(x0, y0, z0, x1, y1, z1, mat, radius = 0.02, opts = {}) {
+    const w = x1 - x0;
+    const h = y1 - y0;
+    const d = z1 - z0;
+    if (w <= 1e-4 || h <= 1e-4 || d <= 1e-4) return null;
+    const r = Math.min(radius, w / 2, h / 2, d / 2) * 0.98;
+    if (r < 0.002) return this.box(x0, y0, z0, x1, y1, z1, mat, opts);
+    const collider = opts.collide === false ? null : this.collision.addBox(x0, y0, z0, x1, y1, z1);
+    const onFloor = FLOOR_LEVELS.some((f) => Math.abs(y0 - f) < 0.02);
+    if (onFloor && h >= 0.3 && opts.shadow) this.shadow(x0, z0, x1, z1, y0);
+    const g = new RoundedBoxGeometry(w, h, d, 2, r);
+    g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    if (!opts.boxUV) worldUV(g, this.materials.tile(mat));
+    this.add(mat, g);
+    return collider;
+  }
+
+  // Any geometry (sized in meters, built around its own origin), turned by
+  // rotY about the vertical axis and moved to (x, y, z). No collider.
+  shape(geometry, mat, x, y, z, rotY = 0) {
+    geometry.rotateY(rotY);
+    geometry.translate(x, y, z);
+    worldUV(geometry, this.materials.tile(mat));
+    this.add(mat, geometry);
+  }
+
   // Horizontal plane facing up (floors) or down (ceilings). No collider.
   plane(x0, z0, x1, z1, y, mat, facingDown = false) {
     this.records.push({ kind: 'plane', x0, z0, x1, z1, y, mat, facingDown });
@@ -60,12 +89,19 @@ export class StaticBuilder {
   }
 
   finish(scene) {
-    for (const [mat, geometries] of this.buckets) {
+    for (const [mat, list] of this.buckets) {
+      // Rounded boxes come without an index; everything merged together
+      // has to match.
+      const geometries = list.some((g) => !g.index) ? list.map((g) => (g.index ? g.toNonIndexed() : g)) : list;
       const merged = mergeGeometries(geometries, false);
-      geometries.forEach((g) => g.dispose());
+      list.forEach((g) => g.dispose());
       const mesh = new THREE.Mesh(merged, mat === SHADOW ? shadowMaterials.box : this.materials.get(mat));
       mesh.matrixAutoUpdate = false;
       if (mat === SHADOW) mesh.renderOrder = -1; // before other see-through things (glass)
+      // Walls, floors and furniture cast and catch real shadows (when on).
+      const solid = mat !== SHADOW && mat !== 'glass';
+      mesh.castShadow = solid;
+      mesh.receiveShadow = solid;
       scene.add(mesh);
     }
     this.buckets.clear();

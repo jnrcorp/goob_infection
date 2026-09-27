@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { createRng } from '../core/random.js';
 import { BUILDING } from './building.js';
 import {
@@ -300,8 +301,8 @@ function furnishOutdoors(b, scene, rng) {
     b.plane(x - 0.05, -8, x + 0.05, -3, 0.03, 'fridge');
     b.plane(x - 0.05, -15, x + 0.05, -10, 0.03, 'fridge');
   }
-  const cars = [[-4.6, -5.5, 'red'], [1, -5.5, 'steel'], [6.6, -5.5, 'suit'], [23.4, -5.5, 'plastic'],
-    [-1.8, -12.5, 'steel'], [9.4, -12.5, 'red'], [15, -12.5, 'plastic'], [29, -12.5, 'suit']];
+  const cars = [[-4.6, -5.5, 'paintRed'], [1, -5.5, 'paintSilver'], [6.6, -5.5, 'paintYellow'], [23.4, -5.5, 'paintBlack'],
+    [-1.8, -12.5, 'paintSilver'], [9.4, -12.5, 'paintBlue'], [15, -12.5, 'paintBlack'], [29, -12.5, 'paintYellow']];
   for (const [x, z, color] of cars) car(b, x, z, color);
   for (const x of [2, 16, 30]) lampPost(b, x, -9);
   bench(b, 4.5, -0.8, 6.5, -0.4);
@@ -321,12 +322,23 @@ function furnishOutdoors(b, scene, rng) {
 }
 
 // Parked car, pointing along z: body, cabin, wheels.
-function car(b, x, z, color) {
-  b.box(x - 0.9, 0.3, z - 2.1, x + 0.9, 1.0, z + 2.1, color, { shadow: true });
-  b.box(x - 0.8, 1.0, z - 1.0, x + 0.8, 1.55, z + 1.1, 'glass', NC);
-  b.box(x - 0.8, 1.55, z - 1.0, x + 0.8, 1.6, z + 1.1, color, NC);
-  for (const [dx, dz] of [[-0.95, -1.4], [0.75, -1.4], [-0.95, 1.2], [0.75, 1.2]]) {
-    b.box(x + dx, 0, z + dz, x + dx + 0.2, 0.55, z + dz + 0.6, 'rubber', NC);
+// A parked sedan (nose toward -z): rounded body, glass cabin, wheels, lights.
+function car(b, x, z, paint) {
+  b.box(x - 0.9, 0, z - 2.15, x + 0.9, 1.5, z + 2.15, null);
+  b.roundBox(x - 0.9, 0.28, z - 2.15, x + 0.9, 0.95, z + 2.15, paint, 0.2, NC);
+  b.roundBox(x - 0.78, 0.9, z - 1.0, x + 0.78, 1.46, z + 1.05, 'tint', 0.14, NC);
+  b.roundBox(x - 0.8, 1.42, z - 0.9, x + 0.8, 1.52, z + 0.95, paint, 0.05, NC);
+  for (const [sx, dz] of [[-1, -1.35], [1, -1.35], [-1, 1.35], [1, 1.35]]) {
+    const wheel = new THREE.CylinderGeometry(0.33, 0.33, 0.22, 20);
+    wheel.rotateZ(Math.PI / 2);
+    b.shape(wheel, 'rubber', x + sx * 0.82, 0.33, z + dz);
+    const hub = new THREE.CylinderGeometry(0.17, 0.17, 0.02, 16);
+    hub.rotateZ(Math.PI / 2);
+    b.shape(hub, 'steel', x + sx * 0.94, 0.33, z + dz);
+  }
+  for (const sx of [-1, 1]) {
+    b.roundBox(x + sx * 0.62 - 0.14, 0.66, z - 2.17, x + sx * 0.62 + 0.14, 0.76, z - 2.1, 'light', 0.02, NC);
+    b.roundBox(x + sx * 0.66 - 0.12, 0.7, z + 2.1, x + sx * 0.66 + 0.12, 0.8, z + 2.17, 'red', 0.02, NC);
   }
 }
 

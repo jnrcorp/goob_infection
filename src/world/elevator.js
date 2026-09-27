@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { sfx } from '../core/sound.js';
-import { ps1ify } from '../render/ps1.js';
 import { toTexture } from '../render/textures.js';
 
 const CAR_SPEED = 1.6;   // m/s
@@ -144,7 +143,7 @@ export class Elevator {
     const map = toTexture(canvas);
     map.magFilter = THREE.LinearFilter;
     map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
-    const material = ps1ify(new THREE.MeshBasicMaterial({ map }));
+    const material = new THREE.MeshBasicMaterial({ map, color: new THREE.Color(1.6, 1.6, 1.6) });
     this.display = { canvas, map, material, text: null };
     return material;
   }

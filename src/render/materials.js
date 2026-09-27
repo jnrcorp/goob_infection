@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { createTextures } from './textures.js';
-import { ps1ify } from './ps1.js';
+import { generateSurfaces } from './surfaces.js';
 
 // Meters covered by one repeat of each texture on world-mapped geometry.
 const TILE = {
@@ -9,31 +8,59 @@ const TILE = {
   cubicle: 1, chair: 0.5, metal: 1, stall: 1, freezer: 1, freezerFloor: 0.6,
   hazard: 0.8, shutter: 1, cardboard: 0.6, asphalt: 4, suit: 0.5, counter: 1,
   fridge: 1, vending: 1, red: 0.5, plant: 0.5, pot: 0.5, rubber: 0.5,
+  trim: 1, facade: 3, grass: 3,
 };
 
-// Big architectural surfaces don't get vertex wobble (see ps1ify).
-const NO_SNAP = new Set([
-  'wall', 'carpet', 'carpetRed', 'ceiling', 'linoleum', 'tile', 'concrete',
-  'freezer', 'freezerFloor', 'hazard', 'shutter', 'asphalt',
-]);
+// Every surface is matte (diffuse light only, no shine or reflections):
+// glossy highlights made rooms look washed out, and flickered as the nearest
+// lights changed over.
 
-export function createMaterials(maxAnisotropy = 1) {
-  const textures = createTextures(maxAnisotropy);
+// Light panels are brighter than white so bloom picks them up.
+const PANEL_GLOW = 3;
+
+// preset: the quality preset (texture size, normal maps).
+export function createMaterials(renderer, preset) {
+  const anisotropy = renderer.capabilities.getMaxAnisotropy();
+  let generated = null;
   const mats = {};
 
-  for (const [name, map] of Object.entries(textures)) {
-    mats[name] = ps1ify(new THREE.MeshLambertMaterial({ map }), { snap: !NO_SNAP.has(name) });
+  function generate(p) {
+    generated?.dispose();
+    generated = generateSurfaces(renderer, { size: p.textureSize, normalMaps: p.normalMaps, anisotropy });
+    for (const [name, { map, normalMap }] of Object.entries(generated.surfaces)) {
+      if (name === 'screen') {
+        mats.screen ??= new THREE.MeshBasicMaterial();
+        mats.screen.map = map;
+        mats.screen.needsUpdate = true;
+        continue;
+      }
+      mats[name] ??= new THREE.MeshLambertMaterial();
+      const m = mats[name];
+      const hadNormal = !!m.normalMap;
+      m.map = map;
+      m.normalMap = normalMap;
+      if (hadNormal !== !!normalMap) m.needsUpdate = true;
+    }
+    textureKey = `${p.textureSize}/${p.normalMaps}`;
   }
-  // Unlit materials: light panels, screens, glass and the goob itself.
-  mats.screen = ps1ify(new THREE.MeshBasicMaterial({ map: textures.screen }));
-  mats.light = ps1ify(new THREE.MeshBasicMaterial({ color: 0xfff6e0 }), { snap: false });
-  mats.lightBlue = ps1ify(new THREE.MeshBasicMaterial({ color: 0xcfe8ff }), { snap: false });
-  mats.visor = ps1ify(new THREE.MeshBasicMaterial({ color: 0x14201e }));
-  mats.trophy = ps1ify(new THREE.MeshLambertMaterial({ color: 0xd9b03a, emissive: 0x3a2a00 }));
-  mats.goob = ps1ify(new THREE.MeshBasicMaterial({ color: 0x6cff4a }));
-  mats.glass = ps1ify(new THREE.MeshBasicMaterial({
-    color: 0x9fc4d0, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide,
-  }), { snap: false });
+  let textureKey = '';
+  generate(preset);
+
+  // Unlit materials: light panels, screens and the goob in the tank.
+  mats.light = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff6e0).multiplyScalar(PANEL_GLOW) });
+  mats.lightBlue = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xcfe8ff).multiplyScalar(1.4) });
+  mats.visor = new THREE.MeshLambertMaterial({ color: 0x14201e });
+  mats.trophy = new THREE.MeshLambertMaterial({ color: 0xd9b03a, emissive: 0x3a2a00 });
+  mats.goob = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x6cff4a).multiplyScalar(1.3) });
+  // Car paint and tinted car glass.
+  for (const [name, color] of [['paintRed', 0x9a1b1b], ['paintSilver', 0xa8adb2], ['paintYellow', 0xd9a820], ['paintBlue', 0x1f3f7a], ['paintBlack', 0x16181b]]) {
+    mats[name] = new THREE.MeshLambertMaterial({ color });
+  }
+  mats.tint = new THREE.MeshLambertMaterial({ color: 0x1b2328 });
+  mats.glass = new THREE.MeshLambertMaterial({
+    color: 0xb8d4dc, transparent: true, opacity: 0.18,
+    depthWrite: false, side: THREE.DoubleSide,
+  });
 
   return {
     get(name) {
@@ -43,6 +70,10 @@ export function createMaterials(maxAnisotropy = 1) {
     },
     tile(name) {
       return TILE[name] ?? 1;
+    },
+    // New textures when the quality preset's texture size or normal maps change.
+    regenerate(p) {
+      if (`${p.textureSize}/${p.normalMaps}` !== textureKey) generate(p);
     },
   };
 }

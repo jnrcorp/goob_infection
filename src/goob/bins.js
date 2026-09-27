@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { ps1ify } from '../render/ps1.js';
 import { toTexture } from '../render/textures.js';
 import { blobShadow } from '../render/shadows.js';
 
@@ -72,7 +71,7 @@ function biohazardMaterial() {
   g.beginPath();
   g.arc(32, 34, 3, 0, Math.PI * 2);
   g.fill();
-  cached = ps1ify(new THREE.MeshLambertMaterial({ map: toTexture(c) }));
+  cached = new THREE.MeshLambertMaterial({ map: toTexture(c) });
   return cached;
 }
 
