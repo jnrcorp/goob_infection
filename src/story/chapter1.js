@@ -381,25 +381,40 @@ export class Chapter1 {
     return node.area;
   }
 
-  // Share of what's left in each area, in percent: goob by volume during the
-  // cleanup, infected coworkers during the cure. Null when the difficulty
-  // doesn't show it, or there's nothing to count.
+  // What's left in each area: liters of goob during the cleanup (the bars
+  // measure against all the goob there's been, so they shrink as you clean),
+  // and each floor's share of the infected coworkers during the cure.
+  // Rows: { area, text, fill (0-1), clear }. Null when the difficulty doesn't
+  // show it, or there's nothing to count.
   floorBreakdown() {
     if (!difficulty().floorBreakdown) return null;
     const totals = Object.fromEntries(AREAS.map((a) => [a, 0]));
-    let title;
     if (this.state === 'GET_VACUUM' || this.state === 'CLEANUP') {
-      title = 'Goob by floor';
       for (const blob of this.goob.blobs.values()) totals[this.areaOf(blob.node)] += blob.volume;
-    } else if (this.state === 'CURE') {
-      title = 'Infected by floor';
-      for (const npc of this.cast.all) if (npc.infected) totals[this.world.areaAt(npc.pos)] += 1;
-    } else {
-      return null;
+      const whole = this.goob.collected + this.goob.remaining;
+      if (whole <= 0) return null;
+      return {
+        title: 'Goob by floor',
+        rows: AREAS.map((area) => {
+          const liters = totals[area];
+          // Rounded up, so a floor with any goob left never reads "0 L".
+          return { area, text: `${Math.ceil(liters - 1e-3)} L`, fill: liters / whole, clear: liters <= 1e-3 };
+        }),
+      };
     }
-    const sum = Object.values(totals).reduce((a, b) => a + b, 0);
-    if (sum <= 0) return null;
-    return { title, rows: AREAS.map((area) => ({ area, percent: (totals[area] / sum) * 100 })) };
+    if (this.state === 'CURE') {
+      for (const npc of this.cast.all) if (npc.infected) totals[this.world.areaAt(npc.pos)] += 1;
+      const sum = Object.values(totals).reduce((a, b) => a + b, 0);
+      if (sum <= 0) return null;
+      return {
+        title: 'Infected by floor',
+        rows: AREAS.map((area) => {
+          const share = totals[area] / sum;
+          return { area, text: `${Math.round(share * 100)}%`, fill: share, clear: totals[area] === 0 };
+        }),
+      };
+    }
+    return null;
   }
 
   // ---------- Cleanup ----------

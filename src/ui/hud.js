@@ -142,29 +142,30 @@ export class Hud {
     }
   }
 
-  // Where what's left is, by floor: { title, rows: [{ area, percent }] } or null.
+  // Where what's left is, by floor:
+  // { title, rows: [{ area, text, fill (0-1), clear }] } or null.
   setBreakdown(breakdown) {
     const el = this.el;
-    const key = breakdown ? `${breakdown.title}|${breakdown.rows.map((r) => Math.round(r.percent)).join(',')}` : '';
+    const key = breakdown ? `${breakdown.title}|${breakdown.rows.map((r) => `${r.text}:${Math.round(r.fill * 100)}`).join(',')}` : '';
     if (this.cache.breakdown === key) return;
     this.cache.breakdown = key;
     el.breakdown.hidden = !breakdown;
     if (!breakdown) return;
     el.breakdownTitle.textContent = breakdown.title;
-    el.breakdownRows.replaceChildren(...breakdown.rows.map(({ area, percent }) => {
+    el.breakdownRows.replaceChildren(...breakdown.rows.map(({ area, text, fill, clear }) => {
       const row = document.createElement('div');
       row.className = 'breakdown-row';
-      row.classList.toggle('clear', percent < 0.5);
+      row.classList.toggle('clear', clear);
       const name = document.createElement('span');
       name.textContent = area;
       const bar = document.createElement('div');
       bar.className = 'breakdown-bar';
-      const fill = document.createElement('i');
-      fill.style.width = `${percent}%`;
-      bar.append(fill);
+      const fillEl = document.createElement('i');
+      fillEl.style.width = `${Math.min(1, fill) * 100}%`;
+      bar.append(fillEl);
       const value = document.createElement('span');
       value.className = 'breakdown-value';
-      value.textContent = `${Math.round(percent)}%`;
+      value.textContent = text;
       row.append(name, bar, value);
       return row;
     }));

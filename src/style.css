@@ -233,7 +233,7 @@ html, body {
 
 .breakdown-row {
   display: grid;
-  grid-template-columns: 64px 110px 48px;
+  grid-template-columns: 64px 110px 64px;
   align-items: center;
   gap: 10px;
 }
