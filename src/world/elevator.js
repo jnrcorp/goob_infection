@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import { sfx } from '../core/sound.js';
+import { ps1ify } from '../render/ps1.js';
+import { toTexture } from '../render/textures.js';
 
 const CAR_SPEED = 1.6;   // m/s
 const DOOR_SPEED = 1.1;  // fraction per second
 const HOLD_OPEN = 4;     // seconds before doors close on their own
 const CAR_HEIGHT = 3;
+const DISPLAY_W = 0.56; // floor display over each landing's doors
+const DISPLAY_H = 0.18;
 
 // Elevator car that travels between floors, with sliding shaft doors and
 // call buttons on each floor. Phases: closed → opening → open → closing → moving.
@@ -89,9 +93,56 @@ export class Elevator {
         use: () => this.request(i),
       });
 
+      // Floor display above the doors (every landing shows the same thing).
+      const display = new THREE.Mesh(new THREE.PlaneGeometry(DISPLAY_W, DISPLAY_H), this.displayMaterial);
+      display.position.set(def.doorAt, fy + 2.31, z - 0.13);
+      display.rotation.y = Math.PI; // face the hallway (-z)
+      scene.add(display);
+
       return { left, right, collider, fy };
     });
     this.syncDoors();
+    this.updateDisplay();
+  }
+
+  // One canvas shared by every landing's display: which floor the car is at
+  // (or passing), with an arrow while it's moving.
+  get displayMaterial() {
+    if (this.display) return this.display.material;
+    const canvas = document.createElement('canvas');
+    canvas.width = 192;
+    canvas.height = 62;
+    const map = toTexture(canvas);
+    map.magFilter = THREE.LinearFilter;
+    map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
+    const material = ps1ify(new THREE.MeshBasicMaterial({ map }));
+    this.display = { canvas, map, material, text: null };
+    return material;
+  }
+
+  updateDisplay() {
+    const name = (i) => this.def.floorNames?.[i] ?? `${i + 1}F`;
+    // The floor the car is nearest, so it counts past floors on the way.
+    let near = 0;
+    this.floors.forEach((fy, i) => { if (Math.abs(fy - this.carY) < Math.abs(this.floors[near] - this.carY)) near = i; });
+    let arrow = '';
+    if (this.phase === 'moving') arrow = this.floors[this.target] > this.carY ? '▲' : '▼';
+    const text = this.jammed ? 'OUT' : `${arrow} ${name(near)}`.trim();
+    const d = this.display;
+    if (d.text === text) return;
+    d.text = text;
+    const g = d.canvas.getContext('2d');
+    const { width: w, height: h } = d.canvas;
+    g.fillStyle = '#1a1a1a';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#050505';
+    g.fillRect(4, 4, w - 8, h - 8);
+    g.fillStyle = this.jammed ? '#ff4030' : '#ffb030';
+    g.font = `bold ${Math.round(h * 0.62)}px "Courier New", monospace`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(text, w / 2, h / 2 + 2);
+    d.map.needsUpdate = true;
   }
 
   reset() {
@@ -191,6 +242,7 @@ export class Elevator {
     }
     this.syncCar();
     this.syncDoors();
+    this.updateDisplay();
   }
 
   syncCar() {

@@ -132,6 +132,10 @@ export class Player {
       p[axis] -= d;
       const wasInside = this.overlapsXZ(b);
       p[axis] += d;
+      // A coworker who walked into you doesn't shove you anywhere (being
+      // snapped out of their way could put you through a wall); you just
+      // can't walk into them yourself.
+      if (wasInside && b.person) continue;
       if (wasInside) this.escape(b);
       else if (axis === 'x') p.x = d > 0 ? b.minX - RADIUS - SKIN : b.maxX + RADIUS + SKIN;
       else p.z = d > 0 ? b.minZ - RADIUS - SKIN : b.maxZ + RADIUS + SKIN;
@@ -198,15 +202,6 @@ export class Player {
       }
     }
     p.y = y;
-  }
-
-  // Shoved: horizontal push away from `from` (an attacker's position).
-  knockFrom(from, strength) {
-    const dx = this.pos.x - from.x;
-    const dz = this.pos.z - from.z;
-    const d = Math.hypot(dx, dz) || 1;
-    this.vel.x += (dx / d) * strength;
-    this.vel.z += (dz / d) * strength;
   }
 
   // Camera shake: seconds remaining; strength fades out with it.

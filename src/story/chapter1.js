@@ -24,7 +24,7 @@ const OBJECTIVES = {
   GET_VACUUM: 'Grab the containment vacuum beside the freezer door.',
   CLEANUP: 'Vacuum up all the goob. Empty the tank into yellow biohazard bins.',
   LAST_TANK: 'Empty your tank into a biohazard bin.',
-  SECURE: (loaded) => `Put the biohazard bins in the secure freezer (${loaded}/${BIN_COUNT}): grab one with E, press R to send it.`,
+  SECURE: (loaded) => `Put the biohazard bins in the secure freezer (${loaded}/${BIN_COUNT}): grab one with E and push it in.`,
   LOCK_FREEZER: 'Close and lock the secure freezer.',
   GET_ANTIDOTE: 'Get the antidote from the infirmary, next to the elevator on 1F.',
   CURE: (cured, total) => `Cure everyone: hold F to spray the antidote (${cured}/${total} cured).`,
@@ -383,7 +383,7 @@ export class Chapter1 {
 
   // What's left in each area: liters of goob during the cleanup (the bars
   // measure against all the goob there's been, so they shrink as you clean),
-  // and each floor's share of the infected coworkers during the cure.
+  // and how many coworkers are still infected during the cure.
   // Rows: { area, text, fill (0-1), clear }. Null when the difficulty doesn't
   // show it, or there's nothing to count.
   floorBreakdown() {
@@ -404,14 +404,13 @@ export class Chapter1 {
     }
     if (this.state === 'CURE') {
       for (const npc of this.cast.all) if (npc.infected) totals[this.world.areaAt(npc.pos)] += 1;
-      const sum = Object.values(totals).reduce((a, b) => a + b, 0);
-      if (sum <= 0) return null;
+      // Bars measure against everyone, so they shrink as you cure people.
+      const everyone = this.cast.all.length;
       return {
         title: 'Infected by floor',
-        rows: AREAS.map((area) => {
-          const share = totals[area] / sum;
-          return { area, text: `${Math.round(share * 100)}%`, fill: share, clear: totals[area] === 0 };
-        }),
+        rows: AREAS.map((area) => ({
+          area, text: `${totals[area]}`, fill: totals[area] / everyone, clear: totals[area] === 0,
+        })),
       };
     }
     return null;
@@ -647,7 +646,6 @@ export class Chapter1 {
     if (!this.hostile) return;
     const before = this.player.suit;
     this.player.suit = Math.max(0, before - INFECTED.damage);
-    this.player.knockFrom(npc.pos, 6);
     this.player.shakeFor(0.35);
     this.fx.flash('#ff3a2a', 0.45);
     sfx.hurt();

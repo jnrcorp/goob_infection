@@ -63,6 +63,7 @@ const goobPassable = new Set([
   ...cast.all.map((n) => n.collider),
 ]);
 const peopleColliders = cast.all.map((n) => n.collider);
+for (const c of peopleColliders) c.person = true; // the player never gets shoved out of these
 const goobGraph = new GoobGraph(collision, goobPassable, {
   // Shut doors (including the elevator's) stop goob spreading between rooms.
   doors: [...world.doors.map((d) => d.collider), ...world.elevator.doors.map((d) => d.collider)],
@@ -205,6 +206,7 @@ function updateFilesButton() {
   document.getElementById('pause-files').textContent = `Files (${found}/${chapter.files.length})`;
 }
 chapter.onFileFound = updateFilesButton;
+chapter.hauler.canSend = () => debug; // R sends a bin to the freezer (debug only)
 document.getElementById('pause-files').addEventListener('click', showFiles);
 document.getElementById('files-back').addEventListener('click', () => beginPlay());
 
@@ -291,7 +293,7 @@ window.addEventListener('keydown', (e) => {
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
 // 1 toggles vertex wobble, 2 toggles dithering, G removes all goob,
 // K cures everyone (during the cure objective), L marks every file as found,
-// I toggles an infinite vacuum tank.
+// I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
@@ -441,7 +443,7 @@ async function runStartupSimulation() {
   if (params.has('report')) {
     const npc = cast.all.find((n) => n.name === params.get('report'));
     const open = world.doors.filter((d) => d.isOpen).map((d) => d.label);
-    console.log(`[report] open doors: ${open.join(', ') || 'none'}; suit ${Math.ceil(player.suit)}%`);
+    console.log(`[report] open doors: ${open.join(', ') || 'none'}; suit ${Math.ceil(player.suit)}%; you at ${player.pos.x.toFixed(2)}, ${player.pos.y.toFixed(2)}, ${player.pos.z.toFixed(2)} (${world.locationAt(player.pos)})`);
     const bins = chapter.hauler.bins.map((b, i) => `${i}: y ${b.group.position.y.toFixed(2)}`).join(', ');
     console.log(`[report] bins ${bins}; elevator car at y ${world.elevator.carY.toFixed(2)}`);
     const byFloor = {};

@@ -63,7 +63,7 @@ export const FILES = [
   },
   {
     id: 'board-email', title: 'Printed email', kind: 'paper', at: { x: 8.1, y: -3.24, z: 20.25 },
-    body: `FROM: Victoria (CEO)\nTO: Board of Directors\nSUBJECT: Mars program — approved\n\nThe board approves the Mars program. Shipments leave quarterly. No returns, no inspections, no questions at the far end.\n\nWhatever the vats can't use goes on the shuttle. Mars has a lot of room.\n\nPlease delete this email.\n\n[Printed by: D. OKAFOR, IT — 02:43]`,
+    body: `FROM: Board of Directors\nTO: Victoria (CEO)\nSUBJECT: Mars program — approved\n\nThe board approves the Mars program. Shipments leave quarterly. No returns, no inspections, no questions at the far end.\n\nWhatever the vats can't use goes on the shuttle. Mars has a lot of room.\n\nPlease delete this email.\n\n[Printed by: D. OKAFOR, IT — 02:43]`,
   },
   {
     id: 'personnel', title: 'Employee of the Month criteria', kind: 'folder', at: { x: 6, y: 8, z: 20.3 },

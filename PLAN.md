@@ -151,7 +151,7 @@ Each milestone ends in something you can play.
 - **Collectible files**: 12 papers (folders, printouts, sticky notes) on desks and counters on every floor. E picks one up and reads it; J (or Files on the pause screen) rereads any you've found.
 - **New final objective**: after Dale's thank-you, **INVESTIGATE** (find 6 of the 12 files), then **CONFRONT** Victoria in the 3F boardroom. Her speech ends with a choice (1/2): **expose Goob Co.** or **keep quiet**, each with its own ending card.
 - Found files are saved in checkpoints and the autosave.
-- R sends the bin you're pushing straight to the secure freezer.
+- Debug only (backquote mode): R sends the bin you're pushing straight to the secure freezer.
 
 ## Still open (answer any time; defaults in brackets)
 

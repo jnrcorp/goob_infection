@@ -17,6 +17,7 @@ export class BinHauler {
     Object.assign(this, { bins, player, collision, hud, onLoaded });
     this.ignore = new Set([...sightIgnore, ...bins.map((b) => b.collider)]);
     this.carried = null;
+    this.canSend = () => false; // main.js turns this on in debug mode
     this.reset();
   }
 
@@ -41,7 +42,7 @@ export class BinHauler {
     this.carried = bin;
     bin.collider.enabled = false;
     this.player.speedScale = 0.65;
-    this.hud.toast('R sends the bin to the secure freezer. Q lets go.', 3);
+    this.hud.toast('Push it into the secure freezer. Q lets go.', 3);
   }
 
   drop() {
@@ -81,8 +82,8 @@ export class BinHauler {
       this.drop();
       return;
     }
-    // R: send the bin straight to the freezer, from anywhere.
-    if (active && input.wasPressed('KeyR')) {
+    // Debug (backquote mode only): R sends the bin straight to the freezer.
+    if (active && this.canSend() && input.wasPressed('KeyR')) {
       this.load(bin);
       return;
     }
