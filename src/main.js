@@ -591,6 +591,11 @@ async function runStartupSimulation() {
 }
 
 runStartupSimulation().then(() => {
+  // Everything's built and the first frame is about to draw: the title
+  // menu can be used now (see [data-loading] in style.css).
+  screens.title.removeAttribute('data-loading');
+  document.getElementById('loading').hidden = true;
+  for (const b of screens.title.querySelectorAll('.menu button')) b.disabled = false;
   clock.getDelta();
   gfx.renderer.setAnimationLoop(() => {
     const dt = clock.getDelta();

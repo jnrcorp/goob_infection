@@ -72,15 +72,16 @@
       <feDisplacementMap in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" />
     </filter>
   </svg>
-  <section id="title" class="screen title-screen">
+  <section id="title" class="screen title-screen" data-loading>
     <h1>The <span class="goob-word" aria-label="Goob"><span class="goob-letters" aria-hidden="true"><span style="--i: 0">G</span><span style="--i: 1">o</span><span style="--i: 2">o</span><span style="--i: 3">b</span></span><i class="drip" style="--x: 14%; --len: 0.2em; --t: 5.2s; --d: -1.1s"></i><i class="drip" style="--x: 39%; --len: 0.13em; --t: 6.8s; --d: -3.9s"></i><i class="drip" style="--x: 64%; --len: 0.24em; --t: 4.6s; --d: -2.4s"></i><i class="drip" style="--x: 82%; --len: 0.16em; --t: 7.4s; --d: -5.3s"></i></span><br>Infection</h1>
+    <p class="loading" id="loading" role="status">Loading<span>.</span><span>.</span><span>.</span></p>
     <nav class="menu" aria-label="Main menu">
       <button id="menu-continue" type="button" hidden>Continue</button>
-      <button id="menu-play" type="button">Play Chapter 1: The Infection</button>
-      <button id="menu-difficulty" type="button">Difficulty: Normal</button>
-      <button id="menu-quality" type="button">Graphics: Auto</button>
-      <button id="menu-volume" type="button">Volume: 75%</button>
-      <button id="menu-quit" type="button">Quit</button>
+      <button id="menu-play" type="button" disabled>Play Chapter 1: The Infection</button>
+      <button id="menu-difficulty" type="button" disabled>Difficulty: Normal</button>
+      <button id="menu-quality" type="button" disabled>Graphics: Auto</button>
+      <button id="menu-volume" type="button" disabled>Volume: 75%</button>
+      <button id="menu-quit" type="button" disabled>Quit</button>
     </nav>
     <p class="difficulty-note" id="difficulty-note"></p>
     <p class="hint">WASD move · Mouse look · E interact · Shift run · Space jump · Esc pause<br>
