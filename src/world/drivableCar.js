@@ -21,7 +21,9 @@ const CAR = {
   steerRate: 3,       // how fast the wheel turns
   hitRadius: 0.95,    // two circles along the body, for bumping into things
 };
-const SEAT = { right: -0.38, back: 0.15, eye: 1.2 }; // driver's eye, relative to the car
+const SEAT = { right: -0.38, back: 0.15, eye: 1.3 }; // driver's eye, relative to the car
+// A wider view from behind the wheel (degrees; walking uses the camera's own).
+const DRIVING_FOV = 88;
 
 export class DrivableCar {
   constructor({ scene, collision, interactions, materials }, { x, z, heading, paint = 'paintBlue' }) {
@@ -49,6 +51,31 @@ export class DrivableCar {
       add(new RoundedBoxGeometry(1.56, 0.56, 2.05, 3, 0.14), 'tint', 0, 1.18, 0.02),
       add(new RoundedBoxGeometry(1.6, 0.1, 1.85, 2, 0.05), paint, 0, 1.47, 0.02),
     ];
+    // Seen from outside, the cabin is a solid block of tinted glass. From the
+    // driver's seat that block would surround the camera, so while you drive
+    // it's swapped for an open interior: a thin roof, slim corner pillars and
+    // a faint windshield you can see straight through.
+    this.outsideCabin = [body[1], body[2]];
+    this.interior = new THREE.Group();
+    const inside = (geometry, mat, px, py, pz) => {
+      const m = new THREE.Mesh(geometry, typeof mat === 'string' ? materials.get(mat) : mat);
+      m.position.set(px, py, pz);
+      this.interior.add(m);
+      return m;
+    };
+    // The roof is just its frame (a full panel filled the top of the view).
+    inside(new THREE.BoxGeometry(1.56, 0.04, 0.1), paint, 0, 1.52, -0.8);             // over the windshield
+    inside(new THREE.BoxGeometry(1.56, 0.04, 0.1), paint, 0, 1.52, 0.9);              // over the rear window
+    for (const sx of [-1, 1]) inside(new THREE.BoxGeometry(0.06, 0.04, 1.8), paint, sx * 0.76, 1.52, 0.05); // side rails
+    for (const [sx, sz, lean] of [[-1, -0.93, 0.35], [1, -0.93, 0.35], [-1, 1.0, -0.2], [1, 1.0, -0.2]]) {
+      const pillar = inside(new THREE.BoxGeometry(0.05, 0.6, 0.06), paint, sx * 0.76, 1.2, sz);
+      pillar.rotation.x = lean; // the windshield and rear window slope
+    }
+    const windshield = new THREE.MeshBasicMaterial({ color: 0x9ec3d6, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide });
+    const glass = inside(new THREE.PlaneGeometry(1.5, 0.62), windshield, 0, 1.2, -1.0);
+    glass.rotation.x = 0.35;
+    this.interior.visible = false;
+    this.group.add(this.interior);
     this.wheels = [];
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       const pivot = new THREE.Group();
@@ -66,9 +93,9 @@ export class DrivableCar {
       add(new RoundedBoxGeometry(0.24, 0.1, 0.07, 1, 0.02), 'red', sx * 0.66, 0.75, L + 0.01);
     }
     // Inside: dashboard and steering wheel (seen from the driver's seat).
-    add(new THREE.BoxGeometry(1.5, 0.12, 0.35), 'plastic', 0, 1.02, -0.72);
-    const wheel = add(new THREE.TorusGeometry(0.17, 0.022, 8, 24), 'rubber', SEAT.right, 1.05, -0.5);
-    wheel.rotation.x = -0.35;
+    add(new THREE.BoxGeometry(1.5, 0.1, 0.35), 'plastic', 0, 0.99, -0.75);
+    const wheel = add(new THREE.TorusGeometry(0.16, 0.02, 8, 24), 'rubber', SEAT.right, 1.0, -0.52);
+    wheel.rotation.x = -0.6; // tilted back, so it sits low in the view
     this.steeringWheel = wheel;
     scene.add(this.group);
 
@@ -104,7 +131,8 @@ export class DrivableCar {
     this.collider.enabled = false;
     player.rig = this;
     player.yaw = this.heading;
-    player.pitch = -0.12;
+    player.pitch = -0.04;
+    this.setDriverView(true);
     sfx.carDoor();
   }
 
@@ -114,6 +142,7 @@ export class DrivableCar {
     if (!player) return;
     this.driver = null;
     player.rig = null;
+    this.setDriverView(false, player);
     this.speed = 0;
     this.collider.enabled = true;
     const f = this.forward;
@@ -181,6 +210,22 @@ export class DrivableCar {
     player.eyeHeight = SEAT.eye;
     const rel = Math.atan2(Math.sin(player.yaw - this.heading), Math.cos(player.yaw - this.heading));
     player.yaw = this.heading + Math.max(-1.8, Math.min(1.8, rel));
+  }
+
+  // From the driver's seat: open interior instead of the solid cabin, and a
+  // wider field of view (restored when you get out).
+  setDriverView(on, player = this.driver) {
+    for (const m of this.outsideCabin) m.visible = !on;
+    this.interior.visible = on;
+    const camera = player?.camera;
+    if (!camera) return;
+    if (on) {
+      this.walkingFov = camera.fov;
+      camera.fov = DRIVING_FOV;
+    } else if (this.walkingFov) {
+      camera.fov = this.walkingFov;
+    }
+    camera.updateProjectionMatrix();
   }
 
   // Would the car at (pos, heading) touch anything solid?
