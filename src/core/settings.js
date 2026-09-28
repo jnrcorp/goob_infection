@@ -9,6 +9,7 @@ export const DIFFICULTIES = {
     infectedOpenDoors: false,
     infectedAttack: false,
     floorBreakdown: true, // HUD shows where the goob / infected are, by floor
+    reinfect: false,      // infected re-infect cured coworkers they touch (during the cure)
     goobSpread: 0.25,     // how fast goob grows and spreads (1 = full speed)
   },
   normal: {
@@ -17,14 +18,16 @@ export const DIFFICULTIES = {
     infectedOpenDoors: false,
     infectedAttack: true,
     floorBreakdown: true,
+    reinfect: false,
     goobSpread: 0.6,
   },
   hard: {
     label: 'Hard',
-    description: "Goob spreads fast. Infected coworkers attack and shove doors open, and the HUD won't tell you where anything is.",
+    description: "Goob spreads fast. Infected coworkers attack, shove doors open and re-infect people you've cured, and the HUD won't tell you where anything is.",
     infectedOpenDoors: true,
     infectedAttack: true,
     floorBreakdown: false,
+    reinfect: true,
     goobSpread: 1,
   },
 };

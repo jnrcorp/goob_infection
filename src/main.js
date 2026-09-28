@@ -173,8 +173,8 @@ cast.setEnv({
     if (!params.has('peaceful')) chapter.hurtPlayer(npc);
   },
   // Everyone stands still while Dale's on the intercom (after the freezer
-  // is locked).
-  hold: () => chapter.state === 'DALE_CALL',
+  // is locked), and while you're spraying the antidote.
+  hold: () => chapter.state === 'DALE_CALL' || antidote.spraying,
   canOpenDoors: () => difficulty().infectedOpenDoors,
   canAttack: () => difficulty().infectedAttack,
   openDoorsNear: (npc) => world.openDoorsNear(npc),
@@ -422,8 +422,8 @@ if (at?.length >= 3 && at.every(Number.isFinite)) {
 }
 // ?npcat=Name,x,y,z[,yawDegrees]: put a coworker somewhere, facing that way
 // (0 = +z) (testing).
-const npcAt = params.get('npcat')?.split(',');
-if (npcAt) {
+// (Repeat it to place several people.)
+for (const npcAt of params.getAll('npcat').map((v) => v.split(','))) {
   const npc = cast.all.find((n) => n.name === npcAt[0]);
   if (npc) {
     npc.pos.set(Number(npcAt[1]), Number(npcAt[2]), Number(npcAt[3]));

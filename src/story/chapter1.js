@@ -49,6 +49,10 @@ const OUTBREAK_SEEDS = {
 const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
 const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE']);
+// Hard: how close (m) and how long (s) an infected has to stay against a
+// cured coworker to re-infect them.
+const REINFECT_RANGE = 0.8;
+const REINFECT_TIME = 1.5;
 const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'INVESTIGATE'];
 // Where Victoria waits to be confronted: head of the boardroom table.
 const VICTORIA_BOARDROOM = { x: 22.55, y: 8, z: 4 };
@@ -65,6 +69,7 @@ export class Chapter1 {
   }) {
     Object.assign(this, { world, player, cast, hud, dialogue, reader, fx, goob, graph, vacuum, antidote, spill, onEnd, onBreach });
     this.outbreak = false;
+    this.contact = new Map(); // cured coworker -> seconds an infected has been against them
     this.checkpoint = null;
     this.token = 0;
     this.time = 0;
@@ -224,6 +229,7 @@ export class Chapter1 {
   update(dt, input, active) {
     this.runTimers(dt);
     this.updateFreezerLock();
+    this.updateReinfection(dt);
     this.spill.update(dt);
     this.hauler.update(dt, input, active && !this.inputLocked);
 
@@ -558,6 +564,33 @@ export class Chapter1 {
     this.setState('CURE', this.objectiveFor('CURE'));
     this.hud.toast('Hold F to spray the antidote. Blast them back with right mouse if they get too close.', 5);
     this.saveCheckpoint();
+  }
+
+  // Hard: during the cure, an infected coworker who stays up against a
+  // cured one re-infects them (not while everyone's holding still).
+  updateReinfection(dt) {
+    if (this.state !== 'CURE' || !difficulty().reinfect || this.antidote.spraying) {
+      this.contact.clear();
+      return;
+    }
+    for (const victim of this.cast.all) {
+      if (!victim.cured) continue;
+      const carrier = this.cast.all.find((n) => n.infected && n.brain?.state !== 'stunned'
+        && Math.abs(n.pos.y - victim.pos.y) < 1
+        && Math.hypot(n.pos.x - victim.pos.x, n.pos.z - victim.pos.z) < REINFECT_RANGE);
+      if (!carrier) {
+        this.contact.delete(victim);
+        continue;
+      }
+      const t = (this.contact.get(victim) ?? 0) + dt;
+      this.contact.set(victim, t);
+      if (t < REINFECT_TIME) continue;
+      this.contact.delete(victim);
+      victim.infect();
+      sfx.moan(victim.pos, 0.9);
+      this.hud.toast(`${carrier.name} re-infected ${victim.name}! (${this.curedCount}/${this.cast.all.length} cured)`, 3);
+      this.hud.setObjective(this.objectiveFor('CURE'));
+    }
   }
 
   cureNpc(npc) {

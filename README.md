@@ -55,7 +55,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
   - `?difficulty=hard` (or `easy`, `normal`) plays on that difficulty without changing your saved choice.
   - `?report=Hank` logs which doors are open, your suit integrity, goob volume by area, and where that coworker is after the simulation, plus who lands each hit.
-  - `?npcat=Hank,x,y,z` places a coworker (testing).
+  - `?npcat=Hank,x,y,z[,yaw]` places a coworker, facing yaw degrees (testing). Repeat it to place several; `?npcfreeze` keeps them still, and `?crowd=N,x,y,z` stacks N coworkers on one spot.
   - `?sim=seconds` fast-forwards the game at load.
   - `?shot` skips the title screen.
   - `?nolock` acts as if the mouse is captured, and `?keys=KeyE:0,KeyW:2` taps E then holds W for 2 seconds after `?sim` (`?after=N` runs N more seconds). These are for automated testing in a headless browser.

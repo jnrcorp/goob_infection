@@ -73,6 +73,7 @@ export class NPC {
   // decides what to do (dazed at first, then hunting the player).
   infect() {
     this.mode = 'infected';
+    this.cured = false;
     this.path = null;
     this.onArrive = null;
     this.talking = false;
