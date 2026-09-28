@@ -36,7 +36,24 @@ const screens = {
   quit: document.getElementById('quit'),
 };
 
+// ---------- Loading ----------
+// Building the game takes a moment. Between the big steps, move the title
+// screen's progress bar on and let the page draw it (this module can await
+// at the top level) before carrying on.
+async function loadStep(fraction, text) {
+  const percent = Math.round(fraction * 100);
+  document.getElementById('loading-fill').style.width = `${Math.max(4, percent)}%`;
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading').setAttribute('aria-valuenow', String(percent));
+  // (A frame, or 100 ms if the tab is in the background and not drawing.)
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => setTimeout(resolve, 0));
+    setTimeout(resolve, 100);
+  });
+}
+
 // ---------- Setup ----------
+await loadStep(0.08, 'Starting the renderer…');
 const gfx = new GameRenderer(canvas);
 // The quality preset to start with (see Graphics quality below).
 function initialQuality() {
@@ -54,10 +71,13 @@ const dialogue = new Dialogue();
 const reader = new Reader();
 const fx = new ScreenFx();
 const collision = new CollisionWorld();
+await loadStep(0.18, 'Painting the walls…');
 const materials = createMaterials(gfx.renderer, QUALITY_PRESETS[initialQuality()]);
 const interactions = new Interactions(camera, collision, hud);
 const ctx = { scene, collision, materials, interactions, hud };
+await loadStep(0.35, 'Building Goob Co.…');
 const world = buildBuilding(ctx);
+await loadStep(0.6, 'Hiring your coworkers…');
 const cast = createCast(ctx, world.props);
 const player = new Player(camera, collision);
 const viewmodel = new Viewmodel(materials);
@@ -128,6 +148,7 @@ const goobPassable = new Set([
 ]);
 const peopleColliders = cast.all.map((n) => n.collider);
 for (const c of peopleColliders) c.person = true; // the player never gets shoved out of these
+await loadStep(0.72, 'Mapping where goob can go…');
 const goobGraph = new GoobGraph(collision, goobPassable, {
   // Shut doors (including the elevator's) stop goob spreading between rooms.
   doors: [...world.doors.map((d) => d.collider), ...world.elevator.doors.map((d) => d.collider)],
@@ -142,6 +163,7 @@ const sightIgnore = new Set([...peopleColliders, ...world.doors.map((d) => d.ope
 const vacuum = new Vacuum({ viewmodel, hud, scene, collision, sightIgnore });
 const antidote = new Antidote({ viewmodel, hud, scene, collision, sightIgnore });
 const spill = new Spill({ scene, materials, player, camera, viewmodel, goob, fx, hud, world, cast });
+await loadStep(0.84, 'Writing chapter 1…');
 const chapter = new Chapter1({
   ctx, world, player, cast, hud, dialogue, reader, interactions, fx, goob, graph: goobGraph, vacuum, antidote, spill,
   sightIgnore, onEnd: endChapter, onBreach: suitBreached,
@@ -589,6 +611,11 @@ async function runStartupSimulation() {
     console.log(`[report] after clicks, open doors: ${world.doors.filter((d) => d.isOpen).map((d) => d.label).join(', ') || 'none'}`);
   }
 }
+
+// Compile the shaders up front, so the first frames of play don't stutter.
+await loadStep(0.94, 'Warming up…');
+gfx.renderer.compile(scene, camera);
+await loadStep(1, 'Ready');
 
 runStartupSimulation().then(() => {
   // Everything's built and the first frame is about to draw: the title
