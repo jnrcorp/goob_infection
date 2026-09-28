@@ -32,6 +32,45 @@ const OUTDOOR = {
   lightY: 6, lightRange: 20, lightIntensity: 34, lightColor: 0xffc68a, lightSpacing: 16, goobSpacing: 2.6,
 };
 
+// ---------------------------------------------------------------- Home
+// Your house, west of the office, where the day starts: a bedroom, bathroom,
+// kitchen and living room, a driveway, and a road east into the Goob Co.
+// parking lot (through a gap in its west fence). The yard is hedged in.
+// No goob ever gets here (noGoob).
+const HOME_H = 2.8;
+const LOT_ENTRANCE_W = 4.6;
+// The road is 4 m wide (a car is 1.8 m) and lines up with the lot's aisle.
+const ROAD = { z0: -14, z1: -10 };
+const HOME_GROUND = { x0: -68, z0: -32, x1: -8, z1: -4 };
+const hedge = (x1, z1, x2, z2) => wall(x1, z1, x2, z2, { h: 1.3, mat: 'plant', showTop: true });
+const homeWalls = [
+  wall(-60, -26, -48, -26, { h: HOME_H, openings: [win(-57, 1.6, 1, 2.2)] }),
+  wall(-60, -16, -48, -16, { h: HOME_H, openings: [door(-57, 'front door'), win(-51, 1.6, 1, 2.2)] }),
+  wall(-60, -26, -60, -16, { h: HOME_H, openings: [win(-18, 1.4, 1, 2.2)] }),
+  wall(-48, -26, -48, -16, { h: HOME_H, openings: [win(-19, 1.4, 1, 2.2)] }),
+  wall(-60, -20, -54, -20, { h: HOME_H, openings: [door(-55.5, 'bedroom door')] }),
+  wall(-54, -26, -54, -16, { h: HOME_H, openings: [door(-24.5, 'bathroom door'), gap(-18, 1.6)] }),
+  wall(-54, -22, -48, -22, { h: HOME_H }),
+  hedge(-68, -32, -8, -32),
+  hedge(-68, -4, -8, -4),
+  hedge(-68, -32, -68, -4),
+  hedge(-8, -32, -8, -26),
+];
+const HOME = { home: true, noGoob: true, ceiling: HOME_H - 0.1, lightColor: 0xffe0b8 };
+const HOME_OUT = { ...OUTDOOR, noGoob: true, lightIntensity: 20, lightSpacing: 18 };
+const homeRooms = [
+  { id: 'bedroom', name: 'Bedroom', rect: { x0: -60, z0: -26, x1: -54, z1: -20 }, floor: 'wood', ...HOME },
+  { id: 'bathroom', name: 'Bathroom', rect: { x0: -54, z0: -26, x1: -48, z1: -22 }, floor: 'tile', ...HOME },
+  { id: 'kitchen', name: 'Kitchen', rect: { x0: -54, z0: -22, x1: -48, z1: -16 }, floor: 'linoleum', ...HOME },
+  { id: 'living', name: 'Living Room', rect: { x0: -60, z0: -20, x1: -54, z1: -16 }, floor: 'carpet', ...HOME },
+  { id: 'driveway', name: 'Driveway', rect: { x0: -57, z0: -16, x1: -49, z1: ROAD.z0 }, ...HOME_OUT, floor: 'concrete' },
+  { id: 'road', name: 'Road', rect: { x0: -68, z0: ROAD.z0, x1: -8, z1: ROAD.z1 }, ...HOME_OUT },
+  {
+    id: 'homeYard', name: 'Your Yard', rect: HOME_GROUND, ...HOME_OUT, floor: 'grass',
+    minus: [{ x0: -60, z0: -26, x1: -48, z1: -16 }, { x0: -57, z0: -16, x1: -49, z1: ROAD.z0 }, { x0: -68, z0: ROAD.z0, x1: -8, z1: ROAD.z1 }],
+  },
+];
+
 export const DOOR_HEIGHT = 2.2;
 
 export const BUILDING = {
@@ -42,10 +81,12 @@ export const BUILDING = {
   roofs: [
     { x0: 24, z0: 0, x1: 36, z1: 24, y: 7.7 },
     { x0: 0, z0: 0, x1: 24, z1: 24, y: 11.7 },
+    { x0: -60, z0: -26, x1: -48, z1: -16, y: 2.8 }, // your house
   ],
   // Outdoor ground you can walk on (parking lot and loading yard).
   grounds: [
-    { x0: -8, z0: -16, x1: 36, z1: 0 },
+    { x0: -8, z0: -26, x1: 36, z1: 0 },
+    HOME_GROUND,
     { x0: 36, z0: -16, x1: 50, z1: 28 },
   ],
 
@@ -125,12 +166,16 @@ export const BUILDING = {
         wall(31, 17, 31, 24, { h: 3.2, mat: 'freezer', openings: [door(20.5, 'freezer door', { w: 1.2, mat: 'freezer' })] }),
         wall(31, 17, 36, 17, { h: 3.2, mat: 'freezer' }),
         // Outdoor perimeter
-        fence(-8, -16, 50, -16, {
+        fence(-8, -26, 36, -26, {
           openings: [door(14, 'front gate', { w: 3, mat: 'metal', locked: "The gate's chained shut. Nobody leaves until the goob is sorted." })],
         }),
         fence(50, -16, 50, 28),
         fence(36, 28, 50, 28),
-        fence(-8, -16, -8, 0),
+        // (The gap is where the road from your house comes in.)
+        fence(-8, -26, -8, 0, { openings: [gap((ROAD.z0 + ROAD.z1) / 2, LOT_ENTRANCE_W)] }),
+        fence(36, -26, 36, -16),
+        fence(36, -16, 50, -16),
+        ...homeWalls,
         fence(-8, 0, 0, 0),
         fence(36, 24, 36, 28),
       ],
@@ -158,8 +203,9 @@ export const BUILDING = {
           id: 'freezer', name: 'Secure Freezer', rect: { x0: 31, z0: 17, x1: 36, z1: 24 }, floor: 'freezerFloor',
           ceiling: null, lightY: 3.18, lightColor: 0xbfe0ff, fixture: 'lightBlue',
         },
-        { id: 'lot', name: 'Parking Lot', rect: { x0: -8, z0: -16, x1: 36, z1: 0 }, ...OUTDOOR },
+        { id: 'lot', name: 'Parking Lot', rect: { x0: -8, z0: -26, x1: 36, z1: 0 }, ...OUTDOOR },
         { id: 'yard', name: 'Loading Yard', rect: { x0: 36, z0: -16, x1: 50, z1: 28 }, ...OUTDOOR },
+        ...homeRooms,
       ],
     },
     // ---------------------------------------------------------------- 2F

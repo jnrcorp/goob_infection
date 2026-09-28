@@ -7,7 +7,9 @@ const OPEN_ANGLE = Math.PI / 2 * 0.95;
 // A hinged door that swings away from whoever opens it.
 // axis 'x': the wall runs along x. axis 'z': the wall runs along z.
 export class Door {
-  constructor(ctx, { x, y, z, axis, w, h = 2.18, mat = 'door', label = 'door', locked = null }) {
+  // swing: 1 or -1 to always open the same way (see openFrom), instead of
+  // away from whoever opens it.
+  constructor(ctx, { x, y, z, axis, w, h = 2.18, mat = 'door', label = 'door', locked = null, swing = 0 }) {
     const { scene, collision, materials, interactions, hud } = ctx;
     this.hud = hud;
     this.label = label;
@@ -15,6 +17,7 @@ export class Door {
     this.z = z;
     this.axis = axis;
     this.locked = locked;
+    this.swing = swing;
     this.angle = 0;
     this.target = 0;
 
@@ -124,9 +127,10 @@ export class Door {
   openFrom(pos) {
     if (this.locked || this.isOpen) return;
     // Positive rotation swings an x-axis door toward -z and a z-axis door toward +x.
-    const sign = this.axis === 'x'
+    const away = this.axis === 'x'
       ? (pos.z < this.z ? -1 : 1)
       : (pos.x < this.x ? 1 : -1);
+    const sign = this.swing || away;
     this.target = sign * OPEN_ANGLE;
     this.syncColliders();
     sfx.door(this.soundPos);

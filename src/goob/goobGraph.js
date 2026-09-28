@@ -62,8 +62,10 @@ export class GoobGraph {
   build(world) {
     const floorNodes = [];
 
-    // Floor grid in every room
+    // Floor grid in every room (not at home: noGoob)
+    const inNoGoob = (x, z) => world.rooms.some((r) => r.noGoob && r.rects.some((q) => x >= q.x0 && x <= q.x1 && z >= q.z0 && z <= q.z1));
     for (const room of world.rooms) {
+      if (room.noGoob) continue;
       const y = BUILDING.floors[room.floorIndex].y;
       const rects = room.goobRect ? [room.goobRect] : room.rects;
       const spacing = room.goobSpacing ?? SPACING; // wider outdoors: fewer spots
@@ -80,6 +82,7 @@ export class GoobGraph {
     // A spot on each side of every doorway, so rooms always connect through
     // their doors however the grid happens to line up.
     for (const door of world.doors) {
+      if (inNoGoob(door.x, door.z)) continue;
       const y = door.pivot.position.y;
       for (const side of [-0.5, 0.5]) {
         const x = door.axis === 'z' ? door.x + side : door.x;
@@ -104,7 +107,7 @@ export class GoobGraph {
       hiding.push(this.addNode(v.x + n.x * 0.02, v.y, v.z + n.z * 0.02, n, 'vent'));
     }
     for (const room of world.rooms) {
-      if (!room.ceiling || room.goobRect) continue;
+      if (!room.ceiling || room.goobRect || room.noGoob) continue;
       const big = room.rects.reduce((a, c) => ((c.x1 - c.x0) * (c.z1 - c.z0) > (a.x1 - a.x0) * (a.z1 - a.z0) ? c : a));
       const y = BUILDING.floors[room.floorIndex].y + room.ceiling;
       hiding.push(this.addNode((big.x0 + big.x1) / 2 + 0.7, y, (big.z0 + big.z1) / 2 + 0.4, NORMALS.ceiling, 'ceiling'));
