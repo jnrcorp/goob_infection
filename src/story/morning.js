@@ -15,7 +15,9 @@ const DRIVEWAY = { x: -53, z: -14.8, heading: -Math.PI / 2 };
 // The Goob Co. lot's two rows of stalls (see furnishOutdoors): stopping in
 // any of them, facing along the stall, counts as parked.
 const STALL_ROWS = [{ x0: -6, x1: 34, z0: -8, z1: -3 }, { x0: -6, x1: 34, z0: -21, z1: -16 }];
-const PARKED = { x: 13.6, z: -5.5, heading: Math.PI };
+// Where your car ends up when the morning's skipped, and at the end (a free
+// stall in the north row, clear of the crowd in the finale).
+const PARKED = { x: 27.8, z: -5.5, heading: Math.PI };
 // The lot entrance (the gap in its west fence): a gate slides across it once
 // you've arrived, so the outbreak stays at the office.
 const GATE = { x: -8, z0: -14.3, z1: -9.7 };

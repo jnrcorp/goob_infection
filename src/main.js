@@ -155,7 +155,8 @@ const goobGraph = new GoobGraph(collision, goobPassable, {
   people: new Set(peopleColliders),
 }).build(world);
 const goob = new GoobSystem(scene, goobGraph, collision);
-goob.spreadSpeed = () => difficulty().goobSpread;
+// (Twice as fast during the lockdown at the end.)
+goob.spreadSpeed = () => difficulty().goobSpread * (chapter?.state === 'ESCAPE' ? 2 : 1);
 
 // Infected walk through each other but not through doors (they can't open
 // them), and see through each other and past open door panels.
@@ -230,9 +231,13 @@ function endChapter({ title, text, hint } = {}) {
   showScreen('tbc');
 }
 
-function suitBreached() {
+// Game over: the suit breached, or (with title/text) something else, like
+// being sealed in by the lockdown at the end.
+function suitBreached({ title, text } = {}) {
   state = 'ended';
   if (document.pointerLockElement) document.exitPointerLock();
+  document.getElementById('breached-heading').textContent = title ?? 'Suit breached';
+  document.getElementById('breached-text').textContent = text ?? 'The goob got in. You feel... surprisingly happy.';
   document.getElementById('breach-retry').hidden = !chapter.hasCheckpoint;
   showScreen('breached');
 }
@@ -480,6 +485,8 @@ if (look) {
   player.pitch = THREE.MathUtils.degToRad(look[1] ?? 0);
   player.updateCamera();
 }
+// ?finale=news: just the ending's news bulletin and credits (testing).
+if (params.get('finale') === 'news') chapter.finale.newsAndCredits();
 // ?npcat=Name,x,y,z[,yawDegrees]: put a coworker somewhere, facing that way
 // (0 = +z) (testing).
 // (Repeat it to place several people.)

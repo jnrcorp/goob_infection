@@ -49,7 +49,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
 - URL options:
   - `?debug` starts with the readout on.
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
-  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE`, `CURE` or `INVESTIGATE` (or `INTRO`: at your desk, skipping the morning). Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
+  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE`, `CURE`, `INVESTIGATE`, `ESCAPE` (the lockdown after you expose Victoria) or `EPILOGUE` (the ending: arrest, coworkers, news and credits), or `INTRO` (at your desk, skipping the morning). Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
   - `?grab=N` starts you pushing biohazard bin N (with `?stage=SECURE`); `?binat=N,x,y,z` places bin N.
   - `?morning=chores` starts with the alarm off and the chores to do (stays where `?at=` puts you). `?morning=drive` skips the chores (you're standing by your car), `?morning=arrive` starts parked at work, and `?morning=office` starts just arrived on 2F. `?carat=x,z,heading` (with `?morning=drive`) puts you in your car there. `?look=yaw,pitch` turns the view (also in bed).
   - `?car=2` starts with the working elevator car on 2F (0 = B1, 1 = 1F, 3 = 3F).
@@ -59,6 +59,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
   - `?difficulty=hard` (or `easy`, `normal`) plays on that difficulty without changing your saved choice.
   - `?report=Hank` logs which doors are open, your suit integrity, goob volume by area, and where that coworker is after the simulation, plus who lands each hit.
+  - `?finale=news` plays just the ending's news bulletin and credits.
   - `?npcat=Hank,x,y,z[,yaw]` places a coworker, facing yaw degrees (testing). Repeat it to place several; `?npcfreeze` keeps them still, and `?crowd=N,x,y,z` stacks N coworkers on one spot.
   - `?sim=seconds` fast-forwards the game at load.
   - `?shot` skips the title screen.

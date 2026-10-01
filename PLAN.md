@@ -160,6 +160,22 @@ Each milestone ends in something you can play.
 - A gate shuts behind you (the outbreak stays at the office). Once you head in and up to 2F, the manager walks over as before.
 - The house, driveway, yard and road sit west of the lot. No goob can spread there.
 
+## The ending (done)
+
+- **Expose Goob Co.** Victoria hits the lockdown:
+  - Klaxons sound and a red alarm glow rings the screen.
+  - The elevator shuts down.
+  - Goob pours out of the vents on 2F and 3F and spreads twice as fast.
+  - Everyone on 3F, and the 2F coworkers nearest the stairwell, are infected again.
+- **The escape:** get out of the building before the countdown runs out (5:00 Easy, 3:30 Normal, 2:30 Hard). If time runs out, you're **Locked in** and retry from the start of the escape.
+- **Outside:**
+  - Police cars with flashing light bars and sirens fill the lot.
+  - Two officers walk Victoria out in handcuffs; she gets a last word.
+  - Dale and five coworkers react.
+  - The evening news breaks the story, with a lower-third, a ticker, and the five missing employees named.
+  - The credits roll, then **The End**.
+- **Keep quiet** is still a short alternative ending (the gold plaque).
+
 ## Still open (answer any time; defaults in brackets)
 
 - ~~Player name and company name~~: you're **Champ** (what Dale calls you), at Goob Co. Every desk has a nameplate; yours is gold, with a trophy.

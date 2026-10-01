@@ -337,6 +337,16 @@ export const sfx = {
     tone({ type: 'sawtooth', freq: 90, to: 70, dur: 0.9, gain: 0.05, attack: 0.1 });
     burst({ type: 'lowpass', freq: 400, dur: 0.25, gain: 0.3, delay: 0.85 });
   },
+  // Building lockdown: a two-tone klaxon (repeat it every couple of seconds).
+  klaxon: () => {
+    tone({ type: 'sawtooth', freq: 520, dur: 0.45, gain: 0.07, attack: 0.03 });
+    tone({ type: 'sawtooth', freq: 390, dur: 0.45, gain: 0.07, attack: 0.03, delay: 0.5 });
+  },
+  // A police siren wailing up and down, from pos (repeat it).
+  siren: (pos) => {
+    tone({ type: 'triangle', freq: 650, to: 1300, dur: 0.9, gain: 0.08, attack: 0.1, pos, range: 60 });
+    tone({ type: 'triangle', freq: 1300, to: 650, dur: 0.9, gain: 0.08, attack: 0.05, pos, range: 60, delay: 1.0 });
+  },
   intercom: () => {
     tone({ type: 'square', freq: 1200, dur: 0.08, gain: 0.05 });
     burst({ type: 'bandpass', freq: 2000, q: 4, dur: 0.3, gain: 0.08, delay: 0.1 });

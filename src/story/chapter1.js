@@ -10,6 +10,7 @@ import { difficulty } from '../core/settings.js';
 import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, CHOICES, ENDINGS } from './lore.js';
 import { createFiles, createFlyers } from '../world/loreProps.js';
 import { Morning } from './morning.js';
+import { Finale } from './finale.js';
 
 // Chapter 1 story flow:
 // MORNING (at home, then the drive; see morning.js) → INTRO → BRIEFING → TO_LOCKERS → TO_FREEZER → SPILL → GET_VACUUM → CLEANUP
@@ -31,6 +32,7 @@ const OBJECTIVES = {
   CURE: (cured, total) => `Cure everyone: hold F to spray the antidote (${cured}/${total} cured).`,
   INVESTIGATE: (found) => `Something's wrong at Goob Co. Find out where goob really comes from: read the files around the building (${Math.min(found, FILES_NEEDED)}/${FILES_NEEDED}). J shows what you've found.`,
   CONFRONT: 'Confront Victoria, the CEO, in the 3F boardroom.',
+  ESCAPE: (seconds) => `LOCKDOWN! Get out of the building with the files before it seals (${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}).`,
 };
 const FREEZER_LOCKED = 'Hazard suit required beyond this point.';
 const FREEZER_SEALED = 'Locked tight. The goob stays in there.';
@@ -49,12 +51,18 @@ const OUTBREAK_SEEDS = {
 // Top to bottom, for the HUD's by-floor breakdown.
 const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
-const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE']);
+const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE']);
 // Hard: how close (m) and how long (s) an infected has to stay against a
 // cured coworker to re-infect them.
 const REINFECT_RANGE = 0.8;
 const REINFECT_TIME = 1.5;
-const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'INVESTIGATE'];
+const STAGES = ['TO_LOCKERS', 'TO_FREEZER', 'GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'INVESTIGATE', 'ESCAPE', 'EPILOGUE'];
+// The escape (after you expose Victoria): how many coworkers on 2F are
+// re-infected (the ones nearest the stairwell door; everyone on 3F is), and
+// how often the lockdown klaxon sounds.
+const ESCAPE_INFECT_2F = 6;
+const STAIRWELL_2F = { x: 13.5, y: 4, z: 13 };
+const KLAXON_EVERY = 2.4;
 // Where Victoria waits to be confronted: head of the boardroom table.
 const VICTORIA_BOARDROOM = { x: 22.55, y: 8, z: 4 };
 
@@ -134,6 +142,8 @@ export class Chapter1 {
       onRead: (item) => this.readFile(item),
     });
     createFlyers(ctx.scene, FLYERS);
+    this.finale = new Finale({ scene: ctx.scene, materials: ctx.materials, cast, player, dialogue, fx, hud });
+    this.alarmEl = document.getElementById('alarm');
     for (const npc of cast.all) npc.onTalk = (n) => this.talkTo(n);
   }
 
@@ -161,10 +171,15 @@ export class Chapter1 {
     if (state === 'SECURE') return o(this.hauler.loadedCount);
     if (state === 'CURE') return o(this.curedCount, this.cast.all.length);
     if (state === 'INVESTIGATE') return o(this.filesFound);
+    if (state === 'ESCAPE') return o(this.escapeTime ?? difficulty().lockdownSeconds);
     return o ?? null;
   }
 
   start() {
+    this.finale.reset();
+    this.alarmEl.hidden = true;
+    this.victoria.person.root.visible = true;
+    this.victoria.collider.enabled = true;
     this.token++;
     this.busy = false;
     this.bossArrived = false;
@@ -239,6 +254,16 @@ export class Chapter1 {
     if (step >= 6) this.sealFreezer();
     if (step >= 7) this.equipAntidote();
     if (step >= 8) for (const npc of this.cast.all) npc.cure(CURED_LINES[npc.name] ?? CURED_LINES.default);
+    if (step >= 9) for (const f of this.files) f.found = true;
+    if (state === 'ESCAPE') {
+      this.player.spawn({ x: 21.4, y: 8, z: 4, yaw: -Math.PI / 2 });
+      this.startEscape();
+      return;
+    }
+    if (state === 'EPILOGUE') {
+      this.startEpilogue();
+      return;
+    }
     this.setState(state, this.objectiveFor(state), false);
     // Checkpoint for retrying, but not an autosave: skipping ahead shouldn't
     // overwrite a real saved game.
@@ -249,6 +274,8 @@ export class Chapter1 {
     this.morning.update(dt, input, active);
     this.runTimers(dt);
     this.updateFreezerLock();
+    this.updateEscape(dt);
+    this.finale.update(dt);
     this.updateReinfection(dt);
     this.spill.update(dt);
     this.hauler.update(dt, input, active && !this.inputLocked);
@@ -261,7 +288,7 @@ export class Chapter1 {
       else this.hud.setObjective(OBJECTIVES.INTRO_AWAY);
     }
 
-    if (this.outbreak) {
+    if (this.outbreak && this.state !== 'EPILOGUE') {
       this.hud.setGoob({
         suit: this.player.suit,
         tank: this.vacuum.equipped ? this.vacuum.tank : null,
@@ -686,10 +713,106 @@ export class Chapter1 {
     if (token !== this.token) return;
     v.talking = false;
     this.player.lookTarget = null;
+    // Expose: she locks the building down and lets the goob loose. Get out.
+    if (choice === 0) {
+      this.startEscape();
+      return;
+    }
     this.busy = true;
     await this.fx.fade(1, 1.8);
     if (token !== this.token) return;
     this.onEnd?.({ title: ending.title, text: ending.text, hint: 'Thanks for playing! Chapter 2 is on its way.' });
+  }
+
+  // ---------- The escape (after exposing Victoria) ----------
+
+  // Victoria hits the lockdown: klaxons, the elevator shuts down, goob
+  // pours out of the vents on the upper floors, and the coworkers up there
+  // are infected again. Get out of the building before it seals.
+  startEscape() {
+    this.busy = false;
+    this.player.lookTarget = null;
+    this.setState('ESCAPE', OBJECTIVES.ESCAPE(difficulty().lockdownSeconds));
+    this.lockdown();
+    for (const npc of this.escapeInfected()) npc.infect();
+    for (const node of this.graph.nodes) {
+      if (node.kind === 'vent' && node.pos.y > 3) this.goob.spawn(node, 2);
+    }
+    this.goob.spreading = true;
+    this.hud.toast('Victoria slams the alarm. LOCKDOWN. The goob\u2019s loose again: get out!', 4);
+    this.saveCheckpoint();
+  }
+
+  // Everyone on 3F, and the coworkers on 2F nearest the stairwell.
+  escapeInfected() {
+    const cured = this.cast.all.filter((n) => !n.infected && n !== this.victoria && n !== this.cast.boss);
+    const top = cured.filter((n) => n.pos.y > 7);
+    const second = cured.filter((n) => n.pos.y > 3 && n.pos.y < 7)
+      .sort((a, b) => a.pos.distanceTo(STAIRWELL_2F) - b.pos.distanceTo(STAIRWELL_2F))
+      .slice(0, ESCAPE_INFECT_2F);
+    return [...top, ...second];
+  }
+
+  // The lockdown itself (also when a checkpoint during the escape is loaded):
+  // Victoria's gone, the elevator's out, the alarm's going and the clock's
+  // running.
+  lockdown() {
+    const v = this.victoria;
+    v.talking = false;
+    v.path = null;
+    v.person.root.visible = false;
+    v.collider.enabled = false;
+    v.talkable = false;
+    this.world.elevator.jam();
+    this.escapeTime = difficulty().lockdownSeconds;
+    this.klaxonIn = 0;
+    this.alarmEl.hidden = false;
+  }
+
+  updateEscape(dt) {
+    if (this.state !== 'ESCAPE' || this.busy) return;
+    this.escapeTime -= dt;
+    this.klaxonIn -= dt;
+    if (this.klaxonIn <= 0) {
+      this.klaxonIn = KLAXON_EVERY;
+      sfx.klaxon();
+    }
+    this.hud.setObjective(OBJECTIVES.ESCAPE(Math.max(0, this.escapeTime)));
+    if (this.world.areaAt(this.player.pos) === 'Outside') this.startEpilogue();
+    else if (this.escapeTime <= 0) this.sealedIn();
+  }
+
+  // Out of time: the building seals with you inside. Retry from the start of
+  // the escape.
+  async sealedIn() {
+    const token = this.token;
+    this.busy = true;
+    this.alarmEl.hidden = true;
+    this.setState('BREACHED', null, false);
+    sfx.lock();
+    await this.fx.fade(1, 1.5);
+    if (token !== this.token) return;
+    this.onBreach?.({
+      title: 'Locked in',
+      text: 'The lockdown sealed the building with you inside. Victoria\u2019s files are going in the shredder. So are you.',
+    });
+  }
+
+  // You made it out: the arrest, your coworkers, the news and the credits.
+  async startEpilogue() {
+    const token = this.token;
+    this.busy = true;
+    this.alarmEl.hidden = true;
+    this.goob.spreading = false;
+    this.setState('EPILOGUE', null, false);
+    // Your car moves out of the way of the crowd (see Morning.finish()).
+    this.morning.finish();
+    this.hud.setGoob(null);
+    this.vacuum.equip(false); // (a cutscene: nothing in your hands)
+    await this.finale.run(this.victoria);
+    if (token !== this.token) return;
+    const ending = ENDINGS[0];
+    this.onEnd?.({ title: 'The End', text: ending.text, hint: 'Thanks for playing The Goob Infection.' });
   }
 
   // ---------- Getting hurt ----------
@@ -813,6 +936,11 @@ export class Chapter1 {
     // Saves from when fewer files were needed go back to investigating.
     const state = c.state === 'CONFRONT' && this.filesFound < FILES_NEEDED ? 'INVESTIGATE' : c.state;
     if (state === 'CONFRONT') this.sendVictoriaToBoardroom();
+    this.finale.reset();
+    this.alarmEl.hidden = true;
+    this.victoria.person.root.visible = true;
+    this.victoria.collider.enabled = true;
+    if (state === 'ESCAPE') this.lockdown();
     this.outbreak = true;
     this.setState(state, this.objectiveFor(state), false);
     this.fx.fade(1, 0);

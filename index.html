@@ -62,7 +62,27 @@
     </div>
   </div>
   <div id="flash"></div>
+  <div id="alarm" hidden></div>
   <div id="fade"></div>
+  <!-- The ending: the evening news, then the credits (see story/finale.js). -->
+  <section id="news" class="news" hidden>
+    <div class="news-frame">
+      <div class="news-top"><span class="news-live">LIVE</span> GNN · Evening News</div>
+      <div class="news-studio">
+        <div class="news-anchor" aria-hidden="true"><i></i></div>
+        <div class="news-graphic">GOOB CO.<br>SHUT DOWN</div>
+      </div>
+      <div class="news-lower">
+        <div class="news-headline">BREAKING: GOOB CO. CEO ARRESTED</div>
+        <p class="news-text" id="news-text"></p>
+      </div>
+      <div class="news-ticker"><span>GOOB CO. SHUT DOWN · CEO ARRESTED · MARS SHIPMENTS GROUNDED · FIVE MISSING EMPLOYEES NAMED · HEALTH OFFICIALS: DO NOT EAT THE GOOB · WHISTLEBLOWER "CHAMP" DECLINES TO COMMENT ·&nbsp;</span></div>
+    </div>
+    <p class="news-hint">E / click: next</p>
+  </section>
+  <section id="credits" class="credits" hidden>
+    <div class="credits-roll" id="credits-roll"></div>
+  </section>
   <!-- Slowly crawling distortion that makes "Goob" on the title screen melt. -->
   <svg class="svg-defs" aria-hidden="true" focusable="false">
     <filter id="goob-warp" x="-10%" y="-20%" width="120%" height="150%">
@@ -117,8 +137,8 @@
   </section>
 
   <section id="breached" class="screen breach-screen" hidden>
-    <h2>Suit breached</h2>
-    <p>The goob got in. You feel... surprisingly happy.</p>
+    <h2 id="breached-heading">Suit breached</h2>
+    <p id="breached-text">The goob got in. You feel... surprisingly happy.</p>
     <nav class="menu" aria-label="Game over">
       <button id="breach-retry" type="button">Try again from last checkpoint</button>
       <button id="breach-title" type="button">Back to title</button>

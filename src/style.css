@@ -653,3 +653,227 @@ html, body {
   font-size: 16px;
   opacity: 0.7;
 }
+
+/* Lockdown alarm (the escape): a slow red glow around the edges. */
+#alarm {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(200, 20, 20, 0.45) 100%);
+  animation: alarm-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes alarm-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* The evening news at the end. */
+.news {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  background: #000;
+  color: #fff;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.news-frame {
+  position: relative;
+  width: min(92vw, 1100px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: linear-gradient(160deg, #0d2350, #06112a 60%, #10224a);
+}
+
+.news-top {
+  position: absolute;
+  top: 3.5%;
+  left: 3%;
+  font-size: clamp(12px, 1.6vw, 18px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.news-live {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 8px;
+  background: #d61f1f;
+  font-weight: 800;
+}
+
+.news-studio {
+  position: absolute;
+  inset: 12% 4% 34% 4%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+/* A news anchor: head and shoulders, in silhouette. */
+.news-anchor {
+  position: relative;
+  width: 26%;
+  height: 100%;
+}
+
+.news-anchor::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 90%;
+  height: 42%;
+  transform: translateX(-50%);
+  border-radius: 45% 45% 0 0;
+  background: #1c2436;
+}
+
+.news-anchor i {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  width: 34%;
+  aspect-ratio: 0.85;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #2b3448;
+}
+
+.news-graphic {
+  align-self: center;
+  padding: 3% 4%;
+  border-left: 6px solid #6cff4a;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: clamp(22px, 4.4vw, 56px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.news-lower {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 9%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0b1426;
+}
+
+.news-headline {
+  padding: 6px 3%;
+  background: #d61f1f;
+  color: #fff;
+  font-size: clamp(14px, 2vw, 24px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.news .news-text {
+  margin: 0;
+  padding: 10px 3% 12px;
+  min-height: 3.6em;
+  font-size: clamp(13px, 1.6vw, 19px);
+  line-height: 1.4;
+}
+
+.news-ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #0b1426;
+  font-size: clamp(11px, 1.4vw, 16px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.news-ticker span {
+  padding-left: 100%;
+  animation: ticker 28s linear infinite;
+}
+
+@keyframes ticker {
+  to { transform: translateX(-100%); }
+}
+
+.news .news-hint {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+/* Credits: scroll up over black. */
+.credits {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  color: #e8f5e2;
+  font-family: "Inter", system-ui, sans-serif;
+  text-align: center;
+}
+
+.credits-roll {
+  position: absolute;
+  left: 50%;
+  width: min(90vw, 640px);
+  top: 0;
+  transform: translate(-50%, 100vh); /* moved by Finale.credits() */
+}
+
+.credits-roll h2 {
+  margin: 0 0 6px;
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 800;
+  color: #6cff4a;
+}
+
+.credits-roll h3 {
+  margin: 56px 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.credits-roll p {
+  margin: 0 0 10px;
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.credits-roll p span {
+  display: block;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.credits-roll .credits-sub {
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+.credits-roll .credits-note {
+  margin-top: 40px;
+  font-size: 15px;
+  opacity: 0.6;
+}
+
+.credits-roll .credits-end {
+  margin-top: 45vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #alarm { animation: none; opacity: 0.6; }
+  .news-ticker span { animation: none; padding-left: 0; }
+}

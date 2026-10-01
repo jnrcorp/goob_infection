@@ -10,6 +10,7 @@ export const DIFFICULTIES = {
     infectedAttack: false,
     floorBreakdown: true, // HUD shows where the goob / infected are, by floor
     reinfect: false,      // infected re-infect cured coworkers they touch (during the cure)
+    lockdownSeconds: 300, // the escape at the end: time to get out before the building seals
     goobSpread: 0.25,     // how fast goob grows and spreads (1 = full speed)
   },
   normal: {
@@ -19,6 +20,7 @@ export const DIFFICULTIES = {
     infectedAttack: true,
     floorBreakdown: true,
     reinfect: false,
+    lockdownSeconds: 210,
     goobSpread: 0.6,
   },
   hard: {
@@ -28,6 +30,7 @@ export const DIFFICULTIES = {
     infectedAttack: true,
     floorBreakdown: false,
     reinfect: true,
+    lockdownSeconds: 150,
     goobSpread: 1,
   },
 };
