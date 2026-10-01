@@ -7,7 +7,7 @@ import { createDuctTape } from '../world/pickups.js';
 import { BinHauler } from './hauling.js';
 import { sfx } from '../core/sound.js';
 import { difficulty } from '../core/settings.js';
-import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, CHOICES, ENDINGS } from './lore.js';
+import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, ENDING } from './lore.js';
 import { createFiles, createFlyers } from '../world/loreProps.js';
 import { Morning } from './morning.js';
 import { Finale } from './finale.js';
@@ -706,22 +706,13 @@ export class Chapter1 {
     v.talking = true;
     this.player.lookTarget = v.headPoint;
     const lines = CONFRONTATION.map((text) => ({ speaker: 'Victoria', text }));
-    const choice = await this.dialogue.play(lines, CHOICES);
-    if (token !== this.token) return;
-    const ending = ENDINGS[choice];
-    await this.dialogue.play([{ speaker: 'Victoria', text: ending.victoria }]);
+    await this.dialogue.play(lines);
     if (token !== this.token) return;
     v.talking = false;
     this.player.lookTarget = null;
-    // Expose: she locks the building down and lets the goob loose. Get out.
-    if (choice === 0) {
-      this.startEscape();
-      return;
-    }
-    this.busy = true;
-    await this.fx.fade(1, 1.8);
-    if (token !== this.token) return;
-    this.onEnd?.({ title: ending.title, text: ending.text, hint: 'Thanks for playing! Chapter 2 is on its way.' });
+    // You're exposing her: she locks the building down and lets the goob
+    // loose. Get out.
+    this.startEscape();
   }
 
   // ---------- The escape (after exposing Victoria) ----------
@@ -811,8 +802,7 @@ export class Chapter1 {
     this.vacuum.equip(false); // (a cutscene: nothing in your hands)
     await this.ending.run(this.victoria);
     if (token !== this.token) return;
-    const ending = ENDINGS[0];
-    this.onEnd?.({ title: 'The End', text: ending.text, hint: 'Thanks for playing The Goob Infection.' });
+    this.onEnd?.({ title: ENDING.title, text: ENDING.text, hint: 'Thanks for playing The Goob Infection.' });
   }
 
   // ---------- Getting hurt ----------

@@ -88,20 +88,12 @@ export const CONFRONTATION = [
   "They're still here, in a way. They're in every jar we ship. They're even in the goob you just vacuumed up.",
   "And Mars? Mars is just where we put what's left over.",
   "Dale told you your name came up on the rotation, didn't he? He thought it was about the delivery. Bless him.",
-  "So here's your choice, Champ. Walk out that door and tell everyone. Or take a promotion, and forget you read a thing.",
+  "I'd offer you a promotion to forget all this. But I can see it on your face. You're going to tell everyone.",
+  "Then you'd better run faster than the goob, Champ.",
 ];
 
-export const CHOICES = ['Expose Goob Co.', 'Keep quiet'];
-
-export const ENDINGS = [
-  {
-    victoria: "Then you'd better run faster than the goob, Champ.",
-    title: 'Chapter 1 complete',
-    text: 'You got the files out. Goob Co. was shut down, the vats were drained, and five families finally got answers. Victoria was never found.',
-  },
-  {
-    victoria: "Wise. Congratulations, Champ. You're Employee of the Month.",
-    title: 'Chapter 1 complete',
-    text: 'You kept quiet. You got a corner office and a gold plaque. The next rotation is in thirty days. Your name is still on the list.',
-  },
-];
+// The ending (you expose Goob Co.; see story/finale.js for the finale).
+export const ENDING = {
+  title: 'The End',
+  text: 'You got the files out. Goob Co. was shut down, the vats were drained, and five families finally got answers. Victoria is awaiting trial.',
+};

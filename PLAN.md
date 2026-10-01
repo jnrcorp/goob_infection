@@ -149,7 +149,7 @@ Each milestone ends in something you can play.
 - **The secret**: goob is made from people. "Employee of the Month" winners get "transferred" to the vats in B1; the Mars shipments carry away what's left. Champ is next on the rotation. Creepy, PG-13.
 - **Things you notice**: missing-person flyers for the five transferred employees (Gary, Denise, Phil, Rosa, Ken), taped up around the building and outside.
 - **Collectible files**: 12 papers (folders, printouts, sticky notes) on desks and counters on every floor. E picks one up and reads it; J (or Files on the pause screen) rereads any you've found.
-- **New final objective**: after Dale's thank-you, **INVESTIGATE** (find all 12 files), then **CONFRONT** Victoria in the 3F boardroom. Her speech ends with a choice (1/2): **expose Goob Co.** or **keep quiet**, each with its own ending card.
+- **New final objective**: after Dale's thank-you, **INVESTIGATE** (find all 12 files), then **CONFRONT** Victoria in the 3F boardroom. She explains everything, realizes you're going to expose her, and triggers the lockdown (see The ending).
 - Found files are saved in checkpoints and the autosave.
 - Debug only (backquote mode): R sends the bin you're pushing straight to the secure freezer.
 
@@ -174,7 +174,7 @@ Each milestone ends in something you can play.
   - Dale and five coworkers react.
   - The evening news breaks the story, with a lower-third, a ticker, and the five missing employees named.
   - The credits roll, then **The End**.
-- **Keep quiet** is still a short alternative ending (the gold plaque).
+- There's one ending: exposing Goob Co. (The old "keep quiet" ending was removed.)
 
 ## Still open (answer any time; defaults in brackets)
 

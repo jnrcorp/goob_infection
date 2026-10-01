@@ -30,7 +30,7 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 
 The day starts at home: turn off your alarm, get ready (brush your teeth and shower, get dressed, make coffee and toast, then grab your keys, in that order), then drive to Goob Co. (W/S gas and brake, A/D steer, Space handbrake, E get in/out) and park in any space in the lot.
 
-WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: Q lets go. With the antidote: hold F to spray. J opens the files you've found (also on the pause screen); 1 and 2 pick an answer when a conversation offers a choice.
+WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: Q lets go. With the antidote: hold F to spray. J opens the files you've found (also on the pause screen).
 
 The title screen has Continue (the autosave), Difficulty and Volume. Goob spreads at a quarter speed on Easy, 60% on Normal and full speed on Hard (`goobSpread` in `src/core/settings.js`). On Easy and Normal the HUD shows, for B1, 1F, 2F, 3F and outside, how many liters of goob are left (during the cleanup) and how many coworkers are still infected (during the cure). Settings and the autosave are kept in the browser (`localStorage`).
 
