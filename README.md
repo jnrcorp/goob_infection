@@ -28,6 +28,8 @@ Then open http://localhost:8000. The server (`serve.py`) turns off browser cachi
 
 ## Controls
 
+The day starts at home: turn off your alarm, get ready (brush your teeth and shower, get dressed, make coffee and toast, then grab your keys, in that order), then drive to Goob Co. (W/S gas and brake, A/D steer, Space handbrake, E get in/out) and park in any space in the lot.
+
 WASD move, mouse look, E interact, Shift run, Space jump, Esc pause. With the vacuum: hold the left mouse button to suck up goob; right-click to blast infected coworkers back. Pushing a bin: Q lets go. With the antidote: hold F to spray. J opens the files you've found (also on the pause screen); 1 and 2 pick an answer when a conversation offers a choice.
 
 The title screen has Continue (the autosave), Difficulty and Volume. Goob spreads at a quarter speed on Easy, 60% on Normal and full speed on Hard (`goobSpread` in `src/core/settings.js`). On Easy and Normal the HUD shows, for B1, 1F, 2F, 3F and outside, how many liters of goob are left (during the cleanup) and how many coworkers are still infected (during the cure). Settings and the autosave are kept in the browser (`localStorage`).
@@ -41,13 +43,15 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `K` cures everyone (during the cure objective, to test the ending).
   - `R` (while pushing a biohazard bin) sends it straight to the secure freezer.
   - `I` toggles an infinite vacuum tank (it never fills, so you never have to empty it).
+  - `M` skips the morning at home and the drive, straight to your desk.
   - `P` saves a checkpoint (and the autosave) right now, once the outbreak has started.
   - `L` marks every file as found (during the investigation, it sends Victoria to the boardroom).
 - URL options:
   - `?debug` starts with the readout on.
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).
-  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE`, `CURE` or `INVESTIGATE`. Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
+  - `?stage=` skips ahead in the story: `TO_LOCKERS`, `TO_FREEZER`, `GET_VACUUM`, `CLEANUP`, `SECURE`, `LOCK_FREEZER`, `GET_ANTIDOTE`, `CURE` or `INVESTIGATE` (or `INTRO`: at your desk, skipping the morning). Everything before that point is set up for you. Skipping ahead doesn't overwrite your autosave.
   - `?grab=N` starts you pushing biohazard bin N (with `?stage=SECURE`); `?binat=N,x,y,z` places bin N.
+  - `?morning=chores` starts with the alarm off and the chores to do (stays where `?at=` puts you). `?morning=drive` skips the chores (you're standing by your car), `?morning=arrive` starts parked at work, and `?morning=office` starts just arrived on 2F. `?carat=x,z,heading` (with `?morning=drive`) puts you in your car there. `?look=yaw,pitch` turns the view (also in bed).
   - `?car=2` starts with the working elevator car on 2F (0 = B1, 1 = 1F, 3 = 3F).
   - `?callto=N` sends the elevator to floor N right away (0 = B1, 1 = 1F, 2 = 2F, 3 = 3F).
   - `?filecheck` logs whether each collectible file rests on something or is buried in furniture.

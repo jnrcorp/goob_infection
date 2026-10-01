@@ -9,9 +9,10 @@ import { sfx } from '../core/sound.js';
 import { difficulty } from '../core/settings.js';
 import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, CHOICES, ENDINGS } from './lore.js';
 import { createFiles, createFlyers } from '../world/loreProps.js';
+import { Morning } from './morning.js';
 
 // Chapter 1 story flow:
-// INTRO → BRIEFING → TO_LOCKERS → TO_FREEZER → SPILL → GET_VACUUM → CLEANUP
+// MORNING (at home, then the drive; see morning.js) → INTRO → BRIEFING → TO_LOCKERS → TO_FREEZER → SPILL → GET_VACUUM → CLEANUP
 // → SECURE (wheel the bins into the freezer) → LOCK_FREEZER → DALE_CALL
 // → GET_ANTIDOTE → CURE → FINALE
 
@@ -69,6 +70,8 @@ export class Chapter1 {
   }) {
     Object.assign(this, { world, player, cast, hud, dialogue, reader, fx, goob, graph, vacuum, antidote, spill, onEnd, onBreach });
     this.outbreak = false;
+    this.morning = new Morning({ ctx, world, player, hud, fx, collision: ctx.collision });
+    this.morning.onDone = () => this.beginIntro();
     this.contact = new Map(); // cured coworker -> seconds an infected has been against them
     this.checkpoint = null;
     this.token = 0;
@@ -141,7 +144,7 @@ export class Chapter1 {
 
   // True while the player shouldn't be able to move or interact.
   get inputLocked() {
-    return this.busy || this.dialogue.active || this.reader.active;
+    return this.busy || this.morning.busy || this.dialogue.active || this.reader.active;
   }
 
   // Game speed (slow motion during the spill).
@@ -180,7 +183,6 @@ export class Chapter1 {
     this.outbreak = false;
     this.checkpoint = null;
     this.hud.setGoob(null);
-    this.player.spawn(this.world.spawn);
     this.player.suited = false;
     this.player.suit = 100;
     this.player.lookTarget = null;
@@ -188,15 +190,32 @@ export class Chapter1 {
     this.freezerDoor.locked = FREEZER_LOCKED;
     this.lockingFreezer = false;
     this.managerDoor.setOpen(-1);
-    this.setState('INTRO', OBJECTIVES.INTRO, false);
+    // The day starts at home (morning.js), which calls beginIntro() once
+    // you're up on 2F.
+    this.setState('MORNING', null, false);
+    this.morning.start();
 
     this.fx.fade(1, 0);
     this.fx.fade(0, 1.2);
+  }
+
+  // At the office: your manager heads over to your desk.
+  beginIntro() {
+    this.setState('INTRO', OBJECTIVES.INTRO);
     this.later(1.5, () => this.cast.boss.walkPath(BOSS_ROUTE, () => { this.bossArrived = true; }));
   }
 
   // Debug: jump straight to a later objective (?stage= in the URL).
   skipTo(state) {
+    // Any skip starts at the office, at your desk (?at= can move you after).
+    if (state === 'INTRO' || STAGES.includes(state)) {
+      this.morning.finish();
+      this.player.spawn(this.world.spawn);
+    }
+    if (state === 'INTRO') {
+      this.beginIntro();
+      return;
+    }
     const step = STAGES.indexOf(state);
     if (step < 0) return;
     this.token++; // cancels the manager's walk
@@ -227,6 +246,7 @@ export class Chapter1 {
   }
 
   update(dt, input, active) {
+    this.morning.update(dt, input, active);
     this.runTimers(dt);
     this.updateFreezerLock();
     this.updateReinfection(dt);
@@ -747,6 +767,7 @@ export class Chapter1 {
     this.hud.toast('', 0);
     this.world.setCanisterVisible(false);
     this.putOnSuit();
+    this.morning.finish();
     this.player.spawn(c.player);
     this.player.suit = c.suit;
     this.player.lookTarget = null;

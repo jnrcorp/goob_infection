@@ -34,14 +34,21 @@ export class Player {
     this.shake = 0;
     // When set ({ x, y, z }), the camera turns smoothly to look at this point.
     this.lookTarget = null;
+    // When set, something else carries the player (lying in bed, driving the
+    // car): { update(dt, input, active, player) } moves pos and yaw each frame,
+    // and the player can still look around but not walk.
+    this.rig = null;
+    // Eye height above pos (lower when lying in bed or sitting in the car).
+    this.eyeHeight = EYE;
   }
 
   get eyeY() {
-    return this.pos.y + EYE;
+    return this.pos.y + this.eyeHeight;
   }
 
   spawn({ x, y, z, yaw = 0 }) {
     this.spawnPoint = { x, y, z, yaw };
+    this.eyeHeight = EYE;
     this.pos.set(x, y, z);
     this.vel.set(0, 0, 0);
     this.yaw = yaw;
@@ -55,6 +62,13 @@ export class Player {
     } else if (active) {
       this.yaw -= input.mouseDX * LOOK;
       this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch - input.mouseDY * LOOK));
+    }
+    if (this.rig) {
+      this.rig.update(dt, input, active, this);
+      this.vel.set(0, 0, 0);
+      this.bob = 0;
+      this.updateCamera(dt);
+      return;
     }
     const axis = (pos, neg) => (active ? (input.down(pos) ? 1 : 0) - (input.down(neg) ? 1 : 0) : 0);
     const forward = axis('KeyW', 'KeyS');
@@ -211,7 +225,7 @@ export class Player {
 
   updateCamera(dt = 0) {
     const bob = this.noclip ? 0 : Math.sin(this.bob * 2) * 0.03;
-    this.camera.position.set(this.pos.x, this.pos.y + EYE + bob, this.pos.z);
+    this.camera.position.set(this.pos.x, this.pos.y + this.eyeHeight + bob, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt);

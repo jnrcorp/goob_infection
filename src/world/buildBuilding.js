@@ -29,6 +29,7 @@ const FILL = {
   '2F': { sky: 0xe8eef8, ground: 0x857a6a, intensity: 1.05 },
   '3F': { sky: 0xf4ecdf, ground: 0x8a7458, intensity: 1.1 },
   Outside: { sky: 0xcfe2f6, ground: 0x7d786c, intensity: 1.5 },
+  Home: { sky: 0xf6ead8, ground: 0x8a6e52, intensity: 1.05 },
 };
 
 // Afternoon sun from the south-west (the parking lot side), through the windows.
@@ -110,9 +111,10 @@ export function buildBuilding(baseCtx) {
         // texture, so the overlap can't be seen; walls hide room boundaries.)
         const e = SEAM_OVERLAP;
         b.plane(r.x0 - e, r.z0 - e, r.x1 + e, r.z1 + e, floor.y, room.floor);
-        if (room.ceiling) b.plane(r.x0 - e, r.z0 - e, r.x1 + e, r.z1 + e, floor.y + room.ceiling, 'ceiling', true);
+        if (room.ceiling) b.plane(r.x0 - e, r.z0 - e, r.x1 + e, r.z1 + e, floor.y + room.ceiling, room.home ? 'trim' : 'ceiling', true);
         const fixture = 'fixture' in room ? room.fixture : 'light';
-        if (fixture) addFixtures(b, r, lightY, fixture);
+        if (room.home) addHomeLight(b, r, lightY);
+        else if (fixture) addFixtures(b, r, lightY, fixture);
       }
       addLights(lightSpots, room, rects, lightY);
     }
@@ -122,6 +124,10 @@ export function buildBuilding(baseCtx) {
   for (const flight of BUILDING.flights) buildStairs(b, collision, flight);
   const elevator = new Elevator(ctx, BUILDING.elevator);
   const props = furnish(ctx);
+  // The glass shower door at home: the west side of the shower, hinged at
+  // the south wall, reaching the fixed screen on the north side. It always
+  // swings out into the bathroom (-x), never into the shower.
+  doors.push(new Door(ctx, { x: -49.5, y: 0, z: -25.2, axis: 'z', w: 1.4, h: 2.1, mat: 'glass', label: 'shower door', swing: -1 }));
   const check = new URLSearchParams(location.search).get('checkfaces');
   if (check !== null) reportOverlappingFaces(b.records, check);
   b.finish(scene);
@@ -211,6 +217,7 @@ export function buildBuilding(baseCtx) {
     areaAt(pos) {
       const floorIndex = this.floorIndexAt(pos.y);
       const room = rooms.find((r) => r.floorIndex === floorIndex && r.rects.some((rect) => inRect(rect, pos.x, pos.z)));
+      if (room?.home) return 'Home';
       return room?.outdoor ? 'Outside' : BUILDING.floors[floorIndex].id;
     },
 
@@ -221,6 +228,7 @@ export function buildBuilding(baseCtx) {
       if (inRect(BUILDING.stairwell, pos.x, pos.z)) return `${floorId} · Stairwell`;
       const room = rooms.find((r) => r.floorIndex === floorIndex && r.rects.some((rect) => inRect(rect, pos.x, pos.z)));
       if (!room) return floorId;
+      if (room.home) return `Home · ${room.name}`;
       return room.outdoor ? `Outside · ${room.name}` : `${floorId} · ${room.name}`;
     },
   };
@@ -317,6 +325,12 @@ function buildWall(ctx, floor, spec, doors) {
     cursor = o.s1;
   }
   piece(cursor, end, 0, h, mat);
+}
+
+// A round flush-mount ceiling light in the middle of a room at home.
+function addHomeLight(b, r, y) {
+  const g = new THREE.CylinderGeometry(0.22, 0.26, 0.06, 24);
+  b.shape(g, 'light', (r.x0 + r.x1) / 2, y - 0.03, (r.z0 + r.z1) / 2);
 }
 
 // Recessed 2-by-4 ft troffer lights spread evenly over a rect, snapped to the

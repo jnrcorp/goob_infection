@@ -172,6 +172,24 @@ function buildLoops() {
     air.connect(filter('bandpass', 1800, 0.7)).connect(out);
     air.start();
   });
+  // Car engine: a low growl whose pitch follows the revs (see setEngine).
+  loop('engine', (out) => {
+    engineOsc = ctx.createOscillator();
+    engineOsc.type = 'sawtooth';
+    engineOsc.frequency.value = 38;
+    const sub = ctx.createOscillator();
+    sub.type = 'square';
+    sub.frequency.value = 19;
+    engineSub = sub;
+    const eg = ctx.createGain();
+    eg.gain.value = 0.5;
+    const sg = ctx.createGain();
+    sg.gain.value = 0.25;
+    engineOsc.connect(filter('lowpass', 420, 2)).connect(eg).connect(out);
+    sub.connect(filter('lowpass', 160)).connect(sg).connect(out);
+    engineOsc.start();
+    sub.start();
+  });
   // Antidote spray: steady hiss.
   loop('spray', (out) => {
     const hiss = noiseSource();
@@ -195,14 +213,25 @@ function buildLoops() {
 }
 
 // Fade each loop toward a target level (0 = off).
-export function setLoops({ hum = 0, vacuum = 0, spray = 0, breath = 0 }) {
+export function setLoops({ hum = 0, vacuum = 0, spray = 0, breath = 0, engine = 0 }) {
   if (!ctx) return;
   const t = ctx.currentTime;
   const set = (name, v) => loops[name]?.gain.setTargetAtTime(v, t, 0.08);
+  set('engine', engine * 0.22);
   set('hum', hum * 0.05);
   set('vacuum', vacuum * 0.35);
   set('spray', spray * 0.12);
   set('breath', breath * 0.1);
+}
+
+// Engine pitch: revs 0 (idle) to 1 (flat out).
+let engineOsc = null;
+let engineSub = null;
+export function setEngine(revs) {
+  if (!engineOsc) return;
+  const t = ctx.currentTime;
+  engineOsc.frequency.setTargetAtTime(38 + revs * 95, t, 0.1);
+  engineSub.frequency.setTargetAtTime(19 + revs * 47, t, 0.1);
 }
 
 // ---------- One-shots ----------
@@ -280,6 +309,33 @@ export const sfx = {
   breach: () => {
     burst({ freq: 700, to: 200, q: 1, dur: 1.4, gain: 0.4, attack: 0.05 });
     tone({ type: 'sawtooth', freq: 300, to: 60, dur: 1.4, gain: 0.12 });
+  },
+  // Morning at home.
+  alarm: (pos) => {
+    for (let i = 0; i < 4; i++) tone({ type: 'square', freq: 1760, dur: 0.07, gain: 0.07, delay: i * 0.12, pos, range: 30 });
+  },
+  water: () => burst({ type: 'bandpass', freq: 2400, q: 0.6, dur: 1.4, gain: 0.18, attack: 0.15 }),
+  coffee: () => {
+    burst({ freq: 700, to: 300, q: 2, dur: 1.2, gain: 0.18, attack: 0.1 });
+    tone({ freq: 90, to: 70, dur: 0.8, gain: 0.08, delay: 0.2 });
+  },
+  ding: () => {
+    burst({ type: 'lowpass', freq: 900, dur: 0.08, gain: 0.2 });
+    tone({ freq: 2093, dur: 0.6, gain: 0.08, delay: 0.1 });
+  },
+  rustle: () => burst({ type: 'bandpass', freq: 1400, q: 0.8, dur: 0.7, gain: 0.14, attack: 0.1 }),
+  keys: () => [2600, 3100, 2900].forEach((f, i) => tone({ type: 'triangle', freq: f, dur: 0.08, gain: 0.05, delay: i * 0.06 })),
+  carDoor: () => {
+    burst({ type: 'lowpass', freq: 500, dur: 0.18, gain: 0.35 });
+    tone({ type: 'triangle', freq: 110, to: 70, dur: 0.15, gain: 0.15 });
+  },
+  crash: () => {
+    burst({ type: 'lowpass', freq: 900, to: 150, dur: 0.35, gain: 0.45 });
+    tone({ type: 'triangle', freq: 90, to: 50, dur: 0.3, gain: 0.25 });
+  },
+  gate: () => {
+    tone({ type: 'sawtooth', freq: 90, to: 70, dur: 0.9, gain: 0.05, attack: 0.1 });
+    burst({ type: 'lowpass', freq: 400, dur: 0.25, gain: 0.3, delay: 0.85 });
   },
   intercom: () => {
     tone({ type: 'square', freq: 1200, dur: 0.08, gain: 0.05 });

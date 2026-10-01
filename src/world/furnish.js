@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createRng } from '../core/random.js';
 import { BUILDING } from './building.js';
+import { toTexture } from '../render/textures.js';
 import {
   bed, bench, bin, cabinet, chair, chairsAround, counter, couch, crate, desk, forklift, fridge, goobCanister,
   hazmatSuit, hazmatSuitProp, lockers, pallet, palletRack, plant, pod, printer, shelf, sign, sinks, stallRow, table,
@@ -195,6 +196,7 @@ export function furnish({ builder: b, scene, materials }) {
   furnishBasement(b, scene, rng, out);
   furnishExecutive(b, scene, out);
   furnishOutdoors(b, scene, rng);
+  furnishHome(b, scene);
 
   // Air vent grilles, low on the walls.
   for (const v of BUILDING.vents) vent(b, v);
@@ -296,18 +298,21 @@ function furnishExecutive(b, scene, out) {
 
 // Parking lot and loading yard.
 function furnishOutdoors(b, scene, rng) {
-  // Parking lot: painted stalls in two rows, some cars, lamp posts, a bench.
+  // Parking lot: painted stalls in two rows (north z -8..-3, south z
+  // -21..-16) with an 8 m aisle between them that runs from the entrance on
+  // the west to the far end, some cars, lamp posts behind the south row, a
+  // bench.
   for (let x = -6; x <= 34; x += 2.8) {
     b.plane(x - 0.05, -8, x + 0.05, -3, 0.03, 'fridge');
-    b.plane(x - 0.05, -15, x + 0.05, -10, 0.03, 'fridge');
+    b.plane(x - 0.05, -21, x + 0.05, -16, 0.03, 'fridge');
   }
   const cars = [[-4.6, -5.5, 'paintRed'], [1, -5.5, 'paintSilver'], [6.6, -5.5, 'paintYellow'], [23.4, -5.5, 'paintBlack'],
-    [-1.8, -12.5, 'paintSilver'], [9.4, -12.5, 'paintBlue'], [15, -12.5, 'paintBlack'], [29, -12.5, 'paintYellow']];
+    [-1.8, -18.5, 'paintSilver'], [9.4, -18.5, 'paintBlue'], [15, -18.5, 'paintBlack'], [29, -18.5, 'paintYellow']];
   for (const [x, z, color] of cars) car(b, x, z, color);
-  for (const x of [2, 16, 30]) lampPost(b, x, -9);
+  for (const x of [2, 16, 30]) lampPost(b, x, -23.5, 1);
   bench(b, 4.5, -0.8, 6.5, -0.4);
   sign(scene, 'GOOB CO.', 19, 3.1, -0.12, 's', { w: 3.2, h: 0.8, ...LOGO });
-  sign(scene, 'VISITOR PARKING', 14, 1.9, -15.88, 'n', { w: 2.2, h: 0.35 });
+  sign(scene, 'VISITOR PARKING', 14, 1.9, -25.88, 'n', { w: 2.2, h: 0.35 });
 
   // Loading yard: the delivery truck, dumpsters, pallets, lamps.
   truck(b, scene);
@@ -342,11 +347,11 @@ function car(b, x, z, paint) {
   }
 }
 
-// Tall sodium lamp.
-function lampPost(b, x, z) {
+// Tall sodium lamp. dir: which way (along z) the arm reaches, -1 or 1.
+function lampPost(b, x, z, dir = -1) {
   b.box(x - 0.1, 0, z - 0.1, x + 0.1, 6, z + 0.1, 'metal');
-  b.box(x - 0.1, 5.9, z - 0.8, x + 0.1, 6, z + 0.1, 'metal', NC);
-  b.box(x - 0.25, 5.8, z - 1.1, x + 0.25, 5.9, z - 0.6, 'light', NC);
+  b.box(x - 0.1, 5.9, Math.min(z, z + dir * 0.8) - 0.1, x + 0.1, 6, Math.max(z, z + dir * 0.8) + 0.1, 'metal', NC);
+  b.box(x - 0.25, 5.8, Math.min(z + dir * 0.6, z + dir * 1.1), x + 0.25, 5.9, Math.max(z + dir * 0.6, z + dir * 1.1), 'light', NC);
 }
 
 // The Mars delivery truck, backed up to the yard.
@@ -372,4 +377,159 @@ function vent(b, { x, y, z, facing }) {
   else if (facing === 's') b.box(x - hw, y - hh, z - t, x + hw, y + hh, z, 'shutter', opts);
   else if (facing === 'e') b.box(x, y - hh, z - hw, x + t, y + hh, z + hw, 'shutter', opts);
   else b.box(x - t, y - hh, z - hw, x, y + hh, z + hw, 'shutter', opts);
+}
+
+// Your house (see BUILDING's home rooms). The things you use in the morning
+// (alarm clock, sink, shower, coffee maker, toaster, wardrobe, key hook) are
+// added by the morning routine (story/morning.js); this is the rest.
+function furnishHome(b, scene) {
+  // Bedroom: a double bed with its head against the south wall, a
+  // nightstand, a rug and a wardrobe.
+  b.box(-59.6, 0, -25.95, -58.0, 0.6, -23.9, null);
+  b.roundBox(-59.6, 0.12, -25.95, -58.0, 0.38, -23.9, 'wood', 0.03, { collide: false, shadow: true });
+  b.roundBox(-59.55, 0.38, -25.9, -58.05, 0.58, -23.95, 'fridge', 0.06, NC);                 // mattress
+  b.roundBox(-59.5, 0.56, -24.9, -58.1, 0.62, -23.97, 'cubicle', 0.03, NC);                   // duvet
+  for (const x of [-59.2, -58.4]) b.roundBox(x - 0.3, 0.58, -25.85, x + 0.3, 0.7, -25.45, 'fridge', 0.05, NC); // pillows
+  b.roundBox(-59.6, 0, -26, -58.0, 1.05, -25.92, 'wood', 0.02, NC);                           // headboard
+  b.roundBox(-57.9, 0, -25.95, -57.4, 0.55, -25.45, 'wood', 0.02, { shadow: true });          // nightstand
+  b.plane(-58.8, -23.7, -56.4, -21.8, 0.005, 'carpetRed');                                    // rug
+  b.roundBox(-59.9, 0, -20.7, -58.2, 2.05, -20.12, 'wood', 0.02, { shadow: true });            // wardrobe
+  // Bathroom: vanity with a basin (the faucet is the "brush your teeth"
+  // prop in story/morning.js), mirror, toilet, shower stall.
+  b.roundBox(-53.1, 0, -25.95, -52.1, 0.85, -25.45, 'wood', 0.02, { shadow: true });
+  b.roundBox(-53.12, 0.85, -25.97, -52.08, 0.9, -25.43, 'counter', 0.01, NC);
+  // Oval basin sitting on the counter: a bowl with a rim and a drain.
+  const bowl = new THREE.LatheGeometry(
+    [[0, 0.012], [0.14, 0.012], [0.16, 0.04], [0.17, 0.12], [0.19, 0.12], [0.18, 0.03], [0.15, 0], [0, 0]]
+      .map(([r, y]) => new THREE.Vector2(r, y)), 32);
+  bowl.scale(1, 1, 0.72);
+  // (Lifted 5 mm off the counter: the basin's base sitting exactly on the
+  // counter top flickered against it.)
+  b.shape(bowl, 'fridge', -52.6, 0.905, -25.69);
+  b.shape(new THREE.CylinderGeometry(0.025, 0.025, 0.004, 16), 'steel', -52.6, 0.922, -25.69);
+  b.box(-53.0, 1.2, -25.97, -52.2, 1.9, -25.92, 'glass', NC);
+  b.roundBox(-51.4, 0, -25.95, -50.95, 0.42, -25.3, 'fridge', 0.08, { shadow: true });         // toilet
+  b.roundBox(-51.4, 0.42, -25.97, -50.95, 0.8, -25.78, 'fridge', 0.04, NC);
+  // Shower: a tray in the corner, a fixed glass screen on the north side,
+  // and a glass door on the west side (built with the doors, in
+  // buildBuilding), which closes it in completely.
+  b.box(-49.5, 0, -25.9, -48.1, 0.08, -24.5, 'tile');                                         // shower tray
+  b.box(-49.5, 0, -24.53, -48.1, 2.1, -24.47, 'glass');                                       // fixed screen
+  // Kitchen: counter along the south wall (coffee maker and toaster on the
+  // west end; see story/morning.js), a cooktop over an oven, a sink between
+  // the cooktop and the fridge, and a table.
+  const SINK = { x0: -50.45, x1: -49.85, z0: -21.85, z1: -21.45, bottom: 0.7 };
+  // Cabinets and counter top, built around the sink's hole.
+  b.box(-53.8, 0, -21.95, -49.6, 0.86, -21.35, null);
+  b.roundBox(-53.8, 0, -21.95, SINK.x0, 0.86, -21.35, 'wood', 0.02, { collide: false, shadow: true });
+  b.roundBox(SINK.x1, 0, -21.95, -49.6, 0.86, -21.35, 'wood', 0.02, { collide: false });
+  b.box(SINK.x0, 0, SINK.z1, SINK.x1, 0.86, -21.35, 'wood', NC);
+  b.box(SINK.x0, 0, -21.95, SINK.x1, 0.86, SINK.z0, 'wood', NC);
+  b.roundBox(-53.82, 0.86, -21.97, SINK.x0, 0.9, -21.33, 'counter', 0.01, NC);
+  b.roundBox(SINK.x1, 0.86, -21.97, -49.58, 0.9, -21.33, 'counter', 0.01, NC);
+  b.box(SINK.x0, 0.86, SINK.z1, SINK.x1, 0.9, -21.33, 'counter', NC);
+  b.box(SINK.x0, 0.86, -21.97, SINK.x1, 0.9, SINK.z0, 'counter', NC);
+  // Stainless basin set into the hole: a bottom, four sides, a thin rim and
+  // a drain.
+  const w = 0.012;
+  b.box(SINK.x0, SINK.bottom - 0.01, SINK.z0, SINK.x1, SINK.bottom, SINK.z1, 'steel', NC);
+  b.box(SINK.x0, SINK.bottom, SINK.z0, SINK.x0 + w, 0.9, SINK.z1, 'steel', NC);
+  b.box(SINK.x1 - w, SINK.bottom, SINK.z0, SINK.x1, 0.9, SINK.z1, 'steel', NC);
+  b.box(SINK.x0 + w, SINK.bottom, SINK.z0, SINK.x1 - w, 0.9, SINK.z0 + w, 'steel', NC);
+  b.box(SINK.x0 + w, SINK.bottom, SINK.z1 - w, SINK.x1 - w, 0.9, SINK.z1, 'steel', NC);
+  for (const [x0, z0, x1, z1] of [[SINK.x0 - 0.02, SINK.z0 - 0.02, SINK.x1 + 0.02, SINK.z0], [SINK.x0 - 0.02, SINK.z1, SINK.x1 + 0.02, SINK.z1 + 0.02],
+    [SINK.x0 - 0.02, SINK.z0, SINK.x0, SINK.z1], [SINK.x1, SINK.z0, SINK.x1 + 0.02, SINK.z1]]) {
+    b.box(x0, 0.9, z0, x1, 0.905, z1, 'steel', NC);
+  }
+  const sinkX = (SINK.x0 + SINK.x1) / 2;
+  b.shape(new THREE.CylinderGeometry(0.03, 0.03, 0.004, 16), 'rubber', sinkX, SINK.bottom + 0.002, (SINK.z0 + SINK.z1) / 2);
+  // Gooseneck faucet behind the sink: a tall pipe arching over the basin.
+  b.shape(new THREE.CylinderGeometry(0.03, 0.035, 0.03, 16), 'steel', sinkX, 0.92, -21.9);
+  b.shape(new THREE.CylinderGeometry(0.014, 0.014, 0.34, 12), 'steel', sinkX, 1.075, -21.9);
+  const arch = new THREE.TorusGeometry(0.09, 0.014, 8, 20, Math.PI);
+  arch.rotateY(Math.PI / 2);
+  b.shape(arch, 'steel', sinkX, 1.245, -21.81);
+  b.shape(new THREE.CylinderGeometry(0.016, 0.014, 0.07, 12), 'steel', sinkX, 1.21, -21.72);
+  b.roundBox(sinkX + 0.05, 0.93, -21.93, sinkX + 0.14, 0.95, -21.89, 'steel', 0.006, NC); // handle
+  // Cooktop: a black glass top with four burners, over an oven with a
+  // window, a handle and control knobs.
+  const COOK = { x0: -51.55, x1: -50.85, z0: -21.9, z1: -21.4 };
+  b.roundBox(COOK.x0, 0.9, COOK.z0, COOK.x1, 0.906, COOK.z1, 'rubber', 0.003, NC);
+  for (const [dx, dz, r] of [[0.18, 0.13, 0.085], [0.52, 0.13, 0.065], [0.18, 0.37, 0.065], [0.52, 0.37, 0.085]]) {
+    for (const k of [1, 0.6]) {
+      const ring = new THREE.TorusGeometry(r * k, 0.004, 4, 32);
+      ring.rotateX(Math.PI / 2);
+      b.shape(ring, 'metal', COOK.x0 + dx, 0.907, COOK.z0 + dz);
+    }
+  }
+  b.box(COOK.x0, 0.08, -21.35, COOK.x1, 0.84, -21.33, 'plastic', NC);                        // oven front
+  b.box(COOK.x0 + 0.08, 0.2, -21.33, COOK.x1 - 0.08, 0.56, -21.325, 'tint', NC);               // oven window
+  b.roundBox(COOK.x0 + 0.08, 0.62, -21.33, COOK.x1 - 0.08, 0.64, -21.29, 'steel', 0.008, NC);  // handle
+  for (let i = 0; i < 4; i++) {
+    const knob = new THREE.CylinderGeometry(0.02, 0.022, 0.025, 14);
+    knob.rotateX(Math.PI / 2);
+    b.shape(knob, 'steel', COOK.x0 + 0.12 + i * 0.153, 0.76, -21.318);
+  }
+  b.roundBox(-49.45, 0, -21.95, -48.6, 1.85, -21.25, 'fridge', 0.03, { shadow: true });
+  table(b, -50.8, -18.6, 1.1, 0.8);
+  chair(b, -50.8, -18.0, 0);
+  chair(b, -50.8, -19.2, 2);
+  // Living room: a sofa facing the TV on the west wall (clear of the bedroom
+  // door to the south and the front door to the north), and the TV, which
+  // has crashed.
+  couch(b, -57.3, -18.2, 1, 1.8);
+  b.roundBox(-59.9, 0, -18.9, -59.45, 0.5, -17.1, 'wood', 0.02, { shadow: true });
+  b.box(-59.8, 0.55, -18.6, -59.74, 1.25, -17.4, 'plastic', NC);
+  const tv = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.64), new THREE.MeshBasicMaterial({ map: toTexture(drawBlueScreen()) }));
+  tv.position.set(-59.735, 0.9, -18);
+  tv.rotation.y = Math.PI / 2; // facing east, into the room
+  scene.add(tv);
+  plant(b, -54.6, -16.6);
+  // Mailbox by the road and a sign for Goob Co. where the road meets the lot.
+  // (The road runs along z -14..-10.)
+  b.box(-47.2, 0, -9.4, -47.1, 1.0, -9.3, 'metal', NC);
+  b.roundBox(-47.35, 1.0, -9.55, -46.95, 1.25, -9.15, 'red', 0.05, NC);
+  sign(scene, 'GOOB CO. →', -14, 1.6, -9.25, 'n', { w: 1.6, h: 0.4, ...LOGO });
+  b.box(-14.05, 0, -9.3, -13.95, 1.4, -9.2, 'metal');
+}
+
+// A crashed Windows-style "blue screen" for the TV at home.
+function drawBlueScreen() {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 596;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0a6fc9';
+  g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#ffffff';
+  g.textBaseline = 'top';
+  g.font = '150px "Segoe UI", system-ui, sans-serif';
+  g.fillText(':(', 70, 40);
+  g.font = '34px "Segoe UI", system-ui, sans-serif';
+  const lines = [
+    "Your PC ran into a problem and needs to restart. We're",
+    "just collecting some error info, and then we'll restart for you.",
+  ];
+  lines.forEach((t, i) => g.fillText(t, 70, 230 + i * 46));
+  g.fillText('0% complete', 70, 350);
+  // QR code: a scatter of squares in a frame.
+  const qx = 70;
+  const qy = 420;
+  g.fillRect(qx, qy, 130, 130);
+  g.fillStyle = '#0a6fc9';
+  g.fillRect(qx + 8, qy + 8, 114, 114);
+  g.fillStyle = '#ffffff';
+  let seed = 7;
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      seed = (seed * 16807) % 2147483647;
+      if (seed % 3 === 0) g.fillRect(qx + 12 + x * 10.6, qy + 12 + y * 10.6, 10, 10);
+    }
+  }
+  g.font = '22px "Segoe UI", system-ui, sans-serif';
+  g.fillText('For more information about this issue and possible fixes, visit', 230, 430);
+  g.fillText('https://www.goob.co/stopcode', 230, 460);
+  g.fillText('If you call a support person, give them this info:', 230, 510);
+  g.fillText('Stop code: GOOB_IN_THE_MACHINE', 230, 540);
+  return c;
 }

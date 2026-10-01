@@ -153,6 +153,13 @@ Each milestone ends in something you can play.
 - Found files are saved in checkpoints and the autosave.
 - Debug only (backquote mode): R sends the bin you're pushing straight to the secure freezer.
 
+## Expansion: the morning (done)
+
+- You wake up in bed at home to your alarm, then do your morning chores: brush your teeth, shower, make coffee and toast, get dressed, and grab your keys and badge.
+- Then you drive your car to work, with arcade handling: W/S gas and brake, A/D steer, Space handbrake, E to get in and out. Park in any space in the Goob Co. lot.
+- A gate shuts behind you (the outbreak stays at the office). Once you head in and up to 2F, the manager walks over as before.
+- The house, driveway, yard and road sit west of the lot. No goob can spread there.
+
 ## Still open (answer any time; defaults in brackets)
 
 - ~~Player name and company name~~: you're **Champ** (what Dale calls you), at Goob Co. Every desk has a nameplate; yours is gold, with a trophy.

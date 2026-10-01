@@ -411,7 +411,7 @@ window.addEventListener('keydown', (e) => {
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
 // V cycles the graphics preset (for comparing), G removes all goob,
 // K cures everyone (during the cure objective), L marks every file as found,
-// P saves a checkpoint now (autosave), I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
+// M skips the morning (at home and the drive), P saves a checkpoint now (autosave), I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
@@ -438,8 +438,46 @@ chapter.start();
 if (params.has('stage')) chapter.skipTo(params.get('stage'));
 const at = params.get('at')?.split(',').map(Number);
 if (at?.length >= 3 && at.every(Number.isFinite)) {
+  player.rig = null; // (not still lying in bed)
   player.spawn({ x: at[0], y: at[1], z: at[2], yaw: THREE.MathUtils.degToRad(at[3] ?? 0) });
   player.pitch = THREE.MathUtils.degToRad(at[4] ?? 0);
+  player.updateCamera();
+}
+// ?morning=chores: up and about, alarm off, chores to do (testing; stays
+// wherever ?at= put you).
+if (params.get('morning') === 'chores' && chapter.morning.active) {
+  player.rig = null;
+  chapter.morning.stage = 'CHORES';
+  hud.setObjective(chapter.morning.choresObjective());
+}
+// ?morning=drive: skip the chores, standing by your car (testing).
+if (params.get('morning') === 'drive' && chapter.morning.active) chapter.morning.readyToDrive();
+// ?morning=arrive: parked at work, about to head inside (testing).
+if (params.get('morning') === 'arrive' && chapter.morning.active) {
+  chapter.morning.readyToDrive();
+  chapter.morning.car.place(13.6, -5.5, Math.PI);
+  chapter.morning.useCar();
+  chapter.morning.arrive();
+}
+// ?morning=office: arrived and just walked up to 2F (testing the hand-off to
+// the workday).
+if (params.get('morning') === 'office' && chapter.morning.active) {
+  chapter.morning.finish();
+  chapter.morning.stage = 'ARRIVE';
+  player.spawn(world.spawn);
+}
+// ?carat=x,z,headingDegrees: put your car there, with you in it (testing
+// the drive; use with ?morning=drive).
+const carAt = params.get('carat')?.split(',').map(Number);
+if (carAt && chapter.morning.stage === 'DRIVE') {
+  chapter.morning.car.place(carAt[0], carAt[1], THREE.MathUtils.degToRad(carAt[2] ?? 0));
+  chapter.morning.useCar();
+}
+// ?look=yawDegrees,pitchDegrees: turn the view (testing; works in bed too).
+const look = params.get('look')?.split(',').map(Number);
+if (look) {
+  player.yaw = THREE.MathUtils.degToRad(look[0]);
+  player.pitch = THREE.MathUtils.degToRad(look[1] ?? 0);
   player.updateCamera();
 }
 // ?npcat=Name,x,y,z[,yawDegrees]: put a coworker somewhere, facing that way
@@ -638,7 +676,9 @@ runStartupSimulation().then(() => {
 function updateAudio(dt) {
   setListener(camera.position.x, camera.position.y, camera.position.z, player.yaw);
   setLoops({
-    hum: chapter.outbreak ? 0.6 : 1,
+    // (No office hum at home or on the road.)
+    hum: chapter.morning.active && chapter.morning.stage !== 'ARRIVE' ? 0 : chapter.outbreak ? 0.6 : 1,
+    engine: chapter.morning.car.driver ? 1 : 0,
     vacuum: vacuum.sucking ? 1 : 0,
     spray: antidote.spraying ? 1 : 0,
     breath: player.suited ? 1 : 0,
@@ -688,6 +728,10 @@ function step(dt) {
     vacuum.infinite = !vacuum.infinite;
     if (vacuum.infinite) vacuum.empty();
     hud.toast(vacuum.infinite ? 'Debug: infinite vacuum tank' : 'Debug: normal vacuum tank', 1.5);
+  }
+  if (active && debug && input.wasPressed('KeyM') && chapter.state === 'MORNING') {
+    chapter.skipTo('INTRO');
+    hud.toast('Debug: skipped the morning', 1.5);
   }
   if (active && debug && input.wasPressed('KeyP') && chapter.outbreak) {
     chapter.saveCheckpoint();
