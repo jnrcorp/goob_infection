@@ -486,7 +486,7 @@ if (look) {
   player.updateCamera();
 }
 // ?finale=news: just the ending's news bulletin and credits (testing).
-if (params.get('finale') === 'news') chapter.finale.newsAndCredits();
+if (params.get('finale') === 'news') chapter.ending.newsAndCredits();
 // ?npcat=Name,x,y,z[,yawDegrees]: put a coworker somewhere, facing that way
 // (0 = +z) (testing).
 // (Repeat it to place several people.)

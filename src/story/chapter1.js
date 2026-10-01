@@ -142,7 +142,7 @@ export class Chapter1 {
       onRead: (item) => this.readFile(item),
     });
     createFlyers(ctx.scene, FLYERS);
-    this.finale = new Finale({ scene: ctx.scene, materials: ctx.materials, cast, player, dialogue, fx, hud });
+    this.ending = new Finale({ scene: ctx.scene, materials: ctx.materials, cast, player, dialogue, fx, hud });
     this.alarmEl = document.getElementById('alarm');
     for (const npc of cast.all) npc.onTalk = (n) => this.talkTo(n);
   }
@@ -176,7 +176,7 @@ export class Chapter1 {
   }
 
   start() {
-    this.finale.reset();
+    this.ending.reset();
     this.alarmEl.hidden = true;
     this.victoria.person.root.visible = true;
     this.victoria.collider.enabled = true;
@@ -275,7 +275,7 @@ export class Chapter1 {
     this.runTimers(dt);
     this.updateFreezerLock();
     this.updateEscape(dt);
-    this.finale.update(dt);
+    this.ending.update(dt);
     this.updateReinfection(dt);
     this.spill.update(dt);
     this.hauler.update(dt, input, active && !this.inputLocked);
@@ -809,7 +809,7 @@ export class Chapter1 {
     this.morning.finish();
     this.hud.setGoob(null);
     this.vacuum.equip(false); // (a cutscene: nothing in your hands)
-    await this.finale.run(this.victoria);
+    await this.ending.run(this.victoria);
     if (token !== this.token) return;
     const ending = ENDINGS[0];
     this.onEnd?.({ title: 'The End', text: ending.text, hint: 'Thanks for playing The Goob Infection.' });
@@ -936,7 +936,7 @@ export class Chapter1 {
     // Saves from when fewer files were needed go back to investigating.
     const state = c.state === 'CONFRONT' && this.filesFound < FILES_NEEDED ? 'INVESTIGATE' : c.state;
     if (state === 'CONFRONT') this.sendVictoriaToBoardroom();
-    this.finale.reset();
+    this.ending.reset();
     this.alarmEl.hidden = true;
     this.victoria.person.root.visible = true;
     this.victoria.collider.enabled = true;
