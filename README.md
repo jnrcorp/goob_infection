@@ -4,7 +4,7 @@ A first-person 3D browser game built with [Three.js](https://threejs.org/) (r170
 
 ## Run
 
-Needs [Node.js](https://nodejs.org/) 20 or newer. Install once:
+Needs [Node.js](https://nodejs.org/) 22 or newer (Wrangler, the deploy tool, needs 22). Install once:
 
 ```powershell
 npm install
@@ -22,14 +22,14 @@ Code changes reload the page automatically.
 
 - `npm run build` bundles the game into `dist/` ([Vite](https://vite.dev/)).
 - `npm run preview` serves that build at http://localhost:8000, to check it before deploying.
-- `npm run deploy` builds and uploads `dist/` to Cloudflare Pages (project `goob-infection`, set in `wrangler.toml`). The first time, Wrangler asks you to log in to Cloudflare.
+- `npm run deploy` builds and uploads `dist/` to the `goob-infection` Cloudflare Worker as static assets (set in `wrangler.toml`). The first time, Wrangler asks you to log in to Cloudflare.
 
-To deploy from Git instead, connect the repo in the Cloudflare dashboard with build command `npm run build` and output directory `dist`.
+Pushes to `main` also deploy automatically: the repo is connected to the Worker through Cloudflare Workers Builds (build command `npm run build`, deploy command `npx wrangler deploy`).
 
 ## Layout
 
 - `index.html`: page shell. Vite bundles it with `src/` and Three.js (an npm dependency, pinned in `package.json`).
-- `vite.config.js`: dev server port and build settings. `wrangler.toml`: the Cloudflare Pages project.
+- `vite.config.js`: dev server port and build settings. `wrangler.toml`: the Cloudflare Worker that serves `dist/`.
 - `src/main.js`: bootstrap and game loop.
 - `src/core/`: input, seeded random numbers, settings, autosave, and synthesized sound (`sound.js`).
 - `src/render/`: the renderer (tone mapping and post effects: bloom, FXAA), quality presets (`quality.js`), procedural textures and materials.
