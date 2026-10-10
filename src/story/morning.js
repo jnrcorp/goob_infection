@@ -46,9 +46,43 @@ const TOO_EARLY = [
   "Not yet. Breakfast first: coffee and toast.",
 ];
 
+// Chapter 2: a week later, the middle of the night. Something's been slipped
+// under the door.
+const CHORES_2 = [
+  { id: 'letter', name: 'read the letter by the front door', step: 0 },
+  { id: 'gear', name: 'grab your hazard gear from the living room', step: 1 },
+  { id: 'keys', name: 'grab your keys', step: 2 },
+];
+const TOO_EARLY_2 = ['', 'Something was slipped under the front door. Read it first.', 'You might need that gear. Grab it first.'];
+const OBJECTIVES_2 = {
+  WAKE: 'Something woke you. Turn off the alarm.',
+  READY: 'Drive to Goob Co. HQ in the dark and park anywhere in the lot.',
+  DRIVE: 'Drive to Goob Co. HQ and park anywhere in the lot. (W/S gas and brake, A/D steer.)',
+  ARRIVE: 'Goob Co. is closed and taped off. Get inside and down to the B1 basement.',
+};
+export const LETTER = {
+  title: 'Letter under the door',
+  kind: 'note',
+  body: `Champ,
+
+It's Dr. Pell. Yes, I'm alive. No, I can't say where I've been.
+
+You shut down the office. You didn't shut down the rotation. There's a floor under Goob Co. that isn't on any plan. B3. The next five "Employees of the Month" are down there right now, waiting to be transferred.
+
+In the B1 basement, the north wall, past the server room: an elevator nobody uses. Code 4-2-7-9.
+
+Bring the vacuum. Bring the spray. Stay out of the flashlights.
+
+Burn this letter. (Don't actually. You'll need the code.)
+
+- P.`,
+};
+
 export class Morning {
-  constructor({ ctx, world, player, hud, fx, collision }) {
-    Object.assign(this, { world, player, hud, fx, collision });
+  constructor({ ctx, world, player, hud, fx, collision, reader }) {
+    Object.assign(this, { world, player, hud, fx, collision, reader });
+    this.mode = 1; // which chapter's morning (2: the night of chapter 2)
+    this.onChoreDone = null; // (id) after each chore
     this.stage = 'done';
     this.busy = false;
     this.done = new Set();
@@ -81,10 +115,10 @@ export class Morning {
     const chore = (id, label, verb, sound, toast, x, y, z, mesh) => prop(
       at(mesh, x, y, z),
       () => (this.done.has(id) ? label : `${verb}`),
-      () => this.stage === 'CHORES' && !this.done.has(id),
+      () => this.stage === 'CHORES' && !this.done.has(id) && this.chores.some((c) => c.id === id),
       () => {
-        const step = CHORES.find((c) => c.id === id).step;
-        if (step > this.currentStep) this.hud.toast(TOO_EARLY[step], 3);
+        const step = this.chores.find((c) => c.id === id).step;
+        if (step > this.currentStep) this.hud.toast((this.mode === 2 ? TOO_EARLY_2 : TOO_EARLY)[step], 3);
         else this.doChore(id, sound, toast);
       },
     );
@@ -112,6 +146,16 @@ export class Morning {
     chore('keys', 'Key hook', 'Grab your keys and badge', sfx.keys, 'Keys, badge, sense of dread. Got everything.', -55.9, 1.45, -16.12,
       group(box(0.3, 0.12, 0.02, 'wood'), at(box(0.05, 0.08, 0.02, 'steel'), -0.06, -0.08, -0.01),
         at(box(0.06, 0.09, 0.01, 'fridge'), 0.07, -0.1, -0.01)));
+    // Chapter 2: a letter on the floor inside the front door, and your old
+    // hazard gear (suit, vacuum, antidote spray) in the living room corner.
+    const envelope = box(0.24, 0.006, 0.16, 'fridge');
+    envelope.rotation.y = 0.5;
+    this.letterProp = chore('letter', 'Letter', 'Read the letter', sfx.rustle, 'Dr. Pell. He\u2019s alive.', -56.6, 0.004, -16.7,
+      // (A bigger invisible box to aim at: the envelope is paper-thin.)
+      group(envelope, new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.45), new THREE.MeshBasicMaterial({ visible: false }))));
+    this.gearProp = chore('gear', 'Hazard gear', 'Grab your hazard gear', sfx.pickup, 'Suit, vacuum, antidote. Just like old times.', -59.4, 0, -16.6,
+      group(at(box(0.5, 0.9, 0.3, 'suit', 0.06), 0, 0.45, 0), at(box(0.22, 0.26, 0.42, 'suit', 0.04), 0.1, 0.13, 0.32),
+        at(box(0.12, 0.3, 0.12, 'lightBlue', 0.04), -0.15, 0.15, 0.3)));
     this.chores = CHORES;
 
     // Your car, in the driveway.
@@ -127,6 +171,10 @@ export class Morning {
     this.gate.collider.wall = true;
   }
 
+  get objectives() {
+    return this.mode === 2 ? { ...OBJECTIVES, ...OBJECTIVES_2 } : OBJECTIVES;
+  }
+
   get active() {
     return this.stage !== 'done';
   }
@@ -136,8 +184,11 @@ export class Morning {
     this.gate.collider.enabled = shut;
   }
 
-  // New day: in bed, alarm going off.
-  start() {
+  // New day: in bed, alarm going off. mode 2: chapter 2's night.
+  start(mode = 1) {
+    this.mode = mode;
+    this.chores = mode === 2 ? CHORES_2 : CHORES;
+    this.letterProp.visible = this.gearProp.visible = mode === 2;
     this.stage = 'WAKE';
     this.busy = false;
     this.done.clear();
@@ -149,7 +200,7 @@ export class Morning {
     this.player.pitch = 0.9; // looking up at the ceiling
     this.player.rig = { update: () => {} }; // lying down: look around, can't walk
     this.alarmIn = 0;
-    this.hud.setObjective(OBJECTIVES.WAKE);
+    this.hud.setObjective(this.objectives.WAKE);
   }
 
   // Testing: ready to drive, standing by the car (?morning=drive).
@@ -180,7 +231,7 @@ export class Morning {
     this.hud.announceObjective(this.choresObjective());
     await this.fx.fade(0, 0.6);
     this.busy = false;
-    this.hud.toast('Ugh. Delivery day.', 2.5);
+    this.hud.toast(this.mode === 2 ? '3 a.m. Something slid under the front door.' : 'Ugh. Delivery day.', 2.5);
   }
 
   // The first step with a chore still to do.
@@ -194,21 +245,26 @@ export class Morning {
     const now = this.chores.filter((c) => c.step === this.currentStep && !this.done.has(c.id)).map((c) => c.name);
     const next = now.length > 1 ? `${now.slice(0, -1).join(', ')} and ${now.at(-1)}` : now[0];
     const cap = next.charAt(0).toUpperCase() + next.slice(1);
-    return `Get ready for work (${done}/${this.chores.length}): ${cap}.`;
+    const what = this.mode === 2 ? 'Get ready' : 'Get ready for work';
+    return `${what} (${done}/${this.chores.length}): ${cap}.`;
   }
 
   async doChore(id, sound, toast) {
     this.busy = true;
     sound();
+    if (id === 'letter') {
+      await this.reader.open(LETTER);
+    }
     await this.fx.fade(1, 0.35);
     this.done.add(id);
     await this.fx.fade(1, 0.25); // a moment in the dark
     await this.fx.fade(0, 0.35);
     this.busy = false;
     this.hud.toast(toast, 2.5);
+    this.onChoreDone?.(id);
     if (this.done.size >= this.chores.length) {
       this.stage = 'DRIVE';
-      this.hud.announceObjective('Ready. Head out to your car in the driveway and drive to work.');
+      this.hud.announceObjective(this.mode === 2 ? this.objectives.READY : 'Ready. Head out to your car in the driveway and drive to work.');
     } else {
       this.hud.setObjective(this.choresObjective());
     }
@@ -221,7 +277,7 @@ export class Morning {
     }
     if (this.stage !== 'DRIVE') return;
     this.car.enter(this.player);
-    this.hud.setObjective(OBJECTIVES.DRIVE);
+    this.hud.setObjective(this.objectives.DRIVE);
     this.hud.toast('W/S: gas and brake · A/D: steer · Space: handbrake · E: get out', 4);
   }
 
@@ -240,8 +296,9 @@ export class Morning {
       return;
     }
     if (this.stage === 'DRIVE' && this.car.driver && this.inSpot()) this.arrive();
-    // At your desk floor: the workday starts.
-    if (this.stage === 'ARRIVE' && this.player.pos.y > 3.5 && this.player.pos.x > 0) {
+    // At your desk floor: the workday starts. (Chapter 2: down in B1.)
+    const there = this.mode === 2 ? this.player.pos.y < -2 && this.player.pos.x > 0 : this.player.pos.y > 3.5 && this.player.pos.x > 0;
+    if (this.stage === 'ARRIVE' && there) {
       this.stage = 'done';
       this.onDone?.();
     }
@@ -264,7 +321,7 @@ export class Morning {
     this.car.exit();
     this.setGate(true);
     sfx.gate();
-    this.hud.announceObjective(OBJECTIVES.ARRIVE);
+    this.hud.announceObjective(this.objectives.ARRIVE);
     await this.fx.fade(0, 0.5);
     this.busy = false;
   }

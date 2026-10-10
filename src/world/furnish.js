@@ -195,6 +195,7 @@ export function furnish({ builder: b, scene, materials }) {
 
   furnishBasement(b, scene, rng, out);
   furnishExecutive(b, scene, out);
+  furnishFacility(b, scene, rng, out);
   furnishOutdoors(b, scene, rng);
   furnishHome(b, scene);
 
@@ -532,4 +533,83 @@ function drawBlueScreen() {
   g.fillText('If you call a support person, give them this info:', 230, 510);
   g.fillText('Stop code: GOOB_IN_THE_MACHINE', 230, 540);
   return c;
+}
+
+// B3, the true facility (chapter 2). Story props (the keycard, the cell
+// release console, the prisoners) are added by story/chapter2.js.
+function furnishFacility(b, scene, rng, out) {
+  const y = -12;
+  // Elevator lobby: hazard stripes at the doors, the floor sign.
+  b.plane(8.2, 21.6, 9.8, 23.8, y + 0.01, 'hazard');
+  sign(scene, 'B3', 10.7, y + 2.3, 23.88, 's', { w: 0.6, h: 0.4, ...DANGER });
+  sign(scene, 'THERE IS NO B2', 7.3, y + 2.3, 23.88, 's', { w: 1.6, h: 0.22 });
+  bench(b, 6.4, 18.6, 6.9, 21.4, y);
+
+  // Security office: a desk facing a wall of camera monitors.
+  out.securityDesk = desk(b, 3, 20.4, 0, y);
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 2; j++) {
+      b.box(0.9 + i * 1.4, y + 1.3 + j * 0.62, 18.12, 2.1 + i * 1.4, y + 1.82 + j * 0.62, 18.18, 'plastic', NC);
+      b.box(0.95 + i * 1.4, y + 1.35 + j * 0.62, 18.18, 2.05 + i * 1.4, y + 1.77 + j * 0.62, 18.2, 'screen', { collide: false, boxUV: true });
+    }
+  }
+  cabinet(b, 5.4, 23.4, 2, y);
+  sign(scene, 'SECURITY', 3, y + 2.6, 17.88, 's', { w: 1.2, h: 0.28 });
+
+  // Staff lockers and staff corridor.
+  lockers(b, 0.1, 25, 0.6, 33, y);
+  bench(b, 2.6, 26, 3.1, 32, y);
+  crate(b, 12.9, 33, 1.0, 0.9, y);
+
+  // Corridor: pipes, signs pointing the way.
+  b.box(0.2, y + 3.1, 14.25, 35.8, y + 3.25, 14.4, 'metal', NC);
+  b.box(0.2, y + 2.95, 14.55, 35.8, y + 3.1, 14.7, 'red', NC);
+  sign(scene, 'HOLDING', 7, y + 2.6, 14.12, 'n', { w: 1.1, h: 0.28, ...DANGER });
+  sign(scene, 'PROCESSING', 22, y + 2.7, 17.88, 's', { w: 1.4, h: 0.28, ...LOGO });
+  sign(scene, 'CONTROL', 33, y + 2.6, 17.88, 's', { w: 1.1, h: 0.28 });
+  sign(scene, 'SHIPPING · MARS', 25, y + 2.6, 14.12, 'n', { w: 1.8, h: 0.28, ...HAZARD });
+
+  // Holding cells: a cot in each, a walkway in front.
+  for (const x0 of [0, 2, 4.3, 6.6, 8.9, 11.2]) {
+    bed(b, x0 + 0.25, 6.25, x0 + 1.05, 8.1, y);
+  }
+  sign(scene, 'EMPLOYEE OF THE MONTH: AWAITING TRANSFER', 7, y + 2.9, 13.88, 's', { w: 4.4, h: 0.3, ...DANGER });
+
+  // Shipping bay: crates bound for Mars, a pallet rack, a forklift.
+  palletRack(b, 15, 6.4, 22, 7.6, rng, y);
+  palletRack(b, 26, 6.4, 35.6, 7.6, rng, y);
+  for (const [x, z] of [[17, 11.5], [18.4, 11.4], [30, 11.8], [31.4, 11.5], [33.6, 10.4]]) {
+    crate(b, x, z, 1.1, 1.0 + rng() * 0.3, y);
+  }
+  forklift(b, 24, 10.8, 1, y);
+  sign(scene, 'NEXT LAUNCH: FRIDAY', 25, y + 2.4, 6.12, 'n', { w: 2.2, h: 0.3, ...HAZARD });
+
+  // Processing hall: four huge vats of goob, pipes overhead, a catwalk rail.
+  out.vats = [];
+  for (const [x, z] of [[18.5, 23], [18.5, 29.5], [25.5, 23], [25.5, 29.5]]) {
+    b.box(x - 1.6, y, z - 1.6, x + 1.6, y + 3.8, z + 1.6, null);
+    b.shape(new THREE.CylinderGeometry(1.7, 1.7, 3.6, 32, 1, true), 'steel', x, y + 1.8, z);
+    b.shape(new THREE.CylinderGeometry(1.72, 1.72, 0.2, 32), 'metal', x, y + 3.65, z);
+    b.shape(new THREE.CylinderGeometry(1.55, 1.55, 0.05, 32), 'goob', x, y + 3.74, z);
+    b.shape(new THREE.CylinderGeometry(0.12, 0.12, 2.3, 10), 'metal', x, y + 4.9, z);
+    out.vats.push({ x, y, z });
+  }
+  b.box(14.2, y + 5.2, 26.1, 29.8, y + 5.4, 26.4, 'metal', NC);
+  b.box(14.2, y + 5.0, 19.1, 29.8, y + 5.15, 19.25, 'red', NC);
+  sign(scene, 'BATCH 7', 18.5, y + 2.6, 24.67, 'n', { w: 0.9, h: 0.25, ...HAZARD });
+
+  // Control room: consoles along the windows into the hall.
+  for (const z of [19.3, 24.7]) {
+    b.box(30.3, y, z - 0.9, 31.1, y + 0.95, z + 0.9, 'plastic', { shadow: true });
+    b.box(30.35, y + 0.95, z - 0.85, 30.9, y + 1.0, z + 0.85, 'screen', { collide: false, boxUV: true });
+  }
+  chair(b, 31.7, 19.3, 1, y);
+  serverRack(b, 35.2, 18.4, 35.9, 20.2, y);
+  out.controlConsole = { x: 30.7, y: y + 1.0, z: 22 };
+
+  // Guard break room.
+  table(b, 33, 30, 1.2, 1.2, y);
+  chairsAround(b, 33, 30, 1.2, 1.2, y);
+  vending(b, 35.1, 32.6, 35.9, 33.9, y);
+  couch(b, 31.2, 33.3, 2, 2, y);
 }

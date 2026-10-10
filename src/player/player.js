@@ -10,6 +10,8 @@ const JUMP = 5.2;
 const WALK = 3.4;
 const RUN = 5.6;
 const FLY = 8;
+const CROUCH = 1.6;      // crouched walking speed
+const CROUCH_DROP = 0.6; // how much lower your eyes are crouched
 const LOOK = 0.0022;
 const SKIN = 0.001;
 
@@ -40,6 +42,8 @@ export class Player {
     this.rig = null;
     // Eye height above pos (lower when lying in bed or sitting in the car).
     this.eyeHeight = EYE;
+    this.crouching = false;
+    this.crouchAmount = 0;
   }
 
   get eyeY() {
@@ -49,6 +53,8 @@ export class Player {
   spawn({ x, y, z, yaw = 0 }) {
     this.spawnPoint = { x, y, z, yaw };
     this.eyeHeight = EYE;
+    this.crouching = false;
+    this.crouchAmount = 0;
     this.pos.set(x, y, z);
     this.vel.set(0, 0, 0);
     this.yaw = yaw;
@@ -92,8 +98,13 @@ export class Player {
     let wz = -cos * forward - sin * strafe;
     const len = Math.hypot(wx, wz);
     if (len > 1) { wx /= len; wz /= len; }
-    const running = input.down('ShiftLeft') || input.down('ShiftRight');
-    const speed = (running ? RUN : WALK) * this.speedScale;
+    // C: crouch (slower, lower, and harder for guards to spot).
+    this.crouching = active && input.down('KeyC');
+    const crouch = this.crouching ? 1 : 0;
+    this.crouchAmount += (crouch - this.crouchAmount) * Math.min(1, dt * 10);
+    this.eyeHeight = EYE - this.crouchAmount * CROUCH_DROP;
+    const running = !this.crouching && (input.down('ShiftLeft') || input.down('ShiftRight'));
+    const speed = (running ? RUN : this.crouching ? CROUCH : WALK) * this.speedScale;
     const k = 1 - Math.exp(-(this.grounded ? 14 : 3) * dt);
     this.vel.x += (wx * speed - this.vel.x) * k;
     this.vel.z += (wz * speed - this.vel.z) * k;

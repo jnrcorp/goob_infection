@@ -11,6 +11,7 @@ import { FILES, FILES_NEEDED, FLYERS, CONFRONTATION, ENDING } from './lore.js';
 import { createFiles, createFlyers } from '../world/loreProps.js';
 import { Morning } from './morning.js';
 import { Finale } from './finale.js';
+import { Chapter2 } from './chapter2.js';
 
 // Chapter 1 story flow:
 // MORNING (at home, then the drive; see morning.js) → INTRO → BRIEFING → TO_LOCKERS → TO_FREEZER → SPILL → GET_VACUUM → CLEANUP
@@ -51,7 +52,7 @@ const OUTBREAK_SEEDS = {
 // Top to bottom, for the HUD's by-floor breakdown.
 const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
-const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE']);
+const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE', 'C2_CURE']);
 // Hard: how close (m) and how long (s) an infected has to stay against a
 // cured coworker to re-infect them.
 const REINFECT_RANGE = 0.8;
@@ -78,7 +79,8 @@ export class Chapter1 {
   }) {
     Object.assign(this, { world, player, cast, hud, dialogue, reader, fx, goob, graph, vacuum, antidote, spill, onEnd, onBreach });
     this.outbreak = false;
-    this.morning = new Morning({ ctx, world, player, hud, fx, collision: ctx.collision });
+    this.chapter = 1;
+    this.morning = new Morning({ ctx, world, player, hud, fx, collision: ctx.collision, reader });
     this.morning.onDone = () => this.beginIntro();
     this.contact = new Map(); // cured coworker -> seconds an infected has been against them
     this.checkpoint = null;
@@ -143,6 +145,11 @@ export class Chapter1 {
     });
     createFlyers(ctx.scene, FLYERS);
     this.ending = new Finale({ scene: ctx.scene, materials: ctx.materials, cast, player, dialogue, fx, hud });
+    // Chapter 2 runs on the same world, cast and systems (see chapter2.js).
+    this.collisionRef = ctx.collision;
+    this.ch2 = new Chapter2({
+      ch1: this, ctx, world, player, cast, hud, dialogue, fx, goob, graph, sightIgnore, morning: this.morning,
+    });
     this.alarmEl = document.getElementById('alarm');
     for (const npc of cast.all) npc.onTalk = (n) => this.talkTo(n);
   }
@@ -175,7 +182,15 @@ export class Chapter1 {
     return o ?? null;
   }
 
-  start() {
+  // Which chapter: 1 (The Infection) or 2 (The True Facility).
+  start(chapter = 1) {
+    this.chapter = chapter;
+    this.ch2.stop();
+    for (const npc of this.cast.all) {
+      npc.person.root.visible = true;
+      npc.collider.enabled = true;
+      npc.frozen = false;
+    }
     this.ending.reset();
     this.alarmEl.hidden = true;
     this.victoria.person.root.visible = true;
@@ -207,11 +222,15 @@ export class Chapter1 {
     this.managerDoor.setOpen(-1);
     // The day starts at home (morning.js), which calls beginIntro() once
     // you're up on 2F.
-    this.setState('MORNING', null, false);
-    this.morning.start();
-
     this.fx.fade(1, 0);
     this.fx.fade(0, 1.2);
+    if (chapter === 2) {
+      this.ch2.start();
+      return;
+    }
+    this.morning.onDone = () => this.beginIntro();
+    this.setState('MORNING', null, false);
+    this.morning.start();
   }
 
   // At the office: your manager heads over to your desk.
@@ -222,6 +241,10 @@ export class Chapter1 {
 
   // Debug: jump straight to a later objective (?stage= in the URL).
   skipTo(state) {
+    if (state.startsWith('C2_')) {
+      this.ch2.skipTo(state);
+      return;
+    }
     // Any skip starts at the office, at your desk (?at= can move you after).
     if (state === 'INTRO' || STAGES.includes(state)) {
       this.morning.finish();
@@ -275,6 +298,7 @@ export class Chapter1 {
     this.runTimers(dt);
     this.updateFreezerLock();
     this.updateEscape(dt);
+    this.ch2.update(dt);
     this.ending.update(dt);
     this.updateReinfection(dt);
     this.spill.update(dt);
@@ -288,7 +312,7 @@ export class Chapter1 {
       else this.hud.setObjective(OBJECTIVES.INTRO_AWAY);
     }
 
-    if (this.outbreak && this.state !== 'EPILOGUE') {
+    if (this.outbreak && this.state !== 'EPILOGUE' && this.state !== 'C2_END') {
       this.hud.setGoob({
         suit: this.player.suit,
         tank: this.vacuum.equipped ? this.vacuum.tank : null,
@@ -641,6 +665,10 @@ export class Chapter1 {
   }
 
   cureNpc(npc) {
+    if (this.chapter === 2) {
+      this.ch2.cured(npc);
+      return;
+    }
     npc.cure(CURED_LINES[npc.name] ?? CURED_LINES.default);
     sfx.cure(npc.pos);
     this.fx.flash('#8fd8ff', 0.3);
@@ -871,6 +899,11 @@ export class Chapter1 {
   restoreCheckpoint(checkpoint = this.checkpoint) {
     const c = checkpoint;
     if (!c) return false;
+    if (c.chapter === 2) {
+      this.chapter = 2;
+      this.ch2.restore(c);
+      return true;
+    }
     this.checkpoint = c;
     this.token++;
     this.busy = false;

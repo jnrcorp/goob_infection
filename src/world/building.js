@@ -71,6 +71,23 @@ const homeRooms = [
   },
 ];
 
+// ---------------------------------------------------------------- B3
+// The hidden elevator's shaft, just north of the building's B1 basement.
+const SECRET_SHAFT = { x0: 7.6, x1: 10.4, z0: 24.1, z1: 26.9, doorAt: 9, doorW: 1.4, doorZ: 24 };
+const SECRET_SHAFT_RECT = { x0: 7.5, z0: 24, x1: 10.5, z1: 27 };
+const secretShaftWalls = (h) => [
+  wall(7.5, 24, 7.5, 27, { h }),
+  wall(10.5, 24, 10.5, 27, { h }),
+  wall(7.5, 27, 10.5, 27, { h }),
+];
+// Facility rooms: concrete and steel, a dim cold light. Goob can be here
+// (chapter 2), but nothing links it to the floors above.
+// Holding cells: one glass door each (centers along x), opened from the
+// control room.
+const CELL_DOORS = [1, 3.15, 5.45, 7.75, 10.05, 12.6];
+const CELL_LOCKED = 'Locked. The cell doors are opened from the control room.';
+const FACILITY = { ceiling: 3.4, lightColor: 0xd6ffe0, lightIntensity: 7, facility: true };
+
 export const DOOR_HEIGHT = 2.2;
 
 export const BUILDING = {
@@ -91,6 +108,60 @@ export const BUILDING = {
   ],
 
   floors: [
+    // ---------------------------------------------------------------- B3
+    // The true facility (chapter 2), 12 m under the lobby. It's on no floor
+    // plan, and there is no B2. Reached only by the hidden elevator from B1.
+    {
+      id: 'B3',
+      y: -12,
+      wallHeight: 6,
+      slab: { x0: 0, z0: 6, x1: 36, z1: 34 },
+      voids: [],
+      walls: [
+        // Outer walls
+        wall(0, 6, 36, 6),
+        wall(0, 34, 36, 34),
+        wall(0, 6, 0, 34),
+        wall(36, 6, 36, 34),
+        // The shaft up to B1 (8 m tall, to meet B1's), opening on the lobby.
+        wall(6, 24, 14, 24, { openings: [lift(SECRET_SHAFT.doorAt), door(12.5, 'staff corridor door', { mat: 'steel' })] }),
+        ...secretShaftWalls(8),
+        // Corridor (z 14-18) along the middle, with rooms off both sides.
+        wall(0, 14, 36, 14, { openings: [door(7, 'holding area door', { mat: 'steel' }), door(25, 'shipping bay door', { mat: 'steel' })] }),
+        wall(0, 18, 30, 18, {
+          openings: [door(3, 'security office door', { mat: 'steel' }), gap(10, 3), door(22, 'processing hall door', { w: 2, mat: 'steel' })],
+        }),
+        wall(30, 18, 36, 18, {
+          openings: [door(33, 'control room door', { mat: 'steel', locked: 'Locked. A card reader blinks red: SECURITY KEYCARD REQUIRED.' })],
+        }),
+        wall(6, 18, 6, 24),
+        wall(14, 18, 14, 34, { openings: [door(30, 'hall side door', { mat: 'steel' })] }),
+        wall(0, 24, 6, 24),
+        wall(6, 24, 6, 34, { openings: [door(29, 'locker room door', { mat: 'steel' })] }),
+        wall(30, 18, 30, 34, { openings: [win(22, 3, 1, 2.4), win(29, 3, 1, 2.4)] }),
+        wall(30, 26, 36, 26, { openings: [door(33, 'guard break room door', { mat: 'steel' })] }),
+        wall(14, 6, 14, 14),
+        // Holding cells: six cells along the south wall, glass doors facing a
+        // walkway (the doors are added with the chapter, in story/chapter2.js).
+        ...[2, 4.3, 6.6, 8.9, 11.2].map((x) => wall(x, 6, x, 10)),
+        wall(0, 10, 14, 10, { openings: CELL_DOORS.map((at, i) => door(at, `cell door ${i + 1}`, { w: 1, mat: 'glass', locked: CELL_LOCKED })) }),
+      ],
+      rooms: [
+        { id: 'b3lobby', name: 'Elevator Lobby', rect: { x0: 6, z0: 18, x1: 14, z1: 24 }, floor: 'freezerFloor', ...FACILITY },
+        { id: 'b3security', name: 'Security Office', rect: { x0: 0, z0: 18, x1: 6, z1: 24 }, floor: 'concrete', ...FACILITY },
+        { id: 'b3locker', name: 'Staff Lockers', rect: { x0: 0, z0: 24, x1: 6, z1: 34 }, floor: 'tile', ...FACILITY },
+        { id: 'b3corridor', name: 'Corridor', rect: { x0: 0, z0: 14, x1: 36, z1: 18 }, floor: 'concrete', ...FACILITY },
+        { id: 'b3cells', name: 'Holding Cells', rect: { x0: 0, z0: 6, x1: 14, z1: 14 }, floor: 'concrete', ...FACILITY, lightColor: 0xd8e4ff },
+        { id: 'b3shipping', name: 'Shipping Bay', rect: { x0: 14, z0: 6, x1: 36, z1: 14 }, floor: 'concrete', ...FACILITY },
+        {
+          id: 'b3hall', name: 'Processing Hall', rect: { x0: 14, z0: 18, x1: 30, z1: 34 }, floor: 'freezerFloor', ...FACILITY,
+          ceiling: null, lightY: 5.6, lightColor: 0xb8ffa8, lightIntensity: 16, lightRange: 14, fixture: null,
+        },
+        { id: 'b3control', name: 'Control Room', rect: { x0: 30, z0: 18, x1: 36, z1: 26 }, floor: 'tile', ...FACILITY, lightColor: 0xc8dcff },
+        { id: 'b3break', name: 'Guard Break Room', rect: { x0: 30, z0: 26, x1: 36, z1: 34 }, floor: 'linoleum', ...FACILITY },
+        { id: 'b3hall2', name: 'Staff Corridor', rect: { x0: 6, z0: 24, x1: 14, z1: 34 }, floor: 'concrete', ...FACILITY, minus: [SECRET_SHAFT_RECT] },
+      ],
+    },
     // ---------------------------------------------------------------- B1
     {
       id: 'B1',
@@ -100,7 +171,9 @@ export const BUILDING = {
       voids: [],
       walls: [
         wall(0, 10, 24, 10),
-        wall(0, 24, 24, 24),
+        // (The hidden elevator to B3 opens in this wall; see secretElevator.)
+        wall(0, 24, 24, 24, { openings: [lift(SECRET_SHAFT.doorAt)] }),
+        ...secretShaftWalls(4),
         wall(0, 10, 0, 24),
         wall(24, 10, 24, 24),
         wall(3, 13, 24, 13, { openings: [lift(16.5), door(21, 'goob lab door')] }),
@@ -312,6 +385,15 @@ export const BUILDING = {
     { x0: 13.6, x1: 14.9, z0: 15, z1: 21, yLow: 4, yHigh: 8, rises: 's', steps: 16 },  // 2F -> 3F
   ],
   stairwell: BUILDING_STAIRWELL,
+
+  // The hidden elevator from B1 down to the true facility (chapter 2). Locked
+  // until you have the code (see story/chapter2.js).
+  secretElevator: {
+    ...SECRET_SHAFT,
+    floors: [-12, -4],
+    floorNames: ['B3', 'B1'],
+    startFloor: 1,
+  },
 
   elevator: {
     x0: 15.1, x1: 17.9, z0: 13.1, z1: 15.9,

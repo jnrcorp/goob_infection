@@ -268,9 +268,14 @@ document.getElementById('menu-play').addEventListener('click', () => {
   chapter.start();
   beginPlay();
 });
+document.getElementById('menu-play2').addEventListener('click', () => {
+  clearSave();
+  chapter.start(2);
+  beginPlay();
+});
 document.getElementById('menu-continue').addEventListener('click', () => {
   const saved = loadGame();
-  chapter.start();
+  chapter.start(saved?.chapter ?? 1);
   if (saved) chapter.restoreCheckpoint(saved);
   beginPlay();
 });
@@ -439,7 +444,8 @@ if (DIFFICULTIES[params.get('difficulty')]) {
   showDifficulty();
 }
 
-chapter.start();
+// ?chapter=2 starts chapter 2 (testing).
+chapter.start(params.get('chapter') === '2' ? 2 : 1);
 if (params.has('stage')) chapter.skipTo(params.get('stage'));
 const at = params.get('at')?.split(',').map(Number);
 if (at?.length >= 3 && at.every(Number.isFinite)) {
@@ -521,6 +527,8 @@ if (params.has('car') && !world.elevator.jammed) {
 // ?binat=N,x,y,z: put biohazard bin N somewhere (testing).
 const binAt = params.get('binat')?.split(',').map(Number);
 if (binAt) chapter.hauler.place(chapter.hauler.bins[binAt[0]], binAt[1], binAt[2], binAt[3]);
+// ?secretto=N: send the hidden elevator to floor N (0 = B3, 1 = B1) after
+// ?sim (testing).
 // ?callto=N: send the (working) elevator to floor N at load (0 = B1).
 if (params.has('callto')) world.elevator.request(Number(params.get('callto')));
 // ?grab=N: start pushing biohazard bin N (with ?stage=SECURE).
@@ -618,6 +626,7 @@ async function runStartupSimulation() {
     else window.dispatchEvent(new KeyboardEvent('keyup', { code }));
     await simulate(1 / 30);
   }
+  if (params.has('secretto')) world.secretElevator.request(Number(params.get('secretto')));
   await simulate(Number(params.get('after')) || 0);
   if (params.has('report')) {
     const npc = cast.all.find((n) => n.name === params.get('report'));
@@ -773,7 +782,8 @@ function step(dt) {
     camera.updateMatrixWorld();
     // No vacuuming or spraying with your hands full of bin.
     const handsFree = controlling && !chapter.hauler.carrying;
-    vacuum.update(dt, input, handsFree, camera, player, goob, cast.all);
+    // (The blast also knocks out chapter 2's guards.)
+    vacuum.update(dt, input, handsFree, camera, player, goob, [...cast.all, ...chapter.ch2.targets]);
     antidote.update(dt, input, handsFree, camera, cast.all, vacuum.nozzleWorld);
     chapter.update(dt, input, controlling);
     fx.update(dt);

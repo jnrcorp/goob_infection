@@ -15,6 +15,8 @@ export class Elevator {
   constructor(ctx, def) {
     const { scene, collision, materials, interactions } = ctx;
     this.def = def;
+    this.hud = ctx.hud;
+    this.lockedMessage = null;
     this.floors = def.floors;
     this.current = def.startFloor;
     this.target = this.current;
@@ -88,7 +90,7 @@ export class Elevator {
       scene.add(button, lamp);
       interactions.add({
         mesh: [button, lamp],
-        label: () => (this.jammed ? 'Elevator: out of service' : 'Call elevator'),
+        label: () => (this.locked ? 'Keypad' : this.jammed ? 'Elevator: out of service' : 'Call elevator'),
         use: () => this.request(i),
       });
 
@@ -213,7 +215,17 @@ export class Elevator {
     return { x: (this.def.x0 + this.def.x1) / 2, y: this.carY, z: (this.def.z0 + this.def.z1) / 2 };
   }
 
+  // When set (a message), the elevator won't go anywhere and says why
+  // (the hidden one to B3, until you know the code).
+  get locked() {
+    return !!this.lockedMessage;
+  }
+
   request(floor) {
+    if (this.locked && !this.tryUnlock?.()) {
+      this.hud?.toast(this.lockedMessage, 3);
+      return;
+    }
     if (this.phase === 'moving' || this.jammed) return;
     if (floor === this.current) {
       if (this.phase === 'closed' || this.phase === 'closing') this.phase = 'opening';
