@@ -23,7 +23,7 @@ const tmpOrigin = new THREE.Vector3();
 
 export class Guard {
   // route: [{ x, z, wait? }] on the floor at height y (a loop).
-  constructor(scene, { name, y, route, look }) {
+  constructor(scene, { name, y, route, look, collision }) {
     this.name = name;
     this.y = y;
     this.route = route;
@@ -33,6 +33,9 @@ export class Guard {
     });
     scene.add(this.person.root);
     this.pos = new THREE.Vector3();
+    // A body you can't walk through (the player isn't shoved out of it).
+    this.collider = collision.addBox(0, 0, 0, 0, 0, 0);
+    this.collider.person = true;
 
     // Flashlight beam: a faint cone reaching out from chest height.
     const length = GUARD.sight;
@@ -70,6 +73,7 @@ export class Guard {
   setVisible(on) {
     this.person.root.visible = on;
     this.active = on;
+    this.collider.enabled = on;
   }
 
   headingTo(p) {
@@ -171,5 +175,9 @@ export class Guard {
   sync() {
     this.person.root.position.copy(this.pos);
     this.person.root.rotation.y = this.yaw;
+    const c = this.collider;
+    c.minX = this.pos.x - 0.25; c.maxX = this.pos.x + 0.25;
+    c.minZ = this.pos.z - 0.25; c.maxZ = this.pos.z + 0.25;
+    c.minY = this.pos.y; c.maxY = this.pos.y + 1.75;
   }
 }

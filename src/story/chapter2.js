@@ -64,7 +64,11 @@ export class Chapter2 {
     this.scene = scene;
     this.collision = ctx.collision;
     this.active = false;
-    this.guards = GUARDS.map((g) => new Guard(scene, { ...g, y: B3_Y }));
+    this.guards = GUARDS.map((g) => new Guard(scene, { ...g, y: B3_Y, collision: ctx.collision }));
+    // Guards' bodies don't block anyone's line of sight (like people's).
+    for (const g of this.guards) sightIgnore.add(g.collider);
+    // People step out of the guards' way.
+    cast.extras = () => (this.active ? this.guards.filter((g) => g.active) : []);
     for (const g of this.guards) g.setVisible(false);
     this.prisoners = PRISONERS.map((p) => ({ ...p, npc: cast.all.find((n) => n.name === p.name) }));
     this.cellDoors = CELL_X.map((_, i) => world.doorByLabel(`cell door ${i + 1}`));
