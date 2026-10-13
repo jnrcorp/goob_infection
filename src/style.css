@@ -919,3 +919,37 @@ html, body {
 #detect.alert .detect-bar i {
   background: #ff4a3a;
 }
+
+/* "You're not done." after chapter 2's credits. */
+.notdone {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: #6cff4a;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.notdone[hidden] {
+  display: none;
+}
+
+.notdone p {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 72px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  opacity: 0;
+}
+
+.notdone.show p {
+  animation: notdone 4.2s ease-in-out forwards;
+}
+
+@keyframes notdone {
+  0% { opacity: 0; transform: scale(0.96); }
+  25%, 75% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}

@@ -204,6 +204,11 @@ Each milestone ends in something you can play.
   4. Get all six freed prisoners (Dr. Pell, Martin, Nell, Kevin, Ivo, Luis) to the lobby.
   5. Take the elevator up.
 - **Ending:** police in the lot at night, the rescued six speak, a news bulletin ("THERE IS NO B2"), chapter 2 credits.
+- **After the credits ("You're not done."):** an hour later in B3, Victoria is in cell 6.
+  - Her executive override takes over your hazard suit. It walks you, with no control, to the control room and presses CELL RELEASE while she talks over the suit radio.
+  - She slips away up the hidden elevator.
+  - Two officers catch you at the console, see the override blinking on your visor, and send you to find her.
+  - She's at her desk in the 3F CEO's office as if nothing happened. Find her, she's arrested again, and **The End**.
 
 ## Still open (answer any time; defaults in brackets)
 

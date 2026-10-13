@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Guard } from './guards.js';
+import { AfterCredits } from './afterCredits.js';
 import { sfx } from '../core/sound.js';
 
 // Chapter 2: The True Facility.
@@ -81,6 +82,7 @@ export class Chapter2 {
     // People step out of the guards' way.
     cast.extras = () => (this.active ? this.guards.filter((g) => g.active) : []);
     for (const g of this.guards) g.setVisible(false);
+    this.after = new AfterCredits({ ch2: this, scene });
     this.prisoners = PRISONERS.map((p) => ({ ...p, npc: cast.all.find((n) => n.name === p.name) }));
     this.cellDoors = CELL_X.map((_, i) => world.doorByLabel(`cell door ${i + 1}`));
     this.controlDoor = world.doorByLabel('control room door');
@@ -170,6 +172,7 @@ export class Chapter2 {
   // Chapter 1: none of this is here.
   stop() {
     this.active = false;
+    this.after.reset();
     this.world.setNight(false, this.scene);
     this.tape.visible = false;
     for (const g of this.guards) g.setVisible(false);
@@ -182,6 +185,55 @@ export class Chapter2 {
   // Guards on patrol, prisoners locked in their cells (two of them
   // infected), the keycard on the desk, goob seeping from the vats, and
   // nobody left in the office upstairs.
+  cellX(n) {
+    return CELL_X[n - 1];
+  }
+
+  // After the raid (the post-credits part): the guards are gone, everyone
+  // you rescued has gone home, the cells are shut, the keycard's long gone,
+  // and the hidden elevator's back at B3.
+  setupAftermath() {
+    this.ch1.ending.reset();
+    this.ending = false;
+    this.ch1.busy = false;
+    this.goob.reset();
+    this.goob.spreading = false;
+    this.keycard.visible = false;
+    for (const g of this.guards) g.setVisible(false);
+    for (const p of this.prisoners) {
+      const npc = p.npc;
+      npc.path = null;
+      npc.person.root.visible = false;
+      npc.collider.enabled = false;
+      npc.frozen = true;
+    }
+    for (const d of this.cellDoors) { d.reset(); d.locked = CELL_LOCKED; }
+    this.controlDoor.reset();
+    this.controlDoor.locked = null;
+    const secret = this.world.secretElevator;
+    secret.lockedMessage = null;
+    secret.current = secret.target = 0;
+    secret.carY = secret.floors[0];
+    secret.phase = 'closed';
+    secret.open.fill(0);
+    secret.syncCar();
+    secret.syncDoors();
+    this.detectEl.hidden = true;
+  }
+
+  // The override opens the doors between you and the control room.
+  openForOverride() {
+    this.world.doorByLabel('holding area door').setOpen(1);
+    this.controlDoor.locked = null;
+    this.controlDoor.setOpen(1);
+  }
+
+  openCell(n) {
+    const d = this.cellDoors[n - 1];
+    d.locked = null;
+    d.setOpen(-1);
+  }
+
   setupFacility() {
     for (const g of this.guards) g.reset();
     this.keycard.visible = true;
@@ -330,6 +382,7 @@ export class Chapter2 {
 
   update(dt) {
     if (!this.active) return;
+    this.after.update(dt);
     const state = this.ch1.state;
     // On B3 once the car has stopped there (not mid-ride: the checkpoint
     // taken here would put you back in a moving car's shaft).
@@ -437,6 +490,11 @@ export class Chapter2 {
       : c.state === 'C2_LEAVE' ? OBJECTIVES.C2_LEAVE(this.inLobby, this.prisoners.length)
         : OBJECTIVES[c.state] ?? null;
     this.ch1.setState(c.state, objective, false);
+    if (c.state === 'C2_FIND') {
+      this.setupAftermath();
+      this.ch1.putOnSuit();
+      this.after.beginFind(false);
+    }
     this.ch1.checkpoint = c;
     this.fx.fade(1, 0);
     await this.fx.fade(0, 0.8);
@@ -446,6 +504,12 @@ export class Chapter2 {
   skipTo(state) {
     this.ch1.start(2);
     this.morning.finish();
+    if (state === 'C2_AFTER') {
+      // Straight to the post-credits part ("You're not done.").
+      this.morning.done.add('letter');
+      this.after.start();
+      return;
+    }
     const spots = {
       C2_INFILTRATE: { x: 13, y: 0, z: -2, yaw: 0 },
       C2_RIDE: { x: 9, y: -4, z: 22.5, yaw: Math.PI },
@@ -453,6 +517,7 @@ export class Chapter2 {
       C2_CONTROL: { x: 3, y: B3_Y, z: 21, yaw: 0 },
       C2_CURE: { x: 32, y: B3_Y, z: 22, yaw: Math.PI / 2 },
       C2_LEAVE: { x: 10, y: B3_Y, z: 21, yaw: 0 },
+      C2_FIND: { x: 31.6, y: B3_Y, z: 21.4, yaw: Math.PI / 2 },
     };
     this.morning.done.add('letter');
     this.restore({
@@ -478,10 +543,7 @@ export class Chapter2 {
     this.ch1.antidote.reset();
     this.goob.spreading = false;
     await this.ch1.ending.runChapter2(this.prisoners.map((p) => p.npc));
-    this.ch1.onEnd?.({
-      title: 'Chapter 2 complete',
-      text: 'You brought all six of them up out of B3. The facility was raided before Friday’s launch, and the rotation ended for good. Somewhere in a holding cell, Victoria is humming.',
-      hint: 'Thanks for playing The Goob Infection.',
-    });
+    // Not over yet (see afterCredits.js).
+    this.after.start();
   }
 }
