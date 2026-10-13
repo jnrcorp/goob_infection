@@ -18,18 +18,29 @@ import { sfx } from '../core/sound.js';
 //   C2_END        the ending (police raid, news, credits)
 
 const CODE = '4-2-7-9';
+const HOLDING_DOOR_X = 7; // the holding area's door to the corridor
+const FILE_OUT_GAP = 1.4; // seconds between freed prisoners leaving their cells
 const B3_Y = -12;
 const LOBBY = { x0: 6.3, z0: 18.3, x1: 13.7, z1: 23.7 };
-// Prisoners (cast members, borrowed from the office), their cells and where
-// they wait in the lobby once freed. infected: needs the antidote first.
+// Prisoners (cast members, borrowed from the office) and their cells.
+// infected: needs the antidote first.
 const PRISONERS = [
-  { name: 'Dr. Pell', cell: 1, spot: { x: 7.2, z: 19.2 } },
-  { name: 'Martin', cell: 2, spot: { x: 8.4, z: 19 } },
-  { name: 'Nell', cell: 3, spot: { x: 9.6, z: 19.3 } },
-  { name: 'Kevin', cell: 4, spot: { x: 10.8, z: 19 }, infected: true },
-  { name: 'Ivo', cell: 5, spot: { x: 12, z: 19.2 } },
-  { name: 'Luis', cell: 6, spot: { x: 13, z: 20.4 }, infected: true },
+  { name: 'Dr. Pell', cell: 1 },
+  { name: 'Martin', cell: 2 },
+  { name: 'Nell', cell: 3 },
+  { name: 'Kevin', cell: 4, infected: true },
+  { name: 'Ivo', cell: 5 },
+  { name: 'Luis', cell: 6, infected: true },
 ];
+// Where freed prisoners wait in the elevator lobby, handed out in the order
+// they're freed: deepest first, alternating west and east walls, so nobody
+// has to walk past someone already standing there, and the way from the
+// entrance (x 8.5-11.5) to the elevator (x 9, z 24) stays clear.
+const LOBBY_SPOTS = [
+  { x: 7.4, z: 22.4 }, { x: 12.9, z: 22.4 }, { x: 7.4, z: 21.2 },
+  { x: 12.9, z: 21.2 }, { x: 7.4, z: 20 }, { x: 12.9, z: 20 },
+];
+const LOBBY_ENTRANCE = { x: 10, z: 18.8 }; // just inside the gap from the corridor
 const CELL_X = [1, 3.15, 5.45, 7.75, 10.05, 12.6];
 const CELL_LOCKED = 'Locked. The cell doors are opened from the control room.';
 const CONTROL_LOCKED = 'Locked. A card reader blinks red: SECURITY KEYCARD REQUIRED.';
@@ -217,6 +228,7 @@ export class Chapter2 {
       npc.lineIndex = 0;
     }
     p.freed = false;
+    p.spot = null;
   }
 
   // Parked at HQ and down in B1: suit up and find the elevator.
@@ -247,10 +259,17 @@ export class Chapter2 {
     this.saveCheckpoint();
   }
 
+  // Everyone who isn't infected walks out, one at a time (nearest the
+  // holding area door first, so each one follows the last) rather than all
+  // crowding the walkway at once.
   openCells() {
     for (const d of this.cellDoors) { d.locked = null; d.setOpen(-1); }
-    for (const p of this.prisoners) {
-      if (!p.npc.infected) this.free(p);
+    let delay = 0;
+    const byDoor = [...this.prisoners].sort((a, b) => Math.abs(CELL_X[a.cell - 1] - HOLDING_DOOR_X) - Math.abs(CELL_X[b.cell - 1] - HOLDING_DOOR_X));
+    for (const p of byDoor) {
+      if (p.npc.infected) continue;
+      this.free(p, delay);
+      delay += FILE_OUT_GAP;
     }
   }
 
@@ -259,22 +278,29 @@ export class Chapter2 {
   }
 
   // Out of the cell and off to the lobby to wait for you.
-  free(p) {
+  free(p, delay = 0) {
     const npc = p.npc;
     p.freed = true;
+    p.spot ??= LOBBY_SPOTS[this.prisoners.filter((q) => q.spot).length];
     npc.brain = null;
     npc.cured = true; // (walks with collision and opens doors)
     npc.talkable = true;
     npc.lines = [...(FREED_LINES[p.name] ?? ['Thank you.'])];
     npc.lineIndex = 0;
     npc.speed = 1.6;
+    // To the lobby entrance, then straight to their spot (a route that ends
+    // at the walkway point nearest the spot can overshoot, and double back
+    // past people already standing there).
     const target = new THREE.Vector3(p.spot.x, B3_Y, p.spot.z);
+    const entrance = new THREE.Vector3(LOBBY_ENTRANCE.x, B3_Y, LOBBY_ENTRANCE.z);
     const nav = npc.env.nav;
-    const route = nav.path(nav.nearest(npc.pos), nav.nearest(target), true) ?? [];
+    const inLobby = npc.pos.z > LOBBY.z0 && npc.pos.x > LOBBY.x0 && npc.pos.x < LOBBY.x1;
+    const route = inLobby ? [] : [...(nav.path(nav.nearest(npc.pos), nav.nearest(entrance), true) ?? []), entrance];
     npc.walkPath([...route, target], () => {
       npc.mode = 'stand';
       npc.yaw = Math.PI; // facing the corridor, waiting
     });
+    npc.pause = delay;
   }
 
   // The antidote worked on one of the infected prisoners (see Chapter1.cureNpc).
@@ -305,7 +331,10 @@ export class Chapter2 {
   update(dt) {
     if (!this.active) return;
     const state = this.ch1.state;
-    if (state === 'C2_RIDE' && this.player.pos.y < -8) {
+    // On B3 once the car has stopped there (not mid-ride: the checkpoint
+    // taken here would put you back in a moving car's shaft).
+    const secret = this.world.secretElevator;
+    if (state === 'C2_RIDE' && this.player.pos.y < -11 && secret.current === 0 && secret.phase !== 'moving') {
       this.ch1.setState('C2_KEYCARD', OBJECTIVES.C2_KEYCARD);
       this.hud.toast('B3. There is no B2. The air smells like goob and floor polish.', 3.5);
       this.saveCheckpoint();
@@ -386,6 +415,8 @@ export class Chapter2 {
     secret.open.fill(0);
     secret.syncCar();
     secret.syncDoors();
+    // (Saved mid-ride: back in the car, at a floor.)
+    if (this.world.settleInElevator(this.player.pos)) this.player.updateCamera();
     const at = ['C2_CONTROL', 'C2_CURE', 'C2_LEAVE'];
     if (at.includes(c.state)) {
       this.keycard.visible = false;
@@ -430,7 +461,7 @@ export class Chapter2 {
       player: spots[state] ?? spots.C2_INFILTRATE,
       secretUnlocked: state !== 'C2_INFILTRATE' && state !== 'C2_HOME',
       secretFloor: ['C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', 'C2_LEAVE'].includes(state) ? 0 : 1,
-      prisoners: state === 'C2_LEAVE' ? this.prisoners.map((q) => ({ name: q.name, infected: false, freed: true, x: q.spot.x, z: q.spot.z })) : null,
+      prisoners: state === 'C2_LEAVE' ? this.prisoners.map((q, i) => ({ name: q.name, infected: false, freed: true, x: LOBBY_SPOTS[i].x, z: LOBBY_SPOTS[i].z })) : null,
     });
   }
 

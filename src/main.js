@@ -198,10 +198,13 @@ cast.setEnv({
   // Everyone stands still while Dale's on the intercom (after the freezer
   // is locked), and while you're spraying the antidote.
   hold: () => chapter.state === 'DALE_CALL' || antidote.spraying,
+  // Everyone, so people walking somewhere can wait for whoever's in front.
+  people: () => cast.all,
   canOpenDoors: () => difficulty().infectedOpenDoors,
   canAttack: () => difficulty().infectedAttack,
   openDoorsNear: (npc) => world.openDoorsNear(npc),
 });
+let closestEver = null; // see step()
 let gameTime = 0;
 let lastStep = 0; // footstep counter for sounds
 
@@ -650,6 +653,7 @@ async function runStartupSimulation() {
       if (!closest || d < closest.d) closest = { d, a: a.name, b: b.name };
     }
     console.log(`[report] everyone: ${cast.all.map((n) => `${n.name}@${n.pos.x.toFixed(2)},${n.pos.z.toFixed(2)}`).join(' ')}`);
+    if (closestEver) console.log(`[report] closest anyone walking ever got to someone: ${closestEver.a} and ${closestEver.b}, ${closestEver.d.toFixed(2)} m at t ${closestEver.t.toFixed(1)}s (${closestEver.at}; waiting for ${closestEver.wait})`);
     if (closest) console.log(`[report] closest two people: ${closest.a} and ${closest.b}, ${closest.d.toFixed(2)} m apart`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
@@ -662,6 +666,7 @@ async function runStartupSimulation() {
     await simulate(0.2);
   }
   if (params.has('click') && params.has('report')) {
+    console.log(`[report] after clicks, you at ${player.pos.x.toFixed(2)}, ${player.pos.y.toFixed(2)}, ${player.pos.z.toFixed(2)}; hidden elevator at y ${world.secretElevator.carY}, ${world.secretElevator.phase}, doors ${world.secretElevator.open.map((o) => o.toFixed(1))}`);
     console.log(`[report] after clicks, open doors: ${world.doors.filter((d) => d.isOpen).map((d) => d.label).join(', ') || 'none'}`);
   }
 }
@@ -713,6 +718,14 @@ function updateAudio(dt) {
 }
 
 function step(dt) {
+  // ?report: the closest any two people walking about ever got (testing).
+  if (params.has('report')) {
+    for (const a of cast.all) for (const b of cast.all) {
+      if (a === b || !a.path || !a.person.root.visible || !b.person.root.visible || Math.abs(a.pos.y - b.pos.y) > 1 || (a.seated && b.seated)) continue;
+      const d = Math.hypot(a.pos.x - b.pos.x, a.pos.z - b.pos.z);
+      if (d < (closestEver?.d ?? Infinity)) closestEver = { d, a: a.name, b: b.name, t: gameTime, at: `${a.pos.x.toFixed(1)},${a.pos.z.toFixed(1)} / ${b.pos.x.toFixed(1)},${b.pos.z.toFixed(1)}`, wait: `${a.yieldingTo?.name ?? '-'} / ${b.yieldingTo?.name ?? '-'}` };
+    }
+  }
   const active = input.locked || noLock;
   // Decided once per frame so the key that closes a dialogue can't also jump or interact.
   const controlling = active && !chapter.inputLocked;

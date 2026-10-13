@@ -936,6 +936,8 @@ export class Chapter1 {
     if (c.freezerSealed) this.sealFreezer();
     this.world.elevator.jam();
     if (!c.elevatorJammed) this.world.elevator.repair();
+    // (Saved mid-ride: back in the car, at a floor.)
+    if (this.world.settleInElevator(this.player.pos)) this.player.updateCamera();
     const car = this.world.elevator.carFloorPoint;
     if (!this.elevatorSpot) this.elevatorSpot = this.graph.addHidingSpot(car.x, car.y, car.z, 'elevator');
     // Anyone the checkpoint doesn't cover is infected where they stand (so the

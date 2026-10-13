@@ -8,6 +8,10 @@ const STEP = 0.45;
 const RADIUS = 0.25;
 const HEIGHT = 1.75;
 
+const YIELD_DISTANCE = 1.1; // meters: someone this close ahead, wait
+const YIELD_MAX = 3;        // seconds: then go anyway
+const AVOID_AHEAD = 2.2;    // meters ahead to steer around people
+const AVOID_WIDTH = 1.1;    // ... within this far either side of the way
 const ROOM_CHECK = 0.1;  // seconds between measuring the room around them
 const ROOM_RANGE = 1.2;  // meters: further than any arm reaches
 const tmpOrigin = new THREE.Vector3();
@@ -237,13 +241,15 @@ export class NPC {
         const dist = Math.hypot(dx, dz);
         if (dist < 0.05) {
           this.arrive(targets);
-        } else if (!this.blockedBy(player, dx, dz)) {
+        } else if (!this.blockedBy(player, dx, dz) && !this.waitingBehind(dx, dz, dt)) {
           const step = Math.min(dist, this.speed * dt);
           if (this.cured) {
-            // After the outbreak people walk with collision (and open doors).
-            // Caught on a corner for a while: skip to the waypoint.
+            // After the outbreak people walk with collision (and open doors),
+            // curving around anyone near their way. Caught on a corner for a
+            // while: skip to the waypoint.
+            const [sx, sz] = this.steerAround(dx / dist, dz / dist, dist);
             const before = this.pos.clone();
-            this.move((dx / dist) * step, (dz / dist) * step);
+            this.move(sx * step, sz * step);
             if (this.pos.distanceTo(before) < step * 0.3) {
               this.stuckFor += dt;
               if (this.stuckFor > 1.5) {
@@ -329,6 +335,57 @@ export class NPC {
   }
 
   // Stop rather than walk into the player.
+  // Bend the walking direction (dirX, dirZ) away from people close to the
+  // way ahead, so walkers curve around them instead of brushing past.
+  // Returns a unit direction.
+  steerAround(dirX, dirZ, dist) {
+    const people = this.env?.people?.();
+    let x = dirX;
+    let z = dirZ;
+    for (const o of people ?? []) {
+      if (o === this || !o.person.root.visible || Math.abs(o.pos.y - this.pos.y) > 1) continue;
+      const ox = o.pos.x - this.pos.x;
+      const oz = o.pos.z - this.pos.z;
+      const along = ox * dirX + oz * dirZ;
+      if (along <= 0 || along > Math.min(dist, AVOID_AHEAD)) continue; // behind, or past where we're going
+      const side = ox * -dirZ + oz * dirX; // + = to our left
+      const gap = Math.abs(side);
+      if (gap > AVOID_WIDTH) continue;
+      const push = (1 - gap / AVOID_WIDTH) * (1 - along / AVOID_AHEAD) * 1.6;
+      const away = side >= 0 ? -1 : 1; // step to the other side
+      x += -dirZ * away * push;
+      z += dirX * away * push;
+    }
+    const len = Math.hypot(x, z) || 1;
+    return [x / len, z / len];
+  }
+
+  // Walking somewhere and someone's right in front: wait for them to move on
+  // instead of walking into them. Two people meeting head-on would wait for
+  // each other forever, so the one with the lower name goes first, and
+  // nobody waits more than a few seconds.
+  waitingBehind(dx, dz, dt) {
+    const people = this.env?.people?.();
+    if (!people) return false;
+    const len = Math.hypot(dx, dz) || 1;
+    const ahead = people.find((o) => {
+      if (o === this || !o.person.root.visible || Math.abs(o.pos.y - this.pos.y) > 1) return false;
+      const ox = o.pos.x - this.pos.x;
+      const oz = o.pos.z - this.pos.z;
+      const d = Math.hypot(ox, oz);
+      return d < YIELD_DISTANCE && (ox * dx + oz * dz) / (d * len) > 0.6;
+    });
+    const headOn = ahead && ahead.yieldingTo === this && this.name < ahead.name;
+    if (!ahead || headOn || this.yieldTime > YIELD_MAX) {
+      this.yieldingTo = null;
+      if (!ahead) this.yieldTime = 0;
+      return false;
+    }
+    this.yieldingTo = ahead;
+    this.yieldTime = (this.yieldTime ?? 0) + dt;
+    return true;
+  }
+
   blockedBy(player, dx, dz) {
     if (Math.abs(player.pos.y - this.pos.y) > 1.5) return false;
     const px = player.pos.x - this.pos.x;

@@ -170,6 +170,31 @@ export function buildBuilding(baseCtx) {
       props.canister.glow.intensity = visible ? 2.5 : 0;
     },
 
+    // After a checkpoint is restored: if pos is inside an elevator's shaft
+    // (saved mid-ride), bring the car to the nearest floor and open its
+    // doors, and stand pos on it, so nobody's ever stranded in a dark
+    // shaft. (A jammed car can't move: pos goes to the car instead.)
+    settleInElevator(pos) {
+      for (const e of [elevator, secretElevator]) {
+        const d = e.def;
+        if (pos.x < d.x0 - 0.2 || pos.x > d.x1 + 0.2 || pos.z < d.z0 - 0.2 || pos.z > d.z1 + 0.2) continue;
+        if (pos.y < Math.min(...e.floors) - 1 || pos.y > Math.max(...e.floors) + 3) continue;
+        if (!e.jammed) {
+          let best = 0;
+          e.floors.forEach((fy, i) => { if (Math.abs(fy - pos.y) < Math.abs(e.floors[best] - pos.y)) best = i; });
+          e.current = e.target = best;
+          e.carY = e.floors[best];
+          e.open.fill(0);
+          e.phase = 'opening';
+          e.syncCar();
+          e.syncDoors();
+        }
+        pos.y = e.carY;
+        return true;
+      }
+      return false;
+    },
+
     doorByLabel(label) {
       return doors.find((d) => d.label === label);
     },
