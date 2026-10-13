@@ -97,7 +97,9 @@ export const BUILDING = {
   // Roofs: over the loading dock (double height) and over the 3-story office block.
   roofs: [
     { x0: 24, z0: 0, x1: 36, z1: 24, y: 7.7 },
-    { x0: 0, z0: 0, x1: 24, z1: 24, y: 11.7 },
+    // (A hole for the elevator, which runs up to the roof.)
+    { x0: 0, z0: 0, x1: 24, z1: 24, y: 11.7, minus: [{ x0: 15, z0: 13, x1: 18, z1: 16 }] },
+    { x0: 14.9, z0: 12.9, x1: 18.1, z1: 16.1, y: 15.2 }, // elevator headhouse on the roof
     { x0: -60, z0: -26, x1: -48, z1: -16, y: 2.8 }, // your house
   ],
   // Outdoor ground you can walk on (parking lot and loading yard).
@@ -376,6 +378,35 @@ export const BUILDING = {
         { id: 'stair3', name: 'Stairwell', rect: { x0: 12, z0: 13, x1: 15, z1: 15 }, floor: 'concrete', ceiling: null, lightY: 3.3, fixture: null },
       ],
     },
+    // ---------------------------------------------------------------- Roof
+    // The main building's roof, reached by the elevator (its headhouse
+    // stands over the shaft). Chapter 2's last shuttle to Mars waits on the
+    // launch pad here.
+    {
+      id: 'Roof',
+      y: 12,
+      wallHeight: 1.1,
+      slab: { x0: 0, z0: 0, x1: 0.01, z1: 0.01 }, // (the roof slab is one of BUILDING.roofs)
+      voids: [],
+      walls: [
+        // Parapet
+        wall(0, 0, 24, 0, { showTop: true, mat: 'facade' }),
+        wall(0, 24, 24, 24, { showTop: true, mat: 'facade' }),
+        wall(0, 0, 0, 24, { showTop: true, mat: 'facade' }),
+        wall(24, 0, 24, 24, { showTop: true, mat: 'facade' }),
+        // Elevator headhouse
+        wall(15, 13, 18, 13, { h: 3.2, mat: 'facade', openings: [lift(16.5)] }),
+        wall(15, 13, 15, 16, { h: 3.2, mat: 'facade' }),
+        wall(18, 13, 18, 16, { h: 3.2, mat: 'facade' }),
+        wall(15, 16, 18, 16, { h: 3.2, mat: 'facade' }),
+      ],
+      rooms: [
+        {
+          id: 'roof', name: 'Rooftop', rect: { x0: 0, z0: 0, x1: 24, z1: 24 }, ...OUTDOOR, noGoob: true, noFloor: true,
+          lightY: 5, lightSpacing: 10, lightIntensity: 18, lightRange: 14, minus: [{ x0: 15, z0: 13, x1: 18, z1: 16 }],
+        },
+      ],
+    },
   ],
 
   // Switchback flights in the stairwell. rises: which way is up.
@@ -398,8 +429,8 @@ export const BUILDING = {
   elevator: {
     x0: 15.1, x1: 17.9, z0: 13.1, z1: 15.9,
     doorAt: 16.5, doorW: 1.4, doorZ: 13,
-    floors: [-4, 0, 4, 8],
-    floorNames: ['B1', '1F', '2F', '3F'],
+    floors: [-4, 0, 4, 8, 12],
+    floorNames: ['B1', '1F', '2F', '3F', 'Roof'],
     startFloor: 1,
   },
 
@@ -477,6 +508,9 @@ export const BUILDING = {
     { x: 5.0, y: 8.0, z: 17.2 },     // records room floor
     { x: 5.5, y: 0.47, z: -0.6 },    // parking lot bench
     { x: 45.3, y: 0, z: 20.0 },      // loading yard, by the pallets
+    // Roof (chapter 2's boss fight): on two of the AC units.
+    { x: 20.5, y: 13.3, z: 4 },
+    { x: 3, y: 13.3, z: 20 },
   ],
 
   // The antidote sprayer waits on the infirmary counter.

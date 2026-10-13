@@ -226,6 +226,11 @@ export class Elevator {
       this.hud?.toast(this.lockedMessage, 3);
       return;
     }
+    // A floor that needs a key (chapter 2's roof): { index: message }.
+    if (this.floorLocks?.[floor]) {
+      this.hud?.toast(this.floorLocks[floor], 3);
+      return;
+    }
     if (this.phase === 'moving' || this.jammed) return;
     if (floor === this.current) {
       if (this.phase === 'closed' || this.phase === 'closing') this.phase = 'opening';

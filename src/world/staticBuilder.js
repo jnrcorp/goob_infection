@@ -4,7 +4,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { shadowMaterials, boxShadowGeometry } from '../render/shadows.js';
 
 const SHADOW = '__shadow';
-const FLOOR_LEVELS = [-12, -4, 0, 4, 8];
+const FLOOR_LEVELS = [-12, -4, 0, 4, 8, 12];
 
 // Collects static boxes and planes, adds their colliders, and merges all
 // geometry that shares a material into one mesh (a few draw calls total).

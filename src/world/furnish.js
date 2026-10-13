@@ -196,6 +196,7 @@ export function furnish({ builder: b, scene, materials }) {
   furnishBasement(b, scene, rng, out);
   furnishExecutive(b, scene, out);
   furnishFacility(b, scene, rng, out);
+  furnishRoof(b, scene, out);
   furnishOutdoors(b, scene, rng);
   furnishHome(b, scene);
 
@@ -612,4 +613,43 @@ function furnishFacility(b, scene, rng, out) {
   chairsAround(b, 33, 30, 1.2, 1.2, y);
   vending(b, 35.1, 32.6, 35.9, 33.9, y);
   couch(b, 31.2, 33.3, 2, 2, y);
+}
+
+// The roof: the launch pad with Goob Co.'s last shuttle to Mars, a gantry,
+// air-conditioning units and an antenna mast.
+function furnishRoof(b, scene, out) {
+  const y = 12;
+  const pad = { x: 7, z: 9 };
+  out.launchPad = { ...pad, y, radius: 3.6 };
+  // Pad: a round concrete plinth with hazard ring.
+  b.shape(new THREE.CylinderGeometry(3.6, 3.8, 0.25, 40), 'concrete', pad.x, y + 0.125, pad.z);
+  b.box(pad.x - 3.6, y, pad.z - 3.6, pad.x + 3.6, y + 0.25, pad.z + 3.6, null);
+  const ring = new THREE.RingGeometry(3.1, 3.5, 40);
+  ring.rotateX(-Math.PI / 2);
+  b.shape(ring, 'hazard', pad.x, y + 0.26, pad.z);
+  // The shuttle: a white body, a nose cone, four fins, a goob-green stripe.
+  b.box(pad.x - 1.3, y, pad.z - 1.3, pad.x + 1.3, y + 9, pad.z + 1.3, null);
+  b.shape(new THREE.CylinderGeometry(1.15, 1.25, 6.5, 28), 'fridge', pad.x, y + 0.25 + 3.25 + 0.4, pad.z);
+  b.shape(new THREE.ConeGeometry(1.15, 2.4, 28), 'fridge', pad.x, y + 0.25 + 0.4 + 6.5 + 1.2, pad.z);
+  b.shape(new THREE.CylinderGeometry(1.17, 1.17, 0.5, 28), 'goob', pad.x, y + 5.2, pad.z);
+  b.shape(new THREE.CylinderGeometry(0.8, 1.05, 0.6, 20), 'metal', pad.x, y + 0.55, pad.z);
+  for (let k = 0; k < 4; k++) {
+    const fin = new THREE.BoxGeometry(0.08, 1.6, 1.0);
+    fin.translate(0, 0, 1.55);
+    b.shape(fin, 'red', pad.x, y + 1.3, pad.z, (k * Math.PI) / 2);
+  }
+  sign(scene, 'GOOB CO. · MARS 7', pad.x, y + 4.2, pad.z + 1.27, 'n', { w: 1.8, h: 0.3, ...LOGO });
+  // Gantry tower beside it.
+  for (const [dx, dz] of [[2.6, -0.6], [3.6, -0.6], [2.6, 0.6], [3.6, 0.6]]) {
+    b.box(pad.x + dx - 0.08, y, pad.z + dz - 0.08, pad.x + dx + 0.08, y + 8.5, pad.z + dz + 0.08, 'metal');
+  }
+  for (let h = 1.5; h < 8.5; h += 1.5) b.box(pad.x + 2.5, y + h, pad.z - 0.7, pad.x + 3.7, y + h + 0.1, pad.z + 0.7, 'hazard', NC);
+  b.box(pad.x + 1.25, y + 6.8, pad.z - 0.25, pad.x + 2.6, y + 6.9, pad.z + 0.25, 'metal', NC); // access arm
+  // Air-conditioning units and an antenna mast.
+  for (const [x, z] of [[20.5, 4], [20.5, 7.5], [3, 20], [7, 20.5]]) {
+    b.roundBox(x - 1, y, z - 0.8, x + 1, y + 1.3, z + 0.8, 'steel', 0.05, { shadow: true });
+  }
+  b.box(21.6, y, 21.6, 21.8, y + 7, 21.8, 'metal');
+  b.box(21.45, y + 6.2, 21.45, 21.95, y + 6.3, 21.95, 'red', NC);
+  sign(scene, 'ROOF', 16.5, y + 2.6, 12.88, 's', { w: 0.8, h: 0.28 });
 }

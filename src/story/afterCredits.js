@@ -29,7 +29,7 @@ const PUPPET_SPEED = 2.2;
 const VICTORIA_ESCAPE = { x: 9, z: 22.6 }; // in front of the hidden elevator
 // Just inside the control room door (x 33, z 18).
 const OFFICERS_AT = [{ x: 32.5, z: 19.3 }, { x: 33.7, z: 19.7 }];
-const FOUND_RANGE = 3;
+const OFFICE = { x0: 0, z0: 0, x1: 10, z1: 8, y: 8 }; // her office, 3F
 
 const OVERRIDE_LINES = [
   { speaker: 'Victoria (suit radio)', text: 'Hello, Champ. Comfortable? You should be. Goob Co. makes a very good suit.' },
@@ -42,12 +42,6 @@ const COPS_LINES = [
   { speaker: 'Officer Diaz', text: 'You walk in here a hero and five minutes later you’re letting her out?' },
   { speaker: 'Officer Kim', text: '... Diaz, look at the suit. The visor’s blinking. GOOB CO. EXECUTIVE OVERRIDE.' },
   { speaker: 'Officer Diaz', text: 'Fine. You know this building better than anyone. Find her, Champ. Before she finds a way out. We’ll be right behind you.' },
-];
-const FOUND_LINES = [
-  { speaker: 'Victoria', text: 'Champ. You found me. I did leave the lights on.' },
-  { speaker: 'Victoria', text: 'Where else would I go? This is my office. My company. My plaques.' },
-  { speaker: 'Officer Diaz', text: 'Victoria, you’re under arrest. Again.' },
-  { speaker: 'Victoria', text: 'Fine. But keep the suit, Champ. You never know when someone might want to take it for a walk.' },
 ];
 const OBJECTIVES = {
   C2_FIND: 'Find Victoria before the police decide you’re her accomplice. She went up the hidden elevator.',
@@ -197,17 +191,15 @@ export class AfterCredits {
     this.beginFind();
   }
 
-  // Victoria's back in her office upstairs; the officers follow you.
+  // She's gone; you go after her. First stop: her office on 3F.
   // save: false when restoring a checkpoint taken here.
   beginFind(save = true) {
     const { ch2 } = this;
     const ch1 = this.ch1;
     const v = ch1.victoria;
-    v.reset(); // at her desk on 3F, typing as if nothing happened
-    v.person.root.visible = true;
-    v.collider.enabled = true;
-    v.frozen = false;
-    v.talkable = false;
+    v.person.root.visible = false;
+    v.collider.enabled = false;
+    v.frozen = true;
     for (const o of this.officers) o.root.visible = false;
     ch2.world.secretElevator.lockedMessage = null;
     ch1.setState('C2_FIND', OBJECTIVES.C2_FIND, save);
@@ -251,34 +243,8 @@ export class AfterCredits {
     const ch1 = this.ch1;
     if (this.watching) for (const o of this.officers) o.update(1 / 60, 0);
     if (ch1.state !== 'C2_FIND' || ch1.busy) return;
-    const v = ch1.victoria;
+    // In her office: she's not there, but she's left a message (part2.js).
     const p = this.ch2.player.pos;
-    if (Math.abs(p.y - v.pos.y) < 1.5 && Math.hypot(p.x - v.pos.x, p.z - v.pos.z) < FOUND_RANGE) this.found(v);
-  }
-
-  async found(v) {
-    const ch1 = this.ch1;
-    const token = ch1.token;
-    ch1.busy = true;
-    ch1.setState('C2_FOUND', null, false);
-    v.talking = true;
-    this.ch2.player.lookTarget = v.headPoint;
-    // The officers were right behind you.
-    const p = this.ch2.player.pos;
-    this.officers.forEach((o, i) => {
-      o.root.position.set(p.x + (i ? 0.9 : -0.9), p.y, p.z + 1.2);
-      o.root.rotation.y = Math.atan2(v.pos.x - o.root.position.x, v.pos.z - o.root.position.z);
-      o.root.visible = true;
-    });
-    await ch1.dialogue.play(FOUND_LINES);
-    if (token !== ch1.token) return;
-    v.talking = false;
-    await ch1.fx.fade(1, 1.6);
-    if (token !== ch1.token) return;
-    ch1.onEnd?.({
-      title: 'The End',
-      text: 'Victoria went back into a cell, this time with her suits’ override codes in an evidence bag. The rotation is over. Goob Co. is over. You still have the suit. It still blinks, sometimes.',
-      hint: 'Thanks for playing The Goob Infection.',
-    });
+    if (Math.abs(p.y - OFFICE.y) < 1.5 && p.x > OFFICE.x0 && p.x < OFFICE.x1 && p.z > OFFICE.z0 && p.z < OFFICE.z1) this.ch2.part2.begin();
   }
 }

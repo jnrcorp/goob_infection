@@ -43,7 +43,7 @@ Pushes to `main` also deploy automatically: the repo is connected to the Worker 
 
 ## Controls
 
-**Chapter 2: The True Facility** (title screen): a week later, at night. Read Dr. Pell's letter, grab your gear and keys, drive to the shut-down HQ, and take the hidden elevator in B1's north wall (code in the letter) down to B3. Sneak past the guards (C to crouch; their flashlights warm to red as they notice you, and a vacuum blast knocks one out for a few seconds), take the keycard from the security office, open the cells from the control room, cure the two infected prisoners, get all six to the elevator lobby and ride up. After the credits: you're not done. Victoria hijacks your hazard suit, walks you to the control room and makes you release her; the police find you at the console, and you have to find her (she's gone back to her office on 3F).
+**Chapter 2: The True Facility** (title screen): a week later, at night. Read Dr. Pell's letter, grab your gear and keys, drive to the shut-down HQ, and take the hidden elevator in B1's north wall (code in the letter) down to B3. Sneak past the guards (C to crouch; their flashlights warm to red as they notice you, and a vacuum blast knocks one out for a few seconds), take the keycard from the security office, open the cells from the control room, cure the two infected prisoners, get all six to the elevator lobby and ride up. After the credits: you're not done. Victoria hijacks your hazard suit, walks you to the control room and makes you release her; the police find you at the console, and you have to find her. Her office is empty except for a message: she's on the roof with the last shuttle to Mars. Smash her four suit-override transmitters (one per floor, B1-3F) past her night security (she yanks your suit around each time), cure the infected night shift (Hank the janitor has the roof key), ride the elevator to the roof, and beat her goob-powered executive suit: blast her with the vacuum, then spray her with the antidote while she's stunned, five times. She dashes away when you get close, and throws three globs at once as she weakens.
 
 The day starts at home: turn off your alarm, get ready (brush your teeth and shower, get dressed, make coffee and toast, then grab your keys, in that order), then drive to Goob Co. (W/S gas and brake, A/D steer, Space handbrake, E get in/out) and park in any space in the lot.
 
@@ -60,6 +60,7 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `K` cures everyone (during the cure objective, to test the ending).
   - `R` (while pushing a biohazard bin) sends it straight to the secure freezer.
   - `I` toggles an infinite vacuum tank (it never fills, so you never have to empty it).
+  - `H` lands a hit on the chapter 2 boss.
   - `M` skips the morning at home and the drive, straight to your desk.
   - `P` saves a checkpoint (and the autosave) right now, once the outbreak has started.
   - `L` marks every file as found (during the investigation, it sends Victoria to the boardroom).
@@ -76,7 +77,8 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `?peaceful` makes infected coworkers' hits do nothing (they still chase you).
   - `?difficulty=hard` (or `easy`, `normal`) plays on that difficulty without changing your saved choice.
   - `?report=Hank` logs which doors are open, your suit integrity, goob volume by area, and where that coworker is after the simulation, plus who lands each hit.
-  - `?chapter=2` starts chapter 2; `?stage=C2_INFILTRATE`, `C2_RIDE`, `C2_KEYCARD`, `C2_CONTROL`, `C2_CURE`, `C2_LEAVE`, `C2_AFTER` (the post-credits part) or `C2_FIND` skip to a chapter 2 stage. `?secretto=0|1` sends the hidden elevator to B3 or B1.
+  - `?chapter=2` starts chapter 2; `?stage=C2_INFILTRATE`, `C2_RIDE`, `C2_KEYCARD`, `C2_CONTROL`, `C2_CURE`, `C2_LEAVE`, `C2_AFTER` (the post-credits part), `C2_FIND`, `C2_TRANSMITTERS`, `C2_NIGHTSHIFT`, `C2_ROOF` or `C2_BOSS` skip to a chapter 2 stage. `?secretto=0|1` sends the hidden elevator to B3 or B1.
+  - `?aimboss` keeps the camera on the chapter 2 boss (to script fights); `?routes` logs walking distances between part 2's objectives.
   - `?finale=news` plays just the ending's news bulletin and credits.
   - `?npcat=Hank,x,y,z[,yaw]` places a coworker, facing yaw degrees (testing). Repeat it to place several; `?npcfreeze` keeps them still, and `?crowd=N,x,y,z` stacks N coworkers on one spot.
   - `?sim=seconds` fast-forwards the game at load.

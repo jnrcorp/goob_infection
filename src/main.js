@@ -424,7 +424,7 @@ window.addEventListener('keydown', (e) => {
 // Backquote (`) toggles the readout. While it's on: N toggles noclip,
 // V cycles the graphics preset (for comparing), G removes all goob,
 // K cures everyone (during the cure objective), L marks every file as found,
-// M skips the morning (at home and the drive), P saves a checkpoint now (autosave), I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
+// M skips the morning (at home and the drive), H lands a hit on the chapter 2 boss, P saves a checkpoint now (autosave), I toggles an infinite vacuum tank, R (while pushing a bin) sends it to the freezer.
 // URL options:
 //   ?debug          start with the readout on
 //   ?shot           skip the title screen (for screenshots)
@@ -493,6 +493,32 @@ if (look) {
   player.yaw = THREE.MathUtils.degToRad(look[0]);
   player.pitch = THREE.MathUtils.degToRad(look[1] ?? 0);
   player.updateCamera();
+}
+// ?routes: walking distances between part 2's objectives (testing its length).
+if (params.has('routes')) {
+  const nav = new Navigation(goobGraph);
+  const legs = [
+    ['office -> B1 server', [5, 8, 5], [11.4, -4, 14.2]],
+    ['B1 server -> 1F mail', [11.4, -4, 14.2], [23.45, 0, 9.2]],
+    ['1F mail -> 2F IT', [23.45, 0, 9.2], [20.55, 4, 15.4]],
+    ['2F IT -> 3F records', [20.55, 4, 15.4], [11.4, 8, 23.4]],
+    ['3F records -> Deb (3F)', [11.4, 8, 23.4], [19.5, 8, 18.5]],
+    ['Deb -> Brad (2F)', [19.5, 8, 18.5], [5.5, 4, 13.2]],
+    ['Brad -> Olu (2F)', [5.5, 4, 13.2], [20.5, 4, 3]],
+    ['Olu -> Hank (1F)', [20.5, 4, 3], [18, 0, 5]],
+    ['Hank -> Rhonda (1F)', [18, 0, 5], [6, 0, 18.5]],
+    ['Rhonda -> Stan (B1)', [6, 0, 18.5], [2, -4, 22.4]],
+    ['Stan -> elevator (B1)', [2, -4, 22.4], [16.5, -4, 12.2]],
+  ];
+  let total = 0;
+  for (const [name, a, b] of legs) {
+    const route = nav.path(nav.nearest(new THREE.Vector3(...a)), nav.nearest(new THREE.Vector3(...b)), true) ?? [];
+    let d = 0;
+    for (let i = 1; i < route.length; i++) d += route[i].distanceTo(route[i - 1]);
+    total += d;
+    console.log(`[report] route ${name}: ${d.toFixed(0)} m`);
+  }
+  console.log(`[report] routes total ${total.toFixed(0)} m`);
 }
 // ?finale=news: just the ending's news bulletin and credits (testing).
 if (params.get('finale') === 'news') chapter.ending.newsAndCredits();
@@ -655,6 +681,8 @@ async function runStartupSimulation() {
     console.log(`[report] everyone: ${cast.all.map((n) => `${n.name}@${n.pos.x.toFixed(2)},${n.pos.z.toFixed(2)}`).join(' ')}`);
     if (closestEver) console.log(`[report] closest anyone walking ever got to someone: ${closestEver.a} and ${closestEver.b}, ${closestEver.d.toFixed(2)} m at t ${closestEver.t.toFixed(1)}s (${closestEver.at}; waiting for ${closestEver.wait})`);
     if (closest) console.log(`[report] closest two people: ${closest.a} and ${closest.b}, ${closest.d.toFixed(2)} m apart`);
+    if (chapter.ch2.part2.boss.root.visible) console.log(`[report] boss armor ${chapter.ch2.part2.boss.armor}, distance ${Math.hypot(chapter.ch2.part2.boss.pos.x - player.pos.x, chapter.ch2.part2.boss.pos.z - player.pos.z).toFixed(1)} m, game time ${gameTime.toFixed(0)}s`);
+    if (chapter.ch2.part2.active) console.log(`[report] part 2: ${JSON.stringify(chapter.ch2.part2.snapshot())}; roof locked ${!!world.elevator.floorLocks}`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
   }
@@ -718,6 +746,9 @@ function updateAudio(dt) {
 }
 
 function step(dt) {
+  // ?aimboss: keep the camera on the chapter 2 boss (testing the fight).
+  const boss = chapter.ch2.part2.boss;
+  if (params.has('aimboss') && boss.active) player.lookTarget = { x: boss.pos.x, y: boss.pos.y + 1.4, z: boss.pos.z };
   // ?report: the closest any two people walking about ever got (testing).
   if (params.has('report')) {
     for (const a of cast.all) for (const b of cast.all) {
@@ -762,6 +793,10 @@ function step(dt) {
     chapter.skipTo('INTRO');
     hud.toast('Debug: skipped the morning', 1.5);
   }
+  if (active && debug && input.wasPressed('KeyH') && chapter.ch2.part2.boss.active) {
+    chapter.ch2.part2.boss.stun();
+    chapter.ch2.part2.cured(chapter.ch2.part2.boss);
+  }
   if (active && debug && input.wasPressed('KeyP') && chapter.outbreak) {
     chapter.saveCheckpoint();
     hud.toast('Debug: checkpoint saved', 1.5);
@@ -797,7 +832,7 @@ function step(dt) {
     const handsFree = controlling && !chapter.hauler.carrying;
     // (The blast also knocks out chapter 2's guards.)
     vacuum.update(dt, input, handsFree, camera, player, goob, [...cast.all, ...chapter.ch2.targets]);
-    antidote.update(dt, input, handsFree, camera, cast.all, vacuum.nozzleWorld);
+    antidote.update(dt, input, handsFree, camera, [...cast.all, ...chapter.ch2.targets], vacuum.nozzleWorld);
     chapter.update(dt, input, controlling);
     fx.update(dt);
     updateAudio(dt);

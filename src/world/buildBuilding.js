@@ -91,7 +91,10 @@ export function buildBuilding(baseCtx) {
       b.plane(r.x0, r.z0, r.x1, r.z1, floor.y - 0.3, 'concrete', true);
     }
   }
-  for (const r of BUILDING.roofs) b.box(r.x0 - 0.1, r.y, r.z0 - 0.1, r.x1 + 0.1, r.y + 0.3, r.z1 + 0.1, 'concrete');
+  for (const roof of BUILDING.roofs) {
+    const outer = { x0: roof.x0 - 0.1, z0: roof.z0 - 0.1, x1: roof.x1 + 0.1, z1: roof.z1 + 0.1 };
+    for (const r of rectMinus(outer, roof.minus ?? [])) b.box(r.x0, roof.y, r.z0, r.x1, roof.y + 0.3, r.z1, 'concrete');
+  }
 
   // Walls, doors and windows
   for (const floor of BUILDING.floors) {
@@ -117,7 +120,8 @@ export function buildBuilding(baseCtx) {
         // hairline cracks that sparkle. (Same material, same world-aligned
         // texture, so the overlap can't be seen; walls hide room boundaries.)
         const e = SEAM_OVERLAP;
-        b.plane(r.x0 - e, r.z0 - e, r.x1 + e, r.z1 + e, floor.y, room.floor);
+        // (noFloor: something else is the floor, like the roof's slab.)
+        if (!room.noFloor) b.plane(r.x0 - e, r.z0 - e, r.x1 + e, r.z1 + e, floor.y, room.floor);
         if (room.ceiling) b.plane(r.x0 - e, r.z0 - e, r.x1 + e, r.z1 + e, floor.y + room.ceiling, room.home ? 'trim' : 'ceiling', true);
         const fixture = 'fixture' in room ? room.fixture : 'light';
         if (room.home) addHomeLight(b, r, lightY);
@@ -276,7 +280,7 @@ export function buildBuilding(baseCtx) {
       const floorIndex = this.floorIndexAt(pos.y);
       const floorId = BUILDING.floors[floorIndex].id;
       if (inRect(elevatorRect, pos.x, pos.z)) return `${floorId} · Elevator`;
-      if (inRect(BUILDING.stairwell, pos.x, pos.z)) return `${floorId} · Stairwell`;
+      if (inRect(BUILDING.stairwell, pos.x, pos.z) && floorId !== 'Roof') return `${floorId} · Stairwell`;
       const room = rooms.find((r) => r.floorIndex === floorIndex && r.rects.some((rect) => inRect(rect, pos.x, pos.z)));
       if (!room) return floorId;
       if (room.home) return `Home · ${room.name}`;

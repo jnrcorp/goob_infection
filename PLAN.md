@@ -208,7 +208,15 @@ Each milestone ends in something you can play.
   - Her executive override takes over your hazard suit. It walks you, with no control, to the control room and presses CELL RELEASE while she talks over the suit radio.
   - She slips away up the hidden elevator.
   - Two officers catch you at the console, see the override blinking on your visor, and send you to find her.
-  - She's at her desk in the 3F CEO's office as if nothing happened. Find her, she's arrested again, and **The End**.
+- **The hunt (part 2):** her office on 3F is empty, apart from a recorded message: she's on the roof with the last shuttle to Mars, she has restarted the vats, and her security never went home.
+  1. **Transmitters:** smash the four suit-override transmitters (B1 server room, 1F mail room, 2F IT closet, 3F records room).
+     - A loyal guard patrols every floor.
+     - After each smash, Victoria grabs your suit for a few seconds and walks you toward the nearest infected.
+  2. **Night shift:** cure the six infected night-shift workers roaming HQ. Hank the janitor gives you the roof key.
+  3. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
+  4. **Boss:** Victoria in a goob-powered executive suit circles you and lobs globs of goob.
+     - Blast her (right mouse) to stun her, then spray her (F) to strip a layer of goob armor.
+     - Five layers and she's done. She dashes away when you get close, and throws three globs at once from layer three. The officers arrive, and **The End**.
 
 ## Still open (answer any time; defaults in brackets)
 
