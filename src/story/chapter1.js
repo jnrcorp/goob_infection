@@ -52,7 +52,7 @@ const OUTBREAK_SEEDS = {
 // Top to bottom, for the HUD's by-floor breakdown.
 const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
-const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE', 'C2_CURE', 'C2_TRANSMITTERS', 'C2_NIGHTSHIFT', 'C2_ROOF']);
+const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE', 'C2_CURE', 'C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF']);
 // Hard: how close (m) and how long (s) an infected has to stay against a
 // cured coworker to re-infect them.
 const REINFECT_RANGE = 0.8;
@@ -466,8 +466,11 @@ export class Chapter1 {
   floorBreakdown() {
     if (!difficulty().floorBreakdown) return null;
     const totals = Object.fromEntries(AREAS.map((a) => [a, 0]));
-    if (this.state === 'GET_VACUUM' || this.state === 'CLEANUP') {
-      for (const blob of this.goob.blobs.values()) totals[this.areaOf(blob.node)] += blob.volume;
+    if (this.state === 'GET_VACUUM' || this.state === 'CLEANUP' || this.state === 'C2_CLEANUP') {
+      for (const blob of this.goob.blobs.values()) {
+        const area = this.areaOf(blob.node);
+        if (area in totals) totals[area] += blob.volume;
+      }
       const whole = this.goob.collected + this.goob.remaining;
       if (whole <= 0) return null;
       return {
@@ -516,7 +519,7 @@ export class Chapter1 {
   binEnabled(bin) {
     if (this.busy || bin.loaded) return false;
     if (this.state === 'SECURE') return !this.hauler.carrying;
-    return this.vacuum.equipped && (this.state === 'GET_VACUUM' || this.state === 'CLEANUP');
+    return this.vacuum.equipped && (this.state === 'GET_VACUUM' || this.state === 'CLEANUP' || this.state === 'C2_CLEANUP');
   }
 
   emptyTank() {
@@ -527,7 +530,8 @@ export class Chapter1 {
     const amount = this.vacuum.empty();
     sfx.pour();
     this.hud.toast(`Emptied ${Math.round(amount)} L of goob into the bin. Checkpoint saved.`, 2.5);
-    this.saveCheckpoint();
+    if (this.chapter === 2) this.ch2.saveCheckpoint();
+    else this.saveCheckpoint();
   }
 
   takeTape(tape) {

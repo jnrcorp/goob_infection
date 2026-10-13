@@ -14,6 +14,10 @@ import { sfx } from '../core/sound.js';
 //                    control your suit (one on each floor B1-3F), past her
 //                    loyal night security and the infected night shift.
 //                    Each one you smash, she yanks your suit around.
+//   C2_CLEANUP       the restarted vats flooded HQ: vacuum it all up (empty
+//                    the tank into the yellow bins), floor by floor.
+//   C2_EVIDENCE      she shredded her records on the way out: find the eight
+//                    scraps scattered around HQ, for the case against her.
 //   C2_NIGHTSHIFT    cure the six infected night-shift workers; Hank the
 //                    janitor has the roof key.
 //   C2_ROOF          ride the elevator up to the roof.
@@ -48,12 +52,27 @@ const NIGHT_SHIFT = [
   { name: 'Deb', x: 19.5, y: 8, z: 18.5 },
   { name: 'Stan', x: 2, y: -4, z: 22.4 },
 ];
+// The shredded evidence: scraps dropped on the floor across HQ as she fled.
+const EVIDENCE = [
+  { x: 8, y: -4, z: 11.6, what: 'a strip of the vat assignment sheet' },
+  { x: 6, y: 0, z: 15, what: 'a corner of an Employee of the Month certificate' },
+  { x: 17, y: 0, z: 8.2, what: 'half a shipping manifest: MARS 7, CARGO: \u201cINPUT\u201d' },
+  { x: 1.2, y: 4, z: 5.2, what: 'a torn memo: \u201cDale must never see this\u201d' },
+  { x: 19.5, y: 4, z: 17.2, what: 'a scrap of the override codes for every hazard suit' },
+  { x: 9.2, y: 4, z: 20, what: 'a payment slip from the Board, marked \u201cdiscretion\u201d' },
+  { x: 17, y: 8, z: 7, what: 'a page of the board minutes: \u201capproved: Mars program\u201d' },
+  { x: 20, y: 8, z: 16, what: 'a photo of the next rotation, with your face circled' },
+];
+// Goob left when the cleanup counts as done (liters; a few stray drops are fine).
+const CLEAN_ENOUGH = 3;
 const ROOF_LOCKED = 'The ROOF button won’t light. It needs a key. (Hank the janitor has one.)';
 const ROOF_ARRIVAL = { x: 16.5, y: 12, z: 11.6, yaw: Math.PI };
 const BOSS_START = { x: 7, z: 16 };
 
 const OBJECTIVES = {
   C2_TRANSMITTERS: (left) => `Smash Victoria’s suit-override transmitters (${4 - left.length}/4): ${left.join(', ')}. Avoid her night security (C to crouch).`,
+  C2_CLEANUP: (liters) => `The restarted vats flooded HQ. Vacuum up the goob and empty your tank into the yellow bins (${Math.ceil(liters)} L left). The HUD shows each floor.`,
+  C2_EVIDENCE: (found) => `She shredded her records on the way out. Find the scraps scattered around HQ (${found}/${EVIDENCE.length}) for the case against her.`,
   C2_NIGHTSHIFT: (cured) => `Cure the infected night shift (${cured}/${NIGHT_SHIFT.length}) with the antidote (F). Hank the janitor has the roof key.`,
   C2_ROOF: 'You have the roof key. Take the elevator up to the roof.',
   C2_BOSS: (armor) => `Stop Victoria. Blast her with the vacuum (right mouse), then spray her with the antidote (F) while she’s stunned. Armor: ${armor}/5.`,
@@ -128,6 +147,36 @@ export class Part2 {
       ch2.sightIgnore.add(g.collider);
     }
 
+    // Evidence scraps: a crumpled bit of paper with a faint glow.
+    const paperMat = new THREE.MeshLambertMaterial({ color: 0xf2eee2, emissive: 0x3a382e });
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.4, depthWrite: false });
+    this.evidence = EVIDENCE.map((e, i) => {
+      const g = new THREE.Group();
+      const paper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.01, 0.14), paperMat);
+      paper.position.y = 0.01;
+      paper.rotation.set(0.15, i * 1.3, -0.1);
+      const torn = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.01, 0.18), paperMat);
+      torn.position.set(0.12, 0.012, 0.05);
+      torn.rotation.y = 0.8 + i;
+      const halo = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), glowMat);
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.y = 0.006;
+      const pick = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 0.6), new THREE.MeshBasicMaterial({ visible: false }));
+      pick.position.y = 0.1;
+      g.add(halo, paper, torn, pick);
+      g.position.set(e.x, e.y, e.z);
+      g.visible = false;
+      scene.add(g);
+      const item = { ...e, group: g, found: false };
+      interactions.add({
+        mesh: [paper, torn, pick],
+        label: 'Pick up the shredded scrap',
+        enabled: () => this.active && g.visible && !item.found && !this.ch1.busy,
+        use: () => this.pickEvidence(item),
+      });
+      return item;
+    });
+
     this.boss = new GoobExec(scene, ch2.ch1.victoria.def.look);
     this.time = 0;
   }
@@ -153,6 +202,7 @@ export class Part2 {
   stop() {
     this.active = false;
     for (const t of this.transmitters) t.group.visible = false;
+    for (const e of this.evidence) e.group.visible = false;
     for (const g of this.guards) g.setVisible(false);
     this.boss.stop();
     this.ch2.world.elevator.floorLocks = null;
@@ -170,7 +220,7 @@ export class Part2 {
     await ch1.dialogue.play(MESSAGE);
     if (token !== ch1.token) return;
     ch1.busy = false;
-    this.setup({ transmitters: [false, false, false, false], cured: [], key: false });
+    this.setup({ transmitters: [false, false, false, false], cured: [], key: false, evidence: [], cleaned: false });
     ch1.equipVacuum();
     ch1.equipAntidote();
     this.ch2.hud.toast('Your vacuum and antidote are clipped to your suit. You’re going to need them.', 4);
@@ -181,7 +231,14 @@ export class Part2 {
   setup(progress) {
     const ch2 = this.ch2;
     this.active = true;
-    this.progress = { transmitters: [...progress.transmitters], cured: [...progress.cured], key: !!progress.key };
+    this.progress = {
+      transmitters: [...progress.transmitters], cured: [...progress.cured], key: !!progress.key,
+      evidence: [...(progress.evidence ?? [])], cleaned: !!progress.cleaned,
+    };
+    this.evidence.forEach((e, i) => {
+      e.found = this.progress.evidence.includes(i);
+      e.group.visible = !e.found;
+    });
     this.transmitters.forEach((t, i) => {
       t.destroyed = this.progress.transmitters[i];
       t.group.visible = !t.destroyed;
@@ -212,13 +269,18 @@ export class Part2 {
       npc.infect();
       npc.brain.reset(3);
     }
-    // Goob's back in HQ (from the restarted vats).
+    // Goob's back in HQ (from the restarted vats): out of every vent and in
+    // puddles across each floor. Once it's been cleaned up it stays gone.
     const goob = ch2.goob;
     goob.reset();
-    for (const node of ch2.graph.nodes) {
-      if (node.kind === 'vent' && node.pos.y > -5 && Math.random() < 0.6) goob.spawn(node, 1.5);
+    if (!this.progress.cleaned) {
+      for (const node of ch2.graph.nodes) {
+        if (node.pos.y < -5 || node.pos.y > 10) continue;
+        if (node.kind === 'vent') goob.spawn(node, 2.2);
+        else if (node.kind === 'floor' && !this.ch1.world.areaAt(node.pos).startsWith('Out') && Math.random() < 0.08) goob.spawn(node, 1.6);
+      }
     }
-    goob.spreading = true;
+    goob.spreading = !this.progress.cleaned;
     ch2.world.elevator.floorLocks = this.progress.key ? null : { 4: ROOF_LOCKED };
     this.boss.stop();
     // Fresh duct tape everywhere (two rolls are on the roof, for the fight).
@@ -235,18 +297,25 @@ export class Part2 {
   objectiveFor(state) {
     if (state === 'C2_TRANSMITTERS') return OBJECTIVES.C2_TRANSMITTERS(this.transmitters.filter((t) => !t.destroyed).map((t) => t.where));
     if (state === 'C2_NIGHTSHIFT') return OBJECTIVES.C2_NIGHTSHIFT(this.progress.cured.length);
+    if (state === 'C2_CLEANUP') return OBJECTIVES.C2_CLEANUP(this.ch2.goob.remaining);
+    if (state === 'C2_EVIDENCE') return OBJECTIVES.C2_EVIDENCE(this.evidence.filter((e) => e.found).length);
     if (state === 'C2_BOSS') return OBJECTIVES.C2_BOSS(this.boss.armor ?? 5);
     return OBJECTIVES[state] ?? null;
   }
 
   snapshot() {
-    return this.active ? { ...this.progress, transmitters: this.transmitters.map((t) => t.destroyed) } : null;
+    if (!this.active) return null;
+    return {
+      ...this.progress,
+      transmitters: this.transmitters.map((t) => t.destroyed),
+      evidence: this.evidence.flatMap((e, i) => (e.found ? [i] : [])),
+    };
   }
 
   // Restoring a checkpoint taken in part 2 (Chapter2.restore has set up the
   // facility and the aftermath; the player is already in place).
   restore(c) {
-    this.setup(c.part2 ?? { transmitters: [false, false, false, false], cured: [], key: false });
+    this.setup(c.part2 ?? { transmitters: [false, false, false, false], cured: [], key: false, evidence: [], cleaned: false });
     const ch1 = this.ch1;
     ch1.equipVacuum();
     ch1.equipAntidote();
@@ -272,7 +341,7 @@ export class Part2 {
     }
     await this.overrideEvent(2);
     this.ch2.hud.toast('Victoria (suit radio): Fine. No more leash. Come up to the roof, Champ. If you can get there.', 4.5);
-    this.enter(this.progress.cured.length >= NIGHT_SHIFT.length ? (this.progress.key ? 'C2_ROOF' : 'C2_NIGHTSHIFT') : 'C2_NIGHTSHIFT', true);
+    this.enter('C2_CLEANUP', true);
   }
 
   // Victoria grabs your suit for a few seconds and walks you toward the
@@ -319,6 +388,37 @@ export class Part2 {
       if (d < range && (!best || d < best.d)) best = { d, pos: npc.pos };
     }
     return best;
+  }
+
+  // ---------- The cleanup and the evidence ----------
+
+  // Called each frame during the cleanup: done once (nearly) all the goob is
+  // vacuumed up and the tank's been emptied.
+  checkCleanup() {
+    const goob = this.ch2.goob;
+    this.ch1.hud.setObjective(this.objectiveFor('C2_CLEANUP'));
+    if (goob.remaining > CLEAN_ENOUGH || this.ch1.vacuum.tank > 0.5) return;
+    goob.reset();
+    goob.spreading = false;
+    this.progress.cleaned = true;
+    this.ch2.hud.toast('HQ is clean. The vats upstairs gurgle, and go quiet.', 3);
+    this.enter('C2_EVIDENCE', true);
+  }
+
+  pickEvidence(item) {
+    item.found = true;
+    item.group.visible = false;
+    sfx.pickup();
+    const found = this.evidence.filter((e) => e.found).length;
+    this.ch2.hud.toast(`Found ${item.what} (${found}/${EVIDENCE.length}).`, 3.5);
+    if (this.state !== 'C2_EVIDENCE') return;
+    if (found >= EVIDENCE.length) {
+      this.ch2.hud.toast('That\u2019s all of it. Enough to put her away for good. Now: the night shift.', 3.5);
+      this.enter(this.progress.cured.length >= NIGHT_SHIFT.length ? (this.progress.key ? 'C2_ROOF' : 'C2_NIGHTSHIFT') : 'C2_NIGHTSHIFT', true);
+    } else {
+      this.ch1.hud.setObjective(this.objectiveFor('C2_EVIDENCE'));
+      this.ch2.saveCheckpoint();
+    }
   }
 
   // ---------- The night shift ----------
@@ -446,11 +546,12 @@ export class Part2 {
     const player = this.ch2.player;
 
     if (state === 'C2_ROOF' && player.pos.y > 11.5 && !ch1.busy) this.startBoss(true);
+    if (state === 'C2_CLEANUP' && !ch1.busy) this.checkCleanup();
     if (state === 'C2_BOSS' && this.boss.active) {
       this.boss.update(dt, player, () => this.damage(this.globDamage()));
     }
 
-    const watching = ['C2_TRANSMITTERS', 'C2_NIGHTSHIFT', 'C2_ROOF'].includes(state) && !ch1.busy && !this.ch2.caughtBusy && !player.rig;
+    const watching = ['C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF'].includes(state) && !ch1.busy && !this.ch2.caughtBusy && !player.rig;
     let suspicion = 0;
     for (const g of this.guards) {
       const s = g.update(dt, player, this.collision, this.ch2.sightIgnore);

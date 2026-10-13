@@ -494,31 +494,44 @@ if (look) {
   player.pitch = THREE.MathUtils.degToRad(look[1] ?? 0);
   player.updateCamera();
 }
-// ?routes: walking distances between part 2's objectives (testing its length).
+// ?routes: walking distances along part 2's whole route (testing its
+// length), and whether its pickups are clear of furniture.
 if (params.has('routes')) {
   const nav = new Navigation(goobGraph);
-  const legs = [
-    ['office -> B1 server', [5, 8, 5], [11.4, -4, 14.2]],
-    ['B1 server -> 1F mail', [11.4, -4, 14.2], [23.45, 0, 9.2]],
-    ['1F mail -> 2F IT', [23.45, 0, 9.2], [20.55, 4, 15.4]],
-    ['2F IT -> 3F records', [20.55, 4, 15.4], [11.4, 8, 23.4]],
-    ['3F records -> Deb (3F)', [11.4, 8, 23.4], [19.5, 8, 18.5]],
-    ['Deb -> Brad (2F)', [19.5, 8, 18.5], [5.5, 4, 13.2]],
-    ['Brad -> Olu (2F)', [5.5, 4, 13.2], [20.5, 4, 3]],
-    ['Olu -> Hank (1F)', [20.5, 4, 3], [18, 0, 5]],
-    ['Hank -> Rhonda (1F)', [18, 0, 5], [6, 0, 18.5]],
-    ['Rhonda -> Stan (B1)', [6, 0, 18.5], [2, -4, 22.4]],
-    ['Stan -> elevator (B1)', [2, -4, 22.4], [16.5, -4, 12.2]],
-  ];
-  let total = 0;
-  for (const [name, a, b] of legs) {
+  const flat = (a, b) => {
     const route = nav.path(nav.nearest(new THREE.Vector3(...a)), nav.nearest(new THREE.Vector3(...b)), true) ?? [];
     let d = 0;
     for (let i = 1; i < route.length; i++) d += route[i].distanceTo(route[i - 1]);
+    return d || Math.hypot(a[0] - b[0], a[2] - b[2]);
+  };
+  // Between floors: to the stairwell, up/down (about 11 m of stairs and
+  // landings per floor), then on from the stairwell.
+  const walk = (a, b) => {
+    if (Math.abs(a[1] - b[1]) < 1) return flat(a, b);
+    return flat(a, [13.5, a[1], 14]) + Math.abs(a[1] - b[1]) / 4 * 11 + flat([13.5, b[1], 14], b);
+  };
+  const stops = [
+    ['B3 control room', [31.6, -12, 21.4]], ['B3 hidden elevator', [9, -12, 22.6]], ['B1 north wall', [9, -4, 22.6]],
+    ["3F Victoria's office", [5, 8, 5]],
+    ['transmitter B1', [11.4, -4, 14.2]], ['transmitter 1F', [22.5, 0, 9.2]], ['transmitter 2F', [20.55, 4, 14.8]], ['transmitter 3F', [11.4, 8, 22.6]],
+    ['cleanup 3F', [12, 8, 11]], ['cleanup 2F', [12, 4, 12]], ['bin 2F', [0.55, 4, 16.1]], ['cleanup 1F', [12, 0, 11.5]], ['bin 1F', [11.8, 0, 12.45]], ['cleanup B1', [12, -4, 11.5]], ['bin B1', [22.9, -4, 11.4]],
+    ['scrap B1', [8, -4, 11.6]], ['scrap 1F a', [6, 0, 15]], ['scrap 1F b', [17, 0, 8.2]], ['scrap 2F a', [1.2, 4, 5.2]], ['scrap 2F b', [19.5, 4, 17.2]], ['scrap 2F c', [9.2, 4, 20]], ['scrap 3F a', [17, 8, 7]], ['scrap 3F b', [20, 8, 16]],
+    ['Deb 3F', [19.5, 8, 18.5]], ['Brad 2F', [5.5, 4, 13.2]], ['Olu 2F', [20.5, 4, 3]], ['Hank 1F', [18, 0, 5]], ['Rhonda 1F', [6, 0, 18.5]], ['Stan B1', [2, -4, 22.4]], ['elevator', [16.5, -4, 12.2]],
+  ];
+  let total = 0;
+  for (let i = 1; i < stops.length; i++) {
+    const [from, a] = stops[i - 1];
+    const [to, b] = stops[i];
+    // (The hidden elevator ride itself isn't walking.)
+    const d = from === 'B3 hidden elevator' ? 0 : walk(a, b);
     total += d;
-    console.log(`[report] route ${name}: ${d.toFixed(0)} m`);
+    console.log(`[report] route ${from} -> ${to}: ${d.toFixed(0)} m`);
   }
   console.log(`[report] routes total ${total.toFixed(0)} m`);
+  for (const [name, p] of stops.filter(([n]) => n.startsWith('scrap') || n.startsWith('transmitter'))) {
+    const inside = collision.pointInside(new THREE.Vector3(p[0], p[1] + 0.1, p[2]));
+    if (inside) console.log(`[report] ${name} at ${p.join(',')} is INSIDE something`);
+  }
 }
 // ?finale=news: just the ending's news bulletin and credits (testing).
 if (params.get('finale') === 'news') chapter.ending.newsAndCredits();

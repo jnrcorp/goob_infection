@@ -212,9 +212,11 @@ Each milestone ends in something you can play.
   1. **Transmitters:** smash the four suit-override transmitters (B1 server room, 1F mail room, 2F IT closet, 3F records room).
      - A loyal guard patrols every floor.
      - After each smash, Victoria grabs your suit for a few seconds and walks you toward the nearest infected.
-  2. **Night shift:** cure the six infected night-shift workers roaming HQ. Hank the janitor gives you the roof key.
-  3. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
-  4. **Boss:** Victoria in a goob-powered executive suit circles you and lobs globs of goob.
+  2. **Cleanup:** the restarted vats flooded HQ (about 180 L, spreading). Vacuum it all up, emptying the tank into the yellow bins, with the per-floor HUD.
+  3. **Evidence:** find the eight scraps of records she shredded as she fled, scattered across B1-3F.
+  4. **Night shift:** cure the six infected night-shift workers roaming HQ. Hank the janitor gives you the roof key.
+  5. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
+  6. **Boss:** Victoria in a goob-powered executive suit circles you and lobs globs of goob.
      - Blast her (right mouse) to stun her, then spray her (F) to strip a layer of goob armor.
      - Five layers and she's done. She dashes away when you get close, and throws three globs at once from layer three. The officers arrive, and **The End**.
 
