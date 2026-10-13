@@ -30,6 +30,13 @@ const FILL = {
   '3F': { sky: 0xf4ecdf, ground: 0x8a7458, intensity: 1.1 },
   Outside: { sky: 0xcfe2f6, ground: 0x7d786c, intensity: 1.5 },
   Home: { sky: 0xf6ead8, ground: 0x8a6e52, intensity: 1.05 },
+  B3: { sky: 0xb8d8c4, ground: 0x4e5a52, intensity: 0.6 },
+};
+// At night (chapter 2) outside is dark: moonlight and the lamps.
+const NIGHT_OUTSIDE = { sky: 0x3a4a6e, ground: 0x1c2026, intensity: 0.35 };
+const SKY = {
+  day: { zenith: 0x6f9ccc, horizon: 0xdde6ec, ground: 0x8a8e8c },
+  night: { zenith: 0x05070f, horizon: 0x1b2438, ground: 0x0c0e12 },
 };
 
 // Afternoon sun from the south-west (the parking lot side), through the windows.
@@ -123,6 +130,10 @@ export function buildBuilding(baseCtx) {
 
   for (const flight of BUILDING.flights) buildStairs(b, collision, flight);
   const elevator = new Elevator(ctx, BUILDING.elevator);
+  const secretElevator = new Elevator(ctx, BUILDING.secretElevator);
+  secretElevator.lockedMessage = 'RESTRICTED. A keypad glows beside the doors: ENTER CODE.';
+  // A lid over the hidden shaft, just under the lawn.
+  b.box(7.4, -0.9, 23.9, 10.6, -0.6, 27.1, 'concrete', { collide: false });
   const props = furnish(ctx);
   // The glass shower door at home: the west side of the shower, hinged at
   // the south wall, reaching the fixed screen on the north side. It always
@@ -139,6 +150,7 @@ export function buildBuilding(baseCtx) {
     rooms,
     doors,
     elevator,
+    secretElevator,
     props,
     lights,
 
@@ -146,6 +158,7 @@ export function buildBuilding(baseCtx) {
     reset() {
       for (const d of doors) d.reset();
       elevator.reset();
+      secretElevator.reset();
       props.suit.group.visible = true;
       this.setCanisterVisible(true);
     },
@@ -173,6 +186,18 @@ export function buildBuilding(baseCtx) {
     // the sun would shine through walls, so on Low it only lights the outdoors.
     shadows: 'none',
 
+    // Night (chapter 2): no sun, a dark sky, dim outdoor fill. The room and
+    // lamp-post lights are unchanged.
+    night: false,
+    setNight(on, scene) {
+      this.night = on;
+      const c = on ? SKY.night : SKY.day;
+      sky.material.uniforms.uZenith.value.set(c.zenith);
+      sky.material.uniforms.uHorizon.value.set(c.horizon);
+      sky.material.uniforms.uGround.value.set(c.ground);
+      scene.background?.set(on ? 0x05070f : 0x9fb4c8);
+    },
+
     setShadows(mode, renderer) {
       this.shadows = mode;
       renderer.shadowMap.enabled = mode !== 'none';
@@ -192,16 +217,17 @@ export function buildBuilding(baseCtx) {
     update(dt, player) {
       for (const d of doors) d.update(dt, player);
       elevator.update(dt, player);
+      secretElevator.update(dt, player);
       props.canister.goob.rotation.y += dt * 0.6;
       lights.update(player.pos);
 
       const area = this.areaAt(player.pos);
-      const target = FILL[area] ?? FILL['1F'];
+      const target = this.night && area === 'Outside' ? NIGHT_OUTSIDE : FILL[area] ?? FILL['1F'];
       const k = 1 - Math.exp(-4 * dt);
       fill.color.lerp(tmpColor.set(target.sky), k);
       fill.groundColor.lerp(tmpColor.set(target.ground), k);
       fill.intensity += (target.intensity - fill.intensity) * k;
-      const sunOn = this.shadows !== 'none' || area === 'Outside';
+      const sunOn = !this.night && (this.shadows !== 'none' || area === 'Outside');
       sun.intensity += ((sunOn ? SUN.intensity : 0) - sun.intensity) * k;
       sky.position.copy(player.pos);
     },

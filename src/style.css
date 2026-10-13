@@ -877,3 +877,45 @@ html, body {
   #alarm { animation: none; opacity: 0.6; }
   .news-ticker span { animation: none; padding-left: 0; }
 }
+
+/* Chapter 2: the guard suspicion meter, just above the crosshair. */
+#detect {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+}
+
+#detect[hidden] {
+  display: none;
+}
+
+.detect-eye {
+  font-size: 20px;
+  filter: grayscale(1) brightness(1.8);
+}
+
+.detect-bar {
+  width: 120px;
+  height: 8px;
+  border: 2px solid #ffe08a;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.detect-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #ffe08a;
+}
+
+#detect.alert .detect-bar {
+  border-color: #ff4a3a;
+}
+
+#detect.alert .detect-bar i {
+  background: #ff4a3a;
+}

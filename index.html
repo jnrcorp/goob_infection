@@ -20,6 +20,8 @@
     <div id="crosshair"></div>
     <div id="prompt" hidden></div>
     <div id="toast" hidden></div>
+    <!-- Chapter 2: how close a guard is to spotting you. -->
+    <div id="detect" hidden><span class="detect-eye">&#128065;</span><div class="detect-bar"><i id="detect-fill"></i></div></div>
     <div id="debug" hidden></div>
     <div id="goob-hud" hidden>
       <div class="goob-row" id="suit-row">
@@ -93,6 +95,7 @@
     <nav class="menu" aria-label="Main menu">
       <button id="menu-continue" type="button" hidden>Continue</button>
       <button id="menu-play" type="button" disabled>Play Chapter 1: The Infection</button>
+      <button id="menu-play2" type="button" disabled>Play Chapter 2: The True Facility</button>
       <button id="menu-difficulty" type="button" disabled>Difficulty: Normal</button>
       <button id="menu-quality" type="button" disabled>Graphics: Auto</button>
       <button id="menu-volume" type="button" disabled>Volume: 75%</button>
@@ -100,7 +103,7 @@
     </nav>
     <p class="difficulty-note" id="difficulty-note"></p>
     <p class="hint">WASD move (in the car: W/S gas and brake, A/D steer) · Mouse look · E interact · Shift run · Space jump · Esc pause<br>
-      Vacuum: left mouse suck · right mouse blast · F antidote · Q let go of a bin · J files</p>
+      C crouch · Vacuum: left mouse suck · right mouse blast · F antidote · Q let go of a bin · J files</p>
   </section>
 
   <section id="pause" class="screen dim-screen" hidden>

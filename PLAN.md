@@ -176,6 +176,35 @@ Each milestone ends in something you can play.
   - The credits roll, then **The End**.
 - There's one ending: exposing Goob Co. (The old "keep quiet" ending was removed.)
 
+## Chapter 2: The True Facility
+
+- **Setup:** a week after chapter 1, at night. You wake to the alarm; Dr. Pell has slipped a letter under your door.
+  - The rotation never stopped: the next "Employees of the Month" are held on B3, a floor under HQ that isn't on any plan.
+  - The letter gives the code to a hidden elevator in B1's north wall.
+- **Home:** read the letter, grab your hazard gear (suit, vacuum and antidote), grab your keys, then drive to the taped-off HQ.
+- **Infiltrate:** get down to B1 and use the keypad (the code works once you've read the letter). Ride down 8 m to B3.
+- **B3 layout:**
+  - an elevator lobby ("THERE IS NO B2")
+  - a security office, staff lockers and a staff corridor
+  - a central corridor
+  - six holding cells with glass doors
+  - a shipping bay ("NEXT LAUNCH: FRIDAY")
+  - a processing hall with four great vats
+  - a control room overlooking the hall
+  - a guard break room
+- **Stealth:**
+  - Three guards patrol with flashlights. Being seen fills their suspicion; closer, standing and moving fill it faster, and crouching (C) halves how far they see.
+  - The beam and the meter over the crosshair warm from yellow to red.
+  - Full suspicion means you're caught and sent back to the last checkpoint.
+  - A vacuum blast knocks a guard out for 9 seconds.
+- **Objectives:**
+  1. Take the keycard from the security office desk (unlocks the control room).
+  2. Press CELL RELEASE.
+  3. Cure Kevin and Luis, who are infected.
+  4. Get all six freed prisoners (Dr. Pell, Martin, Nell, Kevin, Ivo, Luis) to the lobby.
+  5. Take the elevator up.
+- **Ending:** police in the lot at night, the rescued six speak, a news bulletin ("THERE IS NO B2"), chapter 2 credits.
+
 ## Still open (answer any time; defaults in brackets)
 
 - ~~Player name and company name~~: you're **Champ** (what Dale calls you), at Goob Co. Every desk has a nameplate; yours is gold, with a trophy.

@@ -220,9 +220,11 @@ export function createCast(ctx, props) {
     setEnv(env) {
       for (const npc of all) npc.setEnv(env);
     },
+    // Other bodies to keep clear of (set by chapter 2: its guards).
+    extras: () => [],
     update(dt, player) {
       for (const npc of all) npc.update(dt, player);
-      separate(all);
+      separate(all, this.extras());
     },
   };
 }
@@ -302,14 +304,18 @@ function trophy(ctx, seat) {
   part(new THREE.BoxGeometry(0.13, 0.015, 0.015), gold, 0.14);
 }
 
-// Nobody walks through anybody: people standing or walking keep a body's
-// width apart (0.6 m, shoulder to shoulder). Overlaps are pushed apart
-// completely each frame, a few passes so crowds settle; walls still stop
-// them (move() collides). Someone seated stays put and only the other one
-// moves.
-const PERSONAL_SPACE = 0.6;
+// Nobody walks through anybody: people standing or walking keep 0.8 m
+// apart, center to center (shoulders plus swinging arms; 0.6 m let arms
+// clip into the person next to them). Overlaps are pushed apart completely
+// each frame, a few passes so crowds settle; walls still stop them (move()
+// collides). Someone seated stays put and only the other one moves.
+// extras: other bodies people must keep clear of, which are never pushed
+// themselves (chapter 2's guards): [{ pos }].
+const PERSONAL_SPACE = 0.8;
 const SEPARATE_PASSES = 3;
-function separate(npcs) {
+function separate(all, extras = []) {
+  // Hidden people (chapter 2 borrows a few; the rest are put away) don't count.
+  const npcs = [...all.filter((n) => n.person.root.visible), ...extras.map((e) => ({ pos: e.pos, seated: true, fixed: true }))];
   const moved = new Set();
   for (let pass = 0; pass < SEPARATE_PASSES; pass++) {
     let any = false;
@@ -317,7 +323,7 @@ function separate(npcs) {
       const a = npcs[i];
       for (let j = i + 1; j < npcs.length; j++) {
         const b = npcs[j];
-        if (a.seated && b.seated) continue;
+        if ((a.seated || a.fixed) && (b.seated || b.fixed)) continue;
         if (Math.abs(a.pos.y - b.pos.y) > 1) continue;
         const dx = b.pos.x - a.pos.x;
         const dz = b.pos.z - a.pos.z;
@@ -338,5 +344,5 @@ function separate(npcs) {
     }
     if (!any) break;
   }
-  for (const npc of moved) npc.syncBody();
+  for (const npc of moved) npc.syncBody?.();
 }

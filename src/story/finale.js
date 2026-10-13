@@ -36,6 +36,34 @@ const NEWS = [
   'CEO Victoria has been taken into custody. Goob Co.’s Mars shipments are grounded, and health officials urge anyone with goob at home not to eat it. Under any circumstances.',
   'The whistleblower, known to coworkers only as “Champ,” declined to comment. Coming up after the break: is your office plant plotting against you?',
 ];
+const RESCUED = [
+  { speaker: 'Dr. Pell', text: 'Fresh air. Real air. Not goob air. Champ, I owe you my life. All of us do.' },
+  { speaker: 'Nell', text: 'Six of us. Six of us who aren’t going to Mars on Friday.' },
+  { speaker: 'Martin', text: 'I’m going to find every plaque Victoria ever handed out, and I’m going to melt them down.' },
+  { speaker: 'Kevin', text: 'I’m still a little green. Is that normal? Dr. Pell, is that normal?' },
+  { speaker: 'Dr. Pell', text: 'Perfectly normal, Kevin. Probably. Let’s get you all home.' },
+];
+const NEWS_2 = [
+  'Good evening. A week after Goob Co. was shut down, police have uncovered a secret facility beneath the company’s headquarters: a level not shown on any building plan.',
+  'Six employees were found held in cells there, scheduled for what internal documents call “transfer.” All six were brought out alive by the same anonymous whistleblower known only as “Champ.”',
+  'Goob Co.’s final Mars shipment, set to launch Friday, has been seized. Authorities say the facility’s vats will be drained and sealed. And no, there was no B2.',
+];
+const CREDITS_2 = `
+  <h2>The Goob Infection</h2>
+  <p class="credits-sub">Chapter 2: The True Facility</p>
+  <h3>Starring</h3>
+  <p>Champ <span>as themselves, again</span></p>
+  <p>Dr. Pell <span>as The Letter Writer</span></p>
+  <p>Martin · Nell · Kevin · Ivo · Luis <span>as The Next Rotation</span></p>
+  <p>Guard Reyes · Guard Blake · Guard Okoro <span>as Security (Night Shift)</span></p>
+  <p>The Goob <span>as The Goob</span></p>
+  <h3>In memory of</h3>
+  <p>Gary Pruitt · Denise Okafor · Phil Hammond · Rosa Delgado · Ken Ashby</p>
+  <h3>Game</h3>
+  <p>jnrcorp, with Claude</p>
+  <p class="credits-note">There is no B2.</p>
+  <h2 class="credits-end">Thanks for playing</h2>
+`;
 const CREDITS_SECONDS = 40;
 const CREDITS = `
   <h2>The Goob Infection</h2>
@@ -208,6 +236,37 @@ export class Finale {
     });
   }
 
+  // Chapter 2's ending: up out of B3 into the parking lot at night, where
+  // the police are already raiding the building; the people you freed say a
+  // few words, then the news and the credits.
+  async runChapter2(rescued) {
+    this.running = true;
+    const { player, fx, dialogue } = this;
+    await fx.fade(1, 0.8);
+    for (const car of this.cars) car.visible = true;
+    rescued.forEach((npc, i) => {
+      npc.path = null;
+      npc.onArrive = null;
+      npc.brain = null;
+      npc.mode = 'stand';
+      npc.talkable = false;
+      const g = GATHER[i % GATHER.length];
+      npc.pos.set(g.x, 0, g.z);
+      npc.home.copy(npc.pos);
+      npc.yaw = Math.atan2(PLAYER_SPOT.x - g.x, PLAYER_SPOT.z - g.z);
+    });
+    player.rig = null;
+    player.spawn({ ...PLAYER_SPOT, yaw: Math.atan2(PLAYER_SPOT.x - 13.4, PLAYER_SPOT.z + 6.4) });
+    player.lookTarget = { x: 13.4, y: 1.5, z: -6.4 };
+    this.sirenIn = 0;
+    await fx.fade(0, 1.2);
+    await dialogue.play(RESCUED);
+    await fx.fade(1, 1.2);
+    await this.news(NEWS_2, { headline: 'BREAKING: SECRET GOOB FACILITY FOUND UNDER HQ', graphic: 'THERE IS<br>NO B2' });
+    await this.credits(CREDITS_2);
+    this.running = false;
+  }
+
   // Testing: the news and credits on their own (?finale=news).
   async newsAndCredits() {
     this.running = true;
@@ -217,18 +276,20 @@ export class Finale {
   }
 
   // A TV news bulletin, one line at a time (E, Space, Enter or a click moves on).
-  news() {
+  news(lines = NEWS, { headline = 'BREAKING: GOOB CO. CEO ARRESTED', graphic = 'GOOB CO.<br>SHUT DOWN' } = {}) {
     const el = document.getElementById('news');
     const text = document.getElementById('news-text');
+    el.querySelector('.news-headline').textContent = headline;
+    el.querySelector('.news-graphic').innerHTML = graphic;
     el.hidden = false;
-    return this.advance(NEWS, (line) => { text.textContent = line; }, 9).then(() => { el.hidden = true; });
+    return this.advance(lines, (line) => { text.textContent = line; }, 9).then(() => { el.hidden = true; });
   }
 
   // Scrolling credits (any key or a click skips to the end).
-  credits() {
+  credits(html = CREDITS) {
     const el = document.getElementById('credits');
     const roll = document.getElementById('credits-roll');
-    roll.innerHTML = CREDITS;
+    roll.innerHTML = html;
     el.hidden = false;
     // Scroll from below the screen until the last line has gone off the top.
     const start = performance.now();
