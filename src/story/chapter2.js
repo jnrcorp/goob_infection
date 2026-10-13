@@ -21,7 +21,7 @@ import { sfx } from '../core/sound.js';
 
 const CODE = '4-2-7-9';
 // Part 2 (after the credits): see part2.js.
-const PART2_STATES = ['C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS'];
+const PART2_STATES = ['C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'];
 const HOLDING_DOOR_X = 7; // the holding area's door to the corridor
 const FILE_OUT_GAP = 1.4; // seconds between freed prisoners leaving their cells
 const B3_Y = -12;
@@ -547,10 +547,10 @@ export class Chapter2 {
       secretFloor: ['C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', 'C2_LEAVE'].includes(state) ? 0 : 1,
       part2: {
         transmitters: [0, 1, 2, 3].map(() => state !== 'C2_TRANSMITTERS'),
-        cured: ['C2_ROOF', 'C2_BOSS'].includes(state) ? ['Hank', 'Rhonda', 'Brad', 'Olu', 'Deb', 'Stan'] : [],
-        key: ['C2_ROOF', 'C2_BOSS'].includes(state),
+        cured: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'].includes(state) ? ['Hank', 'Rhonda', 'Brad', 'Olu', 'Deb', 'Stan'] : [],
+        key: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'].includes(state),
         cleaned: !['C2_TRANSMITTERS', 'C2_CLEANUP'].includes(state),
-        evidence: ['C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS'].includes(state) ? [0, 1, 2, 3, 4, 5, 6, 7] : [],
+        evidence: ['C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'].includes(state) ? [0, 1, 2, 3, 4, 5, 6, 7] : [],
       },
       prisoners: state === 'C2_LEAVE' ? this.prisoners.map((q, i) => ({ name: q.name, infected: false, freed: true, x: LOBBY_SPOTS[i].x, z: LOBBY_SPOTS[i].z })) : null,
     });

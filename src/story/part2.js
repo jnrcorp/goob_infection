@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Guard } from './guards.js';
 import { GoobExec } from './boss.js';
+import { FinalRun } from './finalRun.js';
 import { CURED_LINES } from '../npc/cast.js';
 import { difficulty } from '../core/settings.js';
 import { sfx } from '../core/sound.js';
@@ -100,8 +101,8 @@ const BOSS_INTRO = [
 const BOSS_DEFEAT = [
   { speaker: 'Victoria', text: 'No… no, the suit… it’s coming apart…' },
   { speaker: 'Officer Diaz', text: 'Victoria! Stay down! It’s over!' },
-  { speaker: 'Victoria', text: 'Over? Goob is forever, Champ. Somebody always wants more.' },
-  { speaker: 'Officer Kim', text: 'Not from this company. Not anymore. Champ, you okay in there?' },
+  { speaker: 'Victoria', text: 'Over? I always have a way out, officer. Goob is forever, Champ.' },
+  { speaker: 'Officer Kim', text: 'She’s in the elevator! She’s going down! Champ, take the stairs, we’ll cut her off!' },
 ];
 
 export class Part2 {
@@ -178,6 +179,7 @@ export class Part2 {
     });
 
     this.boss = new GoobExec(scene, ch2.ch1.victoria.def.look);
+    this.finalRun = new FinalRun(this);
     this.time = 0;
   }
 
@@ -196,7 +198,7 @@ export class Part2 {
   // Things the vacuum blast and the antidote can hit (guards and the boss).
   get targets() {
     if (!this.active) return [];
-    return [...this.guards.filter((g) => g.active), ...(this.boss.active ? [this.boss] : [])];
+    return [...this.guards.filter((g) => g.active), ...(this.boss.active ? [this.boss] : []), ...this.finalRun.targets];
   }
 
   stop() {
@@ -320,6 +322,8 @@ export class Part2 {
     ch1.equipVacuum();
     ch1.equipAntidote();
     if (c.state === 'C2_BOSS') this.startBoss(false);
+    else if (c.state === 'C2_CHASE') this.finalRun.startChase(false);
+    else if (c.state === 'C2_ESCORT') this.finalRun.startEscort(false);
     else ch1.setState(c.state, this.objectiveFor(c.state), false);
   }
 
@@ -430,6 +434,7 @@ export class Part2 {
       this.bossHit();
       return true;
     }
+    if (this.finalRun.cureFollower(npc)) return true;
     const n = this.nightShift.find((q) => q.npc === npc);
     if (!n) return false;
     npc.cure(CURED_LINES[npc.name] ?? CURED_LINES.default);
@@ -514,13 +519,12 @@ export class Part2 {
     });
     await ch1.dialogue.play(BOSS_DEFEAT);
     if (token !== ch1.token) return;
-    await ch1.fx.fade(1, 1.8);
+    // She gets away from the roof: the chase is on (finalRun.js).
+    await ch1.fx.fade(1, 0.8);
     if (token !== ch1.token) return;
-    ch1.onEnd?.({
-      title: 'The End',
-      text: 'Victoria’s goob suit came apart on the roof, a few hours before dawn. The last shuttle to Mars never launched. The vats were drained, the transmitters bagged as evidence, and the night shift went home. The rotation is over. Goob Co. is over. You kept the suit. It doesn’t blink anymore.',
-      hint: 'Thanks for playing The Goob Infection.',
-    });
+    for (const o of officers) o.root.visible = false;
+    this.finalRun.startChase();
+    await ch1.fx.fade(0, 0.6);
   }
 
   damage(amount) {
@@ -547,6 +551,7 @@ export class Part2 {
 
     if (state === 'C2_ROOF' && player.pos.y > 11.5 && !ch1.busy) this.startBoss(true);
     if (state === 'C2_CLEANUP' && !ch1.busy) this.checkCleanup();
+    this.finalRun.update(dt);
     if (state === 'C2_BOSS' && this.boss.active) {
       this.boss.update(dt, player, () => this.damage(this.globDamage()));
     }

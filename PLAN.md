@@ -218,7 +218,13 @@ Each milestone ends in something you can play.
   5. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
   6. **Boss:** Victoria in a goob-powered executive suit circles you and lobs globs of goob.
      - Blast her (right mouse) to stun her, then spray her (F) to strip a layer of goob armor.
-     - Five layers and she's done. She dashes away when you get close, and throws three globs at once from layer three. The officers arrive, and **The End**.
+     - Five layers and she's done. She dashes away when you get close, and throws three globs at once from layer three. The officers arrive.
+  7. **Chase:** her suit falls apart and she flees in the elevator. Take the stairs and catch her before she reaches the getaway truck in the loading yard.
+     - She stops now and then to fling goob back at you, and a vacuum blast staggers her.
+     - You have to sprint; walking lets her escape, and you retry the chase.
+  8. **Escort:** lead the six night-shift workers from the 1F break room, through the front doors, to the police line in the parking lot.
+     - Six infected wait along the way. Any that catch a follower re-infect them, and you have to cure them.
+     - All six safe means **The End**.
 
 ## Still open (answer any time; defaults in brackets)
 

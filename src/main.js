@@ -205,6 +205,7 @@ cast.setEnv({
   openDoorsNear: (npc) => world.openDoorsNear(npc),
 });
 let closestEver = null; // see step()
+let autoChaseIn = 0; // see step()
 let gameTime = 0;
 let lastStep = 0; // footstep counter for sounds
 
@@ -517,6 +518,8 @@ if (params.has('routes')) {
     ['cleanup 3F', [12, 8, 11]], ['cleanup 2F', [12, 4, 12]], ['bin 2F', [0.55, 4, 16.1]], ['cleanup 1F', [12, 0, 11.5]], ['bin 1F', [11.8, 0, 12.45]], ['cleanup B1', [12, -4, 11.5]], ['bin B1', [22.9, -4, 11.4]],
     ['scrap B1', [8, -4, 11.6]], ['scrap 1F a', [6, 0, 15]], ['scrap 1F b', [17, 0, 8.2]], ['scrap 2F a', [1.2, 4, 5.2]], ['scrap 2F b', [19.5, 4, 17.2]], ['scrap 2F c', [9.2, 4, 20]], ['scrap 3F a', [17, 8, 7]], ['scrap 3F b', [20, 8, 16]],
     ['Deb 3F', [19.5, 8, 18.5]], ['Brad 2F', [5.5, 4, 13.2]], ['Olu 2F', [20.5, 4, 3]], ['Hank 1F', [18, 0, 5]], ['Rhonda 1F', [6, 0, 18.5]], ['Stan B1', [2, -4, 22.4]], ['elevator', [16.5, -4, 12.2]],
+    ['roof -> chase start 3F', [16.5, 8, 11.6]], ['chase: catch her (loading dock)', [32, 0, 16]],
+    ['escort: break room', [6.5, 0, 18.6]], ['escort: front doors', [19, 0, 1]], ['escort: police line', [17, 0, -6]],
   ];
   let total = 0;
   for (let i = 1; i < stops.length; i++) {
@@ -695,8 +698,11 @@ async function runStartupSimulation() {
     if (closestEver) console.log(`[report] closest anyone walking ever got to someone: ${closestEver.a} and ${closestEver.b}, ${closestEver.d.toFixed(2)} m at t ${closestEver.t.toFixed(1)}s (${closestEver.at}; waiting for ${closestEver.wait})`);
     if (closest) console.log(`[report] closest two people: ${closest.a} and ${closest.b}, ${closest.d.toFixed(2)} m apart`);
     if (chapter.ch2.part2.boss.root.visible) console.log(`[report] boss armor ${chapter.ch2.part2.boss.armor}, distance ${Math.hypot(chapter.ch2.part2.boss.pos.x - player.pos.x, chapter.ch2.part2.boss.pos.z - player.pos.z).toFixed(1)} m, game time ${gameTime.toFixed(0)}s`);
+    const fr = chapter.ch2.part2.finalRun;
+    if (fr.followers && chapter.state === 'C2_ESCORT') console.log(`[report] escort: ${fr.followers.map((n) => `${n.name}${n.safe ? ' SAFE' : n.infected ? ' INFECTED' : ''}@${n.pos.x.toFixed(1)},${n.pos.z.toFixed(1)}`).join(' ')}`);
     if (chapter.ch2.part2.active) console.log(`[report] part 2: ${JSON.stringify(chapter.ch2.part2.snapshot())}; roof locked ${!!world.elevator.floorLocks}`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
+    if (npc?.path) console.log(`[report] ${npc.name} path ${npc.pathIndex}/${npc.path.length} next ${JSON.stringify(npc.path[npc.pathIndex])} frozen ${npc.frozen} waitingFor ${npc.yieldingTo?.name ?? '-'} stuck ${npc.stuckFor?.toFixed(1)}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
   }
   // ?click=id1,id2 clicks buttons by id (for testing menus).
@@ -762,6 +768,20 @@ function step(dt) {
   // ?aimboss: keep the camera on the chapter 2 boss (testing the fight).
   const boss = chapter.ch2.part2.boss;
   if (params.has('aimboss') && boss.active) player.lookTarget = { x: boss.pos.x, y: boss.pos.y + 1.4, z: boss.pos.z };
+  // ?aimvictoria: keep the camera on Victoria (testing the chase); ?holdshift: run.
+  // ?autochase: steer along the nav graph toward Victoria (testing the chase;
+  // hold W with ?keys).
+  if (params.has('autochase') && chapter.state === 'C2_CHASE') {
+    autoChaseIn -= dt;
+    if (autoChaseIn <= 0) {
+      autoChaseIn = 0.25;
+      const nav = new Navigation(goobGraph);
+      const route = nav.path(nav.nearest(player.pos), nav.nearest(chapter.victoria.pos), true) ?? [];
+      const next = route.find((p) => Math.hypot(p.x - player.pos.x, p.z - player.pos.z) > 1.2) ?? chapter.victoria.pos;
+      player.lookTarget = { x: next.x, y: next.y + 1.5, z: next.z };
+    }
+  }
+  if (params.has('holdshift')) input.keys.add('ShiftLeft');
   // ?report: the closest any two people walking about ever got (testing).
   if (params.has('report')) {
     for (const a of cast.all) for (const b of cast.all) {
