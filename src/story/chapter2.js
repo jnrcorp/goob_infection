@@ -4,6 +4,7 @@ import { Guard } from './guards.js';
 import { AfterCredits } from './afterCredits.js';
 import { Part2 } from './part2.js';
 import { LAUNCH_STATES } from './launch.js';
+import { IsolationWing, WING_STATES } from './isolation.js';
 import { sfx } from '../core/sound.js';
 
 // Chapter 2: The True Facility.
@@ -17,6 +18,7 @@ import { sfx } from '../core/sound.js';
 //   C2_KEYCARD    sneak past security to the keycard in the security office
 //   C2_CONTROL    get into the control room and open the cells
 //   C2_CURE       two of the prisoners are infected: cure them
+//   C2_FUSES, C2_WING, C2_ISOLATION   the isolation wing (isolation.js)
 //   C2_LEAVE      get everyone to the lobby and take the elevator up
 //   C2_END        the ending (police raid, news, credits)
 
@@ -46,6 +48,8 @@ const PRISONERS = [
 const LOBBY_SPOTS = [
   { x: 7.4, z: 22.4 }, { x: 12.9, z: 22.4 }, { x: 7.4, z: 21.2 },
   { x: 12.9, z: 21.2 }, { x: 7.4, z: 20 }, { x: 12.9, z: 20 },
+  // (The isolation wing's four, who come later: the near corners and beside the doors.)
+  { x: 11.6, z: 23 }, { x: 11.6, z: 21.6 }, { x: 7.4, z: 18.9 }, { x: 12.9, z: 18.9 },
 ];
 const LOBBY_ENTRANCE = { x: 10, z: 18.8 }; // just inside the gap from the corridor
 const CELL_X = [1, 3.15, 5.45, 7.75, 10.05, 12.6];
@@ -100,10 +104,11 @@ export class Chapter2 {
     // Guards' bodies don't block anyone's line of sight (like people's).
     for (const g of this.guards) sightIgnore.add(g.collider);
     // People step out of the guards' way.
-    cast.extras = () => (this.active ? this.guards.filter((g) => g.active) : []);
+    cast.extras = () => (this.active ? [...this.guards.filter((g) => g.active), ...this.wing.prisoners.map((q) => q.npc).filter((n) => n.person.root.visible)] : []);
     for (const g of this.guards) g.setVisible(false);
     this.after = new AfterCredits({ ch2: this, scene });
     this.part2 = new Part2({ ch2: this, ctx });
+    this.wing = new IsolationWing(this, ctx);
     this.prisoners = PRISONERS.map((p) => ({ ...p, npc: cast.all.find((n) => n.name === p.name) }));
     this.cellDoors = CELL_X.map((_, i) => world.doorByLabel(`cell door ${i + 1}`));
     this.controlDoor = world.doorByLabel('control room door');
@@ -173,7 +178,25 @@ export class Chapter2 {
 
   // Everything ignored by the guards' line of sight: people and open doors.
   get targets() {
-    return this.active ? [...this.guards, ...this.part2.targets] : [];
+    return this.active ? [...this.guards, ...this.part2.targets, ...this.wing.targets] : [];
+  }
+
+  // Everyone there is to rescue: the holding cells and the isolation wing.
+  get everyone() {
+    return [...this.prisoners, ...this.wing.prisoners];
+  }
+
+  // Into a part 1 state with its objective, and a checkpoint.
+  enter(state) {
+    this.ch1.setState(state, this.objectiveFor(state));
+    this.saveCheckpoint();
+  }
+
+  objectiveFor(state) {
+    if (WING_STATES.includes(state)) return this.wing.objectiveFor(state);
+    if (state === 'C2_CURE') return OBJECTIVES.C2_CURE(this.infectedLeft);
+    if (state === 'C2_LEAVE') return OBJECTIVES.C2_LEAVE(this.inLobby, this.everyone.length);
+    return OBJECTIVES[state] ?? null;
   }
 
   // A new game of chapter 2 (Chapter1.start(2) has reset the world).
@@ -195,6 +218,7 @@ export class Chapter2 {
     this.active = false;
     this.after.reset();
     this.part2.stop();
+    this.wing.stop();
     this.world.setNight(false, this.scene);
     this.tape.visible = false;
     for (const g of this.guards) g.setVisible(false);
@@ -229,6 +253,7 @@ export class Chapter2 {
       npc.collider.enabled = false;
       npc.frozen = true;
     }
+    this.wing.hide();
     for (const d of this.cellDoors) { d.reset(); d.locked = CELL_LOCKED; }
     this.controlDoor.reset();
     this.controlDoor.locked = null;
@@ -270,9 +295,10 @@ export class Chapter2 {
       npc.frozen = true;
     }
     for (const p of this.prisoners) this.lockUp(p);
+    this.wing.setup(null);
     this.goob.reset();
     for (const node of this.graph.nodes) {
-      if (node.pos.y > -13 && node.pos.y < -11 && node.pos.x > 14 && node.pos.x < 30 && node.pos.z > 18 && Math.random() < 0.18) {
+      if (node.pos.y > -13 && node.pos.y < -11 && node.pos.x > 14 && node.pos.x < 30 && node.pos.z > 18 && node.pos.z < 34 && Math.random() < 0.18) {
         this.goob.spawn(node, 1 + Math.random());
       }
     }
@@ -355,7 +381,7 @@ export class Chapter2 {
   free(p, delay = 0) {
     const npc = p.npc;
     p.freed = true;
-    p.spot ??= LOBBY_SPOTS[this.prisoners.filter((q) => q.spot).length];
+    p.spot ??= LOBBY_SPOTS[this.everyone.filter((q) => q.spot).length];
     npc.brain = null;
     npc.cured = true; // (walks with collision and opens doors)
     npc.talkable = true;
@@ -380,6 +406,7 @@ export class Chapter2 {
   // The antidote worked on one of the infected prisoners (see Chapter1.cureNpc).
   cured(npc) {
     if (this.part2.cured(npc)) return;
+    if (this.wing.cured(npc)) return;
     const p = this.prisoners.find((q) => q.npc === npc);
     npc.person.setInfected(false);
     sfx.cure(npc.pos);
@@ -391,13 +418,14 @@ export class Chapter2 {
     if (this.ch1.state !== 'C2_CURE') return;
     if (this.infectedLeft > 0) this.ch1.hud.setObjective(OBJECTIVES.C2_CURE(this.infectedLeft));
     else {
-      this.ch1.setState('C2_LEAVE', OBJECTIVES.C2_LEAVE(this.inLobby, this.prisoners.length));
+      // Not everyone yet: the isolation wing (isolation.js).
       this.saveCheckpoint();
+      this.wing.begin();
     }
   }
 
   get inLobby() {
-    return this.prisoners.filter((p) => {
+    return this.everyone.filter((p) => {
       const q = p.npc.pos;
       return p.freed && q.y < -11 && q.x > LOBBY.x0 && q.x < LOBBY.x1 && q.z > LOBBY.z0 && q.z < LOBBY.z1;
     }).length;
@@ -416,10 +444,10 @@ export class Chapter2 {
       this.saveCheckpoint();
     }
     if (state === 'C2_LEAVE') {
-      this.hud.setObjective(OBJECTIVES.C2_LEAVE(this.inLobby, this.prisoners.length));
+      this.hud.setObjective(OBJECTIVES.C2_LEAVE(this.inLobby, this.everyone.length));
       // Everyone's in the lobby and you've taken the elevator up to B1.
       const up = this.world.secretElevator;
-      if (this.inLobby === this.prisoners.length && up.current === 1 && this.player.pos.y > -6 && this.player.pos.z > 24) this.finish();
+      if (this.inLobby === this.everyone.length && up.current === 1 && this.player.pos.y > -6 && this.player.pos.z > 24) this.finish();
     }
 
     // Security.
@@ -430,6 +458,7 @@ export class Chapter2 {
       if (watching) suspicion = Math.max(suspicion, s);
     }
     suspicion = Math.max(suspicion, this.part2.update(dt));
+    suspicion = Math.max(suspicion, this.wing.update(dt, this.player, this.collision, this.sightIgnore, watching));
     if (UNSEEN) suspicion = 0;
     this.detectEl.hidden = suspicion <= 0.01;
     this.detectFill.style.width = `${Math.round(suspicion * 100)}%`;
@@ -460,7 +489,8 @@ export class Chapter2 {
       suit: p.suit,
       secretUnlocked: !this.world.secretElevator.locked,
       secretFloor: this.world.secretElevator.current,
-      prisoners: this.prisoners.map((q) => ({ name: q.name, infected: q.npc.infected, freed: q.freed, x: q.npc.pos.x, z: q.npc.pos.z })),
+      prisoners: this.everyone.map((q) => ({ name: q.name, infected: q.npc.infected, freed: q.freed, x: q.npc.pos.x, z: q.npc.pos.z })),
+      wing: this.wing.snapshot(),
       part2: this.part2.snapshot(),
     };
     this.ch1.onCheckpoint?.(this.ch1.checkpoint);
@@ -496,12 +526,12 @@ export class Chapter2 {
     secret.syncDoors();
     // (Saved mid-ride: back in the car, at a floor.)
     if (this.world.settleInElevator(this.player.pos)) this.player.updateCamera();
-    const at = ['C2_CONTROL', 'C2_CURE', 'C2_LEAVE'];
+    const at = ['C2_CONTROL', 'C2_CURE', ...WING_STATES, 'C2_LEAVE'];
     if (at.includes(c.state)) {
       this.keycard.visible = false;
       this.controlDoor.locked = null;
     }
-    if (c.state === 'C2_CURE' || c.state === 'C2_LEAVE') {
+    if (c.state === 'C2_CURE' || WING_STATES.includes(c.state) || c.state === 'C2_LEAVE') {
       for (const d of this.cellDoors) { d.locked = null; d.setOpen(-1); }
       for (const p of this.prisoners) {
         const saved = c.prisoners?.find((q) => q.name === p.name);
@@ -511,11 +541,10 @@ export class Chapter2 {
           this.free(p);
         }
       }
+      this.wing.setup(c.wing);
+      this.wing.restoreFreed(c.prisoners);
     }
-    const objective = c.state === 'C2_CURE' ? OBJECTIVES.C2_CURE(this.infectedLeft)
-      : c.state === 'C2_LEAVE' ? OBJECTIVES.C2_LEAVE(this.inLobby, this.prisoners.length)
-        : OBJECTIVES[c.state] ?? null;
-    this.ch1.setState(c.state, objective, false);
+    this.ch1.setState(c.state, this.objectiveFor(c.state), false);
     if (c.state === 'C2_FIND') {
       this.setupAftermath();
       this.ch1.putOnSuit();
@@ -548,6 +577,9 @@ export class Chapter2 {
       C2_CONTROL: { x: 3, y: B3_Y, z: 21, yaw: 0 },
       C2_CURE: { x: 32, y: B3_Y, z: 22, yaw: Math.PI / 2 },
       C2_LEAVE: { x: 10, y: B3_Y, z: 21, yaw: 0 },
+      C2_FUSES: { x: 32, y: B3_Y, z: 22, yaw: Math.PI / 2 },
+      C2_WING: { x: 10, y: B3_Y, z: 32.5, yaw: Math.PI },
+      C2_ISOLATION: { x: 30, y: B3_Y, z: 46.5, yaw: 0 },
       C2_FIND: { x: 31.6, y: B3_Y, z: 21.4, yaw: Math.PI / 2 },
       C2_TRANSMITTERS: { x: 5, y: 8, z: 5, yaw: Math.PI },
       C2_CLEANUP: { x: 12, y: 0, z: 11.5, yaw: Math.PI / 2 },
@@ -570,7 +602,10 @@ export class Chapter2 {
       state: state === 'C2_HOME' ? 'C2_INFILTRATE' : state,
       player: spots[state] ?? spots.C2_INFILTRATE,
       secretUnlocked: state !== 'C2_INFILTRATE' && state !== 'C2_HOME',
-      secretFloor: ['C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', 'C2_LEAVE'].includes(state) ? 0 : 1,
+      secretFloor: ['C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', ...WING_STATES, 'C2_LEAVE'].includes(state) ? 0 : 1,
+      wing: WING_STATES.includes(state) || state === 'C2_LEAVE'
+        ? { fuses: [true, true, true].map(() => state !== 'C2_FUSES'), power: state !== 'C2_FUSES', released: ['C2_ISOLATION', 'C2_LEAVE'].includes(state) }
+        : null,
       part2: {
         transmitters: [0, 1, 2, 3].map(() => state !== 'C2_TRANSMITTERS'),
         cured: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT', ...LAUNCH_STATES].includes(state) ? ['Hank', 'Rhonda', 'Brad', 'Olu', 'Deb', 'Stan'] : [],
@@ -579,7 +614,8 @@ export class Chapter2 {
         evidence: ['C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT', ...LAUNCH_STATES].includes(state) ? [0, 1, 2, 3, 4, 5, 6, 7] : [],
         launch: launchSkip(state),
       },
-      prisoners: state === 'C2_LEAVE' ? this.prisoners.map((q, i) => ({ name: q.name, infected: false, freed: true, x: LOBBY_SPOTS[i].x, z: LOBBY_SPOTS[i].z })) : null,
+      prisoners: state === 'C2_LEAVE' ? this.everyone.map((q, i) => ({ name: q.name, infected: false, freed: true, x: LOBBY_SPOTS[i].x, z: LOBBY_SPOTS[i].z }))
+        : WING_STATES.includes(state) ? this.prisoners.map((q, i) => ({ name: q.name, infected: false, freed: true, x: LOBBY_SPOTS[i].x, z: LOBBY_SPOTS[i].z })) : null,
     });
   }
 
@@ -595,7 +631,8 @@ export class Chapter2 {
     this.ch1.vacuum.equip(false);
     this.ch1.antidote.reset();
     this.goob.spreading = false;
-    await this.ch1.ending.runChapter2(this.prisoners.map((p) => p.npc));
+    this.wing.cameras.forEach((cam) => this.wing.setCamera(cam, false));
+    await this.ch1.ending.runChapter2(this.everyone.map((p) => p.npc));
     // Not over yet (see afterCredits.js).
     this.after.start();
   }

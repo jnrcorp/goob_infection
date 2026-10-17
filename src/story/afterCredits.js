@@ -34,7 +34,7 @@ const OFFICE = { x0: 0, z0: 0, x1: 10, z1: 8, y: 8 }; // her office, 3F
 const OVERRIDE_LINES = [
   { speaker: 'Victoria (suit radio)', text: 'Hello, Champ. Comfortable? You should be. Goob Co. makes a very good suit.' },
   { speaker: 'Victoria (suit radio)', text: 'Every suit we ever made has an executive override. I’m the executive. Left foot. Right foot.' },
-  { speaker: 'Victoria (suit radio)', text: 'You let six people out of those cells tonight. What’s one more?' },
+  { speaker: 'Victoria (suit radio)', text: 'You let ten people out of those cells tonight. What’s one more?' },
 ];
 const COPS_LINES = [
   { speaker: 'Officer Diaz', text: 'Step away from the console! Hands where we can see them!' },

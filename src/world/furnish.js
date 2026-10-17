@@ -615,6 +615,27 @@ function furnishFacility(b, scene, rng, out) {
   chairsAround(b, 33, 30, 1.2, 1.2, y);
   vending(b, 35.1, 32.6, 35.9, 33.9, y);
   couch(b, 31.2, 33.3, 2, 2, y);
+
+  // The isolation wing: crates to hide behind in the corridor (its cameras
+  // are story props), a cot in each cell, the wing's control desk, and the
+  // fuse box beside the wing door in the staff corridor.
+  for (const [x, z, s] of [[8.6, 36.4, 1.1], [13.4, 38.6, 1.2], [19.6, 35.4, 1.1], [23.4, 38.4, 1.2], [27.8, 35.5, 1.0]]) {
+    crate(b, x, z, s, 1.25, y);
+  }
+  for (const x0 of [0, 6, 12, 18]) bed(b, x0 + 0.4, 47.6, x0 + 2.4, 49.6, y);
+  b.box(25, y, 47.8, 35, y + 0.95, 49.2, 'plastic', { shadow: true });
+  b.box(25.1, y + 1.1, 49.7, 34.9, y + 2.6, 49.85, 'screen', { collide: false, boxUV: true });
+  chair(b, 28, 47, 0, y);
+  chair(b, 32, 47, 0, y);
+  sign(scene, 'ISOLATION', 10, y + 2.6, 33.88, 's', { w: 1.4, h: 0.3, ...DANGER });
+  sign(scene, 'SUBJECTS WHO RESISTED', 12, y + 2.9, 40.12, 'n', { w: 2.6, h: 0.28, ...DANGER });
+  sign(scene, 'WING CONTROL', 30, y + 2.6, 39.88, 's', { w: 1.5, h: 0.28 });
+  out.wing = {
+    fuseBox: { x: 11.4, y: y + 1.35, z: 33.84 },
+    fuses: [{ x: 3.5, y: y + 0.77, z: 20.15, where: 'security office' }, { x: 2.85, y: y + 0.48, z: 29, where: 'staff lockers' }, { x: 33.2, y: y + 0.77, z: 30.1, where: 'guard break room' }],
+    console: { x: 30, y: y + 1.0, z: 48.5 },
+    cameras: [{ x: 5, z: 39.8, yaw: Math.PI }, { x: 16, z: 34.2, yaw: 0 }, { x: 27, z: 39.8, yaw: Math.PI }].map((c) => ({ ...c, y: y + 2.9 })),
+  };
 }
 
 // The roof: the launch pad with Goob Co.'s last shuttle to Mars, a gantry,

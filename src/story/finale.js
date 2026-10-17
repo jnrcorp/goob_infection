@@ -15,6 +15,7 @@ const VICTORIA_ROUTE = [{ x: 19, z: -0.8 }, { x: 20.2, z: -4.5 }, { x: 21.2, z: 
 const GATHER = [
   { name: 'Dale', x: 12.6, z: -4.4 }, { name: 'Priya', x: 11.6, z: -5.6 }, { name: 'Hank', x: 12.3, z: -6.8 },
   { name: 'Nell', x: 13.6, z: -7.5 }, { name: 'Kevin', x: 15, z: -7.6 }, { name: 'Pat', x: 16.3, z: -7.1 },
+  { x: 10.6, z: -6.9 }, { x: 11.4, z: -8.2 }, { x: 14.3, z: -8.9 }, { x: 17.2, z: -8.3 },
 ];
 
 const ARREST = [
@@ -38,14 +39,15 @@ const NEWS = [
 ];
 const RESCUED = [
   { speaker: 'Dr. Pell', text: 'Fresh air. Real air. Not goob air. Champ, I owe you my life. All of us do.' },
-  { speaker: 'Nell', text: 'Six of us. Six of us who aren’t going to Mars on Friday.' },
+  { speaker: 'Nell', text: 'Ten of us. Ten of us who aren’t going to Mars on Friday.' },
+  { speaker: 'Otis', text: 'Twenty years I guarded that place. First time I ever walked out the front.' },
   { speaker: 'Martin', text: 'I’m going to find every plaque Victoria ever handed out, and I’m going to melt them down.' },
   { speaker: 'Kevin', text: 'I’m still a little green. Is that normal? Dr. Pell, is that normal?' },
   { speaker: 'Dr. Pell', text: 'Perfectly normal, Kevin. Probably. Let’s get you all home.' },
 ];
 const NEWS_2 = [
   'Good evening. A week after Goob Co. was shut down, police have uncovered a secret facility beneath the company’s headquarters: a level not shown on any building plan.',
-  'Six employees were found held in cells there, scheduled for what internal documents call “transfer.” All six were brought out alive by the same anonymous whistleblower known only as “Champ.”',
+  'Ten employees were found held in cells there, scheduled for what internal documents call “transfer.” All ten were brought out alive by the same anonymous whistleblower known only as “Champ.”',
   'Goob Co.’s final Mars shipment, set to launch Friday, has been seized. Authorities say the facility’s vats will be drained and sealed. And no, there was no B2.',
 ];
 const CREDITS_2 = `

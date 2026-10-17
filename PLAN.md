@@ -202,7 +202,11 @@ Each milestone ends in something you can play.
   2. Press CELL RELEASE.
   3. Cure Kevin and Luis, who are infected.
   4. Get all six freed prisoners (Dr. Pell, Martin, Nell, Kevin, Ivo, Luis) to the lobby.
-  5. Take the elevator up.
+  5. **The isolation wing:** Dr. Pell remembers the ones who fought back, kept in isolation north of the staff corridor (Gloria, Raj, Otis and Bev, new faces who aren't in the office cast).
+     - The wing has no power. Find the three fuses (security office, staff lockers, guard break room) and put them in the fuse box by the wing door.
+     - The power brings back three sweeping cameras in the wing corridor. Sneak past them (crates for cover, crouch to halve their range) to wing control.
+     - CAMERAS OFF / RELEASE ISOLATION opens the four cells. Raj and Bev come out infected: cure them.
+  6. Get all ten to the elevator lobby and take the elevator up.
 - **Ending:** police in the lot at night, the rescued six speak, a news bulletin ("THERE IS NO B2"), chapter 2 credits.
 - **After the credits ("You're not done."):** an hour later in B3, Victoria is in cell 6.
   - Her executive override takes over your hazard suit. It walks you, with no control, to the control room and presses CELL RELEASE while she talks over the suit radio.

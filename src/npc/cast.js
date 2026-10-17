@@ -17,7 +17,7 @@ const SKIN = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac, 0x6b4226];
 const HAIR = { dark: 0x2b1d0e, brown: 0x5a3a1a, black: 0x111111, blond: 0xc9a25a, grey: 0xa8a8a8, red: 0x8a3b12 };
 const PANTS = { navy: 0x2d3142, charcoal: 0x3b3b3b, khaki: 0x8a7a5a, black: 0x1c1c1e };
 
-const look = (shirt, pants, skin, hair, extra = {}) => ({ shirt, pants: PANTS[pants], skin: SKIN[skin], hair: HAIR[hair], ...extra });
+export const look = (shirt, pants, skin, hair, extra = {}) => ({ shirt, pants: PANTS[pants], skin: SKIN[skin], hair: HAIR[hair], ...extra });
 
 // Facing the monitor from a desk seat, by desk rotation (see furniture.desk).
 const SEAT_YAW = [Math.PI, -Math.PI / 2, 0, Math.PI / 2];

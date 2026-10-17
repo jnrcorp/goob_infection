@@ -161,6 +161,17 @@ const secretShaftWalls = (h) => [
 const CELL_DOORS = [1, 3.15, 5.45, 7.75, 10.05, 12.6];
 const CELL_LOCKED = 'Locked. The cell doors are opened from the control room.';
 const FACILITY = { ceiling: 3.4, lightColor: 0xd6ffe0, lightIntensity: 7, facility: true };
+// The isolation wing (chapter 2), north of the staff corridor: a corridor
+// watched by cameras, four isolation cells, and the wing's control room.
+export const WING = {
+  corridor: { x0: 0, z0: 34, x1: 36, z1: 40 },
+  cells: { x0: 0, z0: 40, x1: 24, z1: 50 },
+  control: { x0: 24, z0: 40, x1: 36, z1: 50 },
+  cellDoors: [3, 9, 15, 21],
+  doorX: 10,
+};
+const WING_LOCKED = 'Locked. The wing has no power: the panel beside the door is dark.';
+const ISO_LOCKED = 'Locked. Isolation cells open from the wing control room.';
 
 export const DOOR_HEIGHT = 2.2;
 
@@ -199,14 +210,23 @@ export const BUILDING = {
       id: 'B3',
       y: -12,
       wallHeight: 6,
-      slab: { x0: 0, z0: 6, x1: 36, z1: 34 },
+      slab: { x0: 0, z0: 6, x1: 36, z1: 50 },
       voids: [],
       walls: [
         // Outer walls
         wall(0, 6, 36, 6),
-        wall(0, 34, 36, 34),
-        wall(0, 6, 0, 34),
-        wall(36, 6, 36, 34),
+        wall(0, 50, 36, 50),
+        wall(0, 6, 0, 50),
+        wall(36, 6, 36, 50),
+        // The isolation wing, through the north end of the staff corridor.
+        wall(0, 34, 36, 34, { openings: [door(WING.doorX, 'isolation wing door', { mat: 'steel', locked: WING_LOCKED })] }),
+        wall(0, 40, 36, 40, {
+          openings: [
+            ...WING.cellDoors.map((at, i) => door(at, `isolation cell ${i + 1}`, { mat: 'glass', locked: ISO_LOCKED })),
+            door(30, 'wing control door', { mat: 'steel' }),
+          ],
+        }),
+        ...[6, 12, 18, 24].map((x) => wall(x, 40, x, 50)),
         // The shaft up to B1 (8 m tall, to meet B1's), opening on the lobby.
         wall(6, 24, 14, 24, { openings: [lift(SECRET_SHAFT.doorAt), door(12.5, 'staff corridor door', { mat: 'steel' })] }),
         ...secretShaftWalls(8),
@@ -244,6 +264,9 @@ export const BUILDING = {
         { id: 'b3control', name: 'Control Room', rect: { x0: 30, z0: 18, x1: 36, z1: 26 }, floor: 'tile', ...FACILITY, lightColor: 0xc8dcff },
         { id: 'b3break', name: 'Guard Break Room', rect: { x0: 30, z0: 26, x1: 36, z1: 34 }, floor: 'linoleum', ...FACILITY },
         { id: 'b3hall2', name: 'Staff Corridor', rect: { x0: 6, z0: 24, x1: 14, z1: 34 }, floor: 'concrete', ...FACILITY, minus: [SECRET_SHAFT_RECT] },
+        { id: 'b3wing', name: 'Isolation Wing', rect: WING.corridor, floor: 'concrete', ...FACILITY, lightColor: 0xffd6d0 },
+        { id: 'b3iso', name: 'Isolation Cells', rect: WING.cells, floor: 'tile', ...FACILITY, lightColor: 0xd8e4ff },
+        { id: 'b3wingctl', name: 'Wing Control', rect: WING.control, floor: 'tile', ...FACILITY, lightColor: 0xc8dcff },
       ],
     },
     // ---------------------------------------------------------------- B1

@@ -704,6 +704,8 @@ async function runStartupSimulation() {
     const fr = chapter.ch2.part2.finalRun;
     if (fr.followers && chapter.state === 'C2_ESCORT') console.log(`[report] escort: ${fr.followers.map((n) => `${n.name}${n.safe ? ' SAFE' : n.infected ? ' INFECTED' : ''}@${n.pos.x.toFixed(1)},${n.pos.z.toFixed(1)}`).join(' ')}`);
     if (chapter.ch2.part2.active) console.log(`[report] part 2: ${JSON.stringify(chapter.ch2.part2.snapshot())}; roof locked ${!!world.elevator.floorLocks}`);
+    const wing = chapter.ch2.wing;
+    if (wing.active) console.log(`[report] wing: ${JSON.stringify(wing.snapshot())}; cameras ${wing.cameras.map((c) => `${c.on ? 'on' : 'off'}:${c.suspicion.toFixed(2)}`).join(' ')}; ${wing.prisoners.map((q) => `${q.name}${q.npc.infected ? ' INFECTED' : q.freed ? ' freed' : ''}@${q.npc.pos.x.toFixed(1)},${q.npc.pos.z.toFixed(1)}`).join(' ')}; in lobby ${chapter.ch2.inLobby}/${chapter.ch2.everyone.length}`);
     const launch = chapter.ch2.part2.launch;
     if (launch.active) console.log(`[report] launch: pods ${launch.pods.map((q) => `${q.name}:${q.state}@${chapter.ch2.cast.all.find((n) => n.name === q.name)?.pos.x.toFixed(1)},${chapter.ch2.cast.all.find((n) => n.name === q.name)?.pos.z.toFixed(1)}`).join(' ')}; code ${launch.digitsText}; final ${launch.final.active ? `armor ${launch.final.armor}, T-${launch.liftoff?.toFixed(0)}` : 'off'}; car ${chapter.morning.car.pos.x.toFixed(1)},${chapter.morning.car.pos.z.toFixed(1)}`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
@@ -821,7 +823,7 @@ function step(dt) {
     goob.blobs.clear();
     hud.toast('Debug: all goob removed', 1.5);
   }
-  if (active && debug && input.wasPressed('KeyK') && chapter.state === 'CURE') {
+  if (active && debug && input.wasPressed('KeyK') && ['CURE', 'C2_CURE'].includes(chapter.state)) {
     for (const npc of cast.all) if (npc.infected) chapter.cureNpc(npc);
   }
   if (active && debug && input.wasPressed('KeyI')) {
