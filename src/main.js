@@ -482,11 +482,11 @@ if (params.get('morning') === 'office' && chapter.morning.active) {
   player.spawn(world.spawn);
 }
 // ?carat=x,z,headingDegrees: put your car there, with you in it (testing
-// the drive; use with ?morning=drive).
+// the drive; use with ?morning=drive, or ?stage=C2_DRIVE).
 const carAt = params.get('carat')?.split(',').map(Number);
-if (carAt && chapter.morning.stage === 'DRIVE') {
+if (carAt && (chapter.morning.stage === 'DRIVE' || chapter.state === 'C2_DRIVE')) {
   chapter.morning.car.place(carAt[0], carAt[1], THREE.MathUtils.degToRad(carAt[2] ?? 0));
-  chapter.morning.useCar();
+  chapter.morning.car.onUse();
 }
 // ?look=yawDegrees,pitchDegrees: turn the view (testing; works in bed too).
 const look = params.get('look')?.split(',').map(Number);
@@ -656,6 +656,8 @@ async function simulate(seconds) {
 // ?keys=KeyE:0,KeyW:2 taps E, then holds W for 2 seconds (after ?sim).
 async function runStartupSimulation() {
   await simulate(Number(params.get('sim')) || 0);
+  // ?escortdone: finish the escort right away (testing what comes after it).
+  if (params.has('escortdone') && chapter.state === 'C2_ESCORT') chapter.ch2.part2.finalRun.finish();
   for (const step of (params.get('keys') ?? '').split(',').filter(Boolean)) {
     const [code, seconds] = step.split(':');
     // Mouse buttons (Mouse0) are pressed directly; keys go through real events.
@@ -672,6 +674,7 @@ async function runStartupSimulation() {
     await simulate(1 / 30);
   }
   if (params.has('secretto')) world.secretElevator.request(Number(params.get('secretto')));
+  if (params.has('gantryto')) world.gantryElevator.request(Number(params.get('gantryto')));
   await simulate(Number(params.get('after')) || 0);
   if (params.has('report')) {
     const npc = cast.all.find((n) => n.name === params.get('report'));
@@ -701,6 +704,8 @@ async function runStartupSimulation() {
     const fr = chapter.ch2.part2.finalRun;
     if (fr.followers && chapter.state === 'C2_ESCORT') console.log(`[report] escort: ${fr.followers.map((n) => `${n.name}${n.safe ? ' SAFE' : n.infected ? ' INFECTED' : ''}@${n.pos.x.toFixed(1)},${n.pos.z.toFixed(1)}`).join(' ')}`);
     if (chapter.ch2.part2.active) console.log(`[report] part 2: ${JSON.stringify(chapter.ch2.part2.snapshot())}; roof locked ${!!world.elevator.floorLocks}`);
+    const launch = chapter.ch2.part2.launch;
+    if (launch.active) console.log(`[report] launch: pods ${launch.pods.map((q) => `${q.name}:${q.state}@${chapter.ch2.cast.all.find((n) => n.name === q.name)?.pos.x.toFixed(1)},${chapter.ch2.cast.all.find((n) => n.name === q.name)?.pos.z.toFixed(1)}`).join(' ')}; code ${launch.digitsText}; final ${launch.final.active ? `armor ${launch.final.armor}, T-${launch.liftoff?.toFixed(0)}` : 'off'}; car ${chapter.morning.car.pos.x.toFixed(1)},${chapter.morning.car.pos.z.toFixed(1)}`);
     console.log(`[report] stage ${chapter.state}; files ${chapter.filesFound}/${chapter.files.length}; reading ${reader.active}; dialogue ${dialogue.active}; screen ${state}`);
     if (npc?.path) console.log(`[report] ${npc.name} path ${npc.pathIndex}/${npc.path.length} next ${JSON.stringify(npc.path[npc.pathIndex])} frozen ${npc.frozen} waitingFor ${npc.yieldingTo?.name ?? '-'} stuck ${npc.stuckFor?.toFixed(1)}`);
     if (npc) console.log(`[report] ${npc.name} at ${npc.pos.x.toFixed(1)}, ${npc.pos.y.toFixed(1)}, ${npc.pos.z.toFixed(1)} (${npc.brain?.state ?? npc.mode})`);
@@ -768,6 +773,8 @@ function step(dt) {
   // ?aimboss: keep the camera on the chapter 2 boss (testing the fight).
   const boss = chapter.ch2.part2.boss;
   if (params.has('aimboss') && boss.active) player.lookTarget = { x: boss.pos.x, y: boss.pos.y + 1.4, z: boss.pos.z };
+  const finalBoss = chapter.ch2.part2.launch.final;
+  if (params.has('aimboss') && finalBoss.active) player.lookTarget = { x: finalBoss.pos.x, y: finalBoss.pos.y + 2, z: finalBoss.pos.z };
   // ?aimvictoria: keep the camera on Victoria (testing the chase); ?holdshift: run.
   // ?autochase: steer along the nav graph toward Victoria (testing the chase;
   // hold W with ?keys).
@@ -862,7 +869,10 @@ function step(dt) {
     goob.update(worldDt, gameTime);
     camera.updateMatrixWorld();
     // No vacuuming or spraying with your hands full of bin.
-    const handsFree = controlling && !chapter.hauler.carrying;
+    // (Or on the steering wheel: the vacuum's put away while you drive.)
+    const driving = !!chapter.morning.car.driver;
+    const handsFree = controlling && !chapter.hauler.carrying && !driving;
+    viewmodel.scene.visible = !driving;
     // (The blast also knocks out chapter 2's guards.)
     vacuum.update(dt, input, handsFree, camera, player, goob, [...cast.all, ...chapter.ch2.targets]);
     antidote.update(dt, input, handsFree, camera, [...cast.all, ...chapter.ch2.targets], vacuum.nozzleWorld);

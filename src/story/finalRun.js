@@ -50,6 +50,7 @@ const OUTRO = [
   { speaker: 'Hank', text: 'Fresh air! Real air! I’m never mopping goob again. I’m going to be a florist.' },
   { speaker: 'Officer Diaz', text: 'That’s everyone. Six for six. Champ, that’s two nights in a row you’ve walked people out of that building.' },
   { speaker: 'Officer Kim', text: 'Go home. Sleep. And maybe take the suit off. The visor’s still blinking.' },
+  { speaker: 'Officer Kim', text: 'Wait. That’s our cruiser’s radio. Something’s wrong.' },
 ];
 const OBJECTIVES = {
   C2_CHASE: 'She’s running! Catch Victoria before she reaches the getaway truck in the loading yard. (Shift to run; a vacuum blast staggers her.)',
@@ -340,13 +341,8 @@ export class FinalRun {
     player.lookTarget = { x: officers[0].root.position.x, y: 1.6, z: officers[0].root.position.z };
     await ch1.dialogue.play(OUTRO);
     if (token !== ch1.token) return;
-    await ch1.fx.fade(1, 1.8);
-    if (token !== ch1.token) return;
-    ch1.onEnd?.({
-      title: 'The End',
-      text: 'Victoria was dragged out of the loading yard a few hours before dawn. The last shuttle to Mars never launched. The vats were drained, the transmitters bagged as evidence, and all six of the night shift walked out the front door. The rotation is over. Goob Co. is over. You kept the suit. It doesn’t blink anymore.',
-      hint: 'Thanks for playing The Goob Infection.',
-    });
+    // Not over: she gets out of the cruiser (launch.js).
+    this.part2.launch.begin();
   }
 
   update(dt) {

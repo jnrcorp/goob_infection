@@ -43,6 +43,7 @@ const SKY = {
 const SUN = { color: 0xfff0d8, intensity: 1.9, direction: [-0.55, 0.65, -0.52], center: [18, 0, 8], extent: 46 };
 
 const tmpColor = new THREE.Color();
+const GANTRY_LOCKED = 'LIFT LOCKED OUT. Launch control has it.';
 
 // Builds Goob Co. HQ from BUILDING data and returns the live world.
 export function buildBuilding(baseCtx) {
@@ -75,7 +76,7 @@ export function buildBuilding(baseCtx) {
   // Outside ground beyond the walls, with the building and the walkable
   // outdoor areas cut out (those draw their own ground; overlapping surfaces
   // flicker).
-  for (const r of rectMinus({ x0: -60, z0: -60, x1: 110, z1: 84 }, [fp, annex, ...BUILDING.grounds])) {
+  for (const r of rectMinus({ x0: -60, z0: -60, x1: 150, z1: 84 }, [fp, annex, ...BUILDING.grounds])) {
     b.plane(r.x0, r.z0, r.x1, r.z1, -0.02, 'grass');
   }
   addCurbs(b, BUILDING.grounds, [fp, annex, ...BUILDING.grounds]);
@@ -136,6 +137,8 @@ export function buildBuilding(baseCtx) {
   const elevator = new Elevator(ctx, BUILDING.elevator);
   const secretElevator = new Elevator(ctx, BUILDING.secretElevator);
   secretElevator.lockedMessage = 'RESTRICTED. A keypad glows beside the doors: ENTER CODE.';
+  const gantryElevator = new Elevator(ctx, BUILDING.gantryElevator);
+  gantryElevator.lockedMessage = GANTRY_LOCKED;
   // A lid over the hidden shaft, just under the lawn.
   b.box(7.4, -0.9, 23.9, 10.6, -0.6, 27.1, 'concrete', { collide: false });
   const props = furnish(ctx);
@@ -155,6 +158,8 @@ export function buildBuilding(baseCtx) {
     doors,
     elevator,
     secretElevator,
+    gantryElevator,
+    gantryLocked: GANTRY_LOCKED,
     props,
     lights,
 
@@ -163,6 +168,8 @@ export function buildBuilding(baseCtx) {
       for (const d of doors) d.reset();
       elevator.reset();
       secretElevator.reset();
+      gantryElevator.reset();
+      gantryElevator.lockedMessage = GANTRY_LOCKED;
       props.suit.group.visible = true;
       this.setCanisterVisible(true);
     },
@@ -179,7 +186,7 @@ export function buildBuilding(baseCtx) {
     // doors, and stand pos on it, so nobody's ever stranded in a dark
     // shaft. (A jammed car can't move: pos goes to the car instead.)
     settleInElevator(pos) {
-      for (const e of [elevator, secretElevator]) {
+      for (const e of [elevator, secretElevator, gantryElevator]) {
         const d = e.def;
         if (pos.x < d.x0 - 0.2 || pos.x > d.x1 + 0.2 || pos.z < d.z0 - 0.2 || pos.z > d.z1 + 0.2) continue;
         if (pos.y < Math.min(...e.floors) - 1 || pos.y > Math.max(...e.floors) + 3) continue;
@@ -247,6 +254,7 @@ export function buildBuilding(baseCtx) {
       for (const d of doors) d.update(dt, player);
       elevator.update(dt, player);
       secretElevator.update(dt, player);
+      gantryElevator.update(dt, player);
       props.canister.goob.rotation.y += dt * 0.6;
       lights.update(player.pos);
 

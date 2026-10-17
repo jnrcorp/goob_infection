@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createRng } from '../core/random.js';
 import { BUILDING } from './building.js';
 import { toTexture } from '../render/textures.js';
+import { furnishLaunchSite } from './launchSite.js';
 import {
   bed, bench, bin, cabinet, chair, chairsAround, counter, couch, crate, desk, forklift, fridge, goobCanister,
   hazmatSuit, hazmatSuitProp, lockers, pallet, palletRack, plant, pod, printer, shelf, sign, sinks, stallRow, table,
@@ -197,6 +198,7 @@ export function furnish({ builder: b, scene, materials }) {
   furnishExecutive(b, scene, out);
   furnishFacility(b, scene, rng, out);
   furnishRoof(b, scene, out);
+  out.launch = furnishLaunchSite(b, scene, rng);
   furnishOutdoors(b, scene, rng);
   furnishHome(b, scene);
 

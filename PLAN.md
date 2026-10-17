@@ -212,7 +212,7 @@ Each milestone ends in something you can play.
   1. **Transmitters:** smash the four suit-override transmitters (B1 server room, 1F mail room, 2F IT closet, 3F records room).
      - A loyal guard patrols every floor.
      - After each smash, Victoria grabs your suit for a few seconds and walks you toward the nearest infected.
-  2. **Cleanup:** the restarted vats flooded HQ (about 180 L, spreading). Vacuum it all up, emptying the tank into the yellow bins, with the per-floor HUD.
+  2. **Cleanup:** the restarted vats flooded HQ (about 80 L; it doesn't spread). Vacuum it up, emptying the tank into the yellow bins, with the per-floor HUD. The last 10 L or so can be left.
   3. **Evidence:** find the eight scraps of records she shredded as she fled, scattered across B1-3F.
   4. **Night shift:** cure the six infected night-shift workers roaming HQ. Hank the janitor gives you the roof key.
   5. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
@@ -224,7 +224,17 @@ Each milestone ends in something you can play.
      - You have to sprint; walking lets her escape, and you retry the chase.
   8. **Escort:** lead the six night-shift workers from the 1F break room, through the front doors, to the police line in the parking lot.
      - Six infected wait along the way. Any that catch a follower re-infect them, and you have to cure them.
-     - All six safe means **The End**.
+     - All six safe, and then the officers' cruiser radio crackles: Victoria slipped her cuffs.
+- **The launch site (part 3):** Goob Co.'s launch site east of the loading yard, where Mars 7 is fueled and loaded with "input": the next rotation, sealed in cargo pods.
+  1. **Drive:** get in your car and drive out the yard's new east gate, down the service road. You pull over short of the staging lot.
+  2. **Gate:** a guard walks the lot past the guard post door. Sneak in (or knock him out) and pull GATE OPEN. The keycard for the hangar and the first digit of the bunker code are on the desk.
+  3. **Cargo:** open the eight pods in the hangar (Priya, Mo, Earl, Carla, Chip, Terry, Sal, Dwayne). Three come out infected and have to be cured. Everyone walks out to the staging lot. The manifest whiteboard has the second digit.
+  4. **Code:** the control bunker's door code (6-1-8-3) is spread around the site: the guard post clipboard, the hangar whiteboard, a sticky note in the fuel depot, and Rex from the board, who's infected and wandering the site (cure him). Lorraine, also infected, tells you about the manual override.
+  5. **Abort:** press ABORT at the launch console. It's rejected: the fuel lines are pressurized, and the vent sequence is BLUE, YELLOW, RED.
+  6. **Valves:** close the fuel depot's three valves in that order. A wrong one spins them all back open.
+  7. **Gantry:** Victoria will fly it herself. The gantry lift unlocks, up to the platform by the rocket's hatch.
+  8. **Final fight:** Victoria and the original batch (bigger, six layers), against a liftoff clock (7, 5 or 4 minutes by difficulty). Blast, then spray. When she rears up she slams the deck with a shockwave: blast her first or back away. Liftoff means retrying from the checkpoint. Beating her means **The End**.
+  - Five launch security guards patrol the lot and the site the whole time (`guards.js`), with checkpoints at every step.
 
 ## Still open (answer any time; defaults in brackets)
 

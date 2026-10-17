@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Guard } from './guards.js';
 import { AfterCredits } from './afterCredits.js';
 import { Part2 } from './part2.js';
+import { LAUNCH_STATES } from './launch.js';
 import { sfx } from '../core/sound.js';
 
 // Chapter 2: The True Facility.
@@ -20,8 +21,10 @@ import { sfx } from '../core/sound.js';
 //   C2_END        the ending (police raid, news, credits)
 
 const CODE = '4-2-7-9';
+// ?unseen: guards never notice you (for testing story flow).
+const UNSEEN = new URLSearchParams(location.search).has('unseen');
 // Part 2 (after the credits): see part2.js.
-const PART2_STATES = ['C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'];
+const PART2_STATES = ['C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT', ...LAUNCH_STATES];
 const HOLDING_DOOR_X = 7; // the holding area's door to the corridor
 const FILE_OUT_GAP = 1.4; // seconds between freed prisoners leaving their cells
 const B3_Y = -12;
@@ -71,6 +74,20 @@ const FREED_LINES = {
   Kevin: ['My head… I was dreaming I was in a jar. Am I still in a jar?'],
   Luis: ['Is it Friday? They said Friday was the launch.'],
 };
+
+// Debug skips: what's already done at the start of each launch site stage.
+function launchSkip(state) {
+  const i = LAUNCH_STATES.indexOf(state);
+  if (i < 0) return null;
+  const past = (s) => i > LAUNCH_STATES.indexOf(s);
+  const free = past('C2_CARGO');
+  return {
+    gate: past('C2_GATE'), keycard: past('C2_GATE'), bunker: past('C2_CODE'), vented: past('C2_VALVES'),
+    digits: [past('C2_CARGO'), past('C2_CARGO'), past('C2_CODE'), past('C2_CODE')],
+    pods: free ? Object.fromEntries(['Priya', 'Mo', 'Earl', 'Carla', 'Chip', 'Terry', 'Sal', 'Dwayne'].map((n) => [n, 'free'])) : {},
+    board: { Rex: past('C2_CODE'), Lorraine: false },
+  };
+}
 
 export class Chapter2 {
   constructor({ ch1, ctx, world, player, cast, hud, dialogue, fx, goob, graph, sightIgnore, morning }) {
@@ -413,6 +430,7 @@ export class Chapter2 {
       if (watching) suspicion = Math.max(suspicion, s);
     }
     suspicion = Math.max(suspicion, this.part2.update(dt));
+    if (UNSEEN) suspicion = 0;
     this.detectEl.hidden = suspicion <= 0.01;
     this.detectFill.style.width = `${Math.round(suspicion * 100)}%`;
     this.detectEl.classList.toggle('alert', suspicion >= 0.6);
@@ -537,6 +555,14 @@ export class Chapter2 {
       C2_NIGHTSHIFT: { x: 12, y: 0, z: 11.5, yaw: Math.PI / 2 },
       C2_ROOF: { x: 16.5, y: 8, z: 12.2, yaw: Math.PI },
       C2_BOSS: { x: 13, y: 12, z: 11.6, yaw: Math.PI / 2 },
+      C2_DRIVE: { x: 26, y: 0, z: -7.6, yaw: Math.PI / 2 },
+      C2_GATE: { x: 61, y: 0, z: 7.4, yaw: -Math.PI / 2 },
+      C2_CARGO: { x: 94, y: 0, z: 25.5, yaw: Math.PI },
+      C2_CODE: { x: 92, y: 0, z: -8, yaw: 0 },
+      C2_ABORT: { x: 92, y: 0, z: -13.5, yaw: 0 },
+      C2_VALVES: { x: 110, y: 0, z: 31, yaw: -Math.PI / 2 },
+      C2_GANTRY: { x: 111.5, y: 0, z: -2, yaw: Math.PI },
+      C2_FINAL: { x: 111.5, y: 12, z: -2.5, yaw: -Math.PI / 2 },
     };
     this.morning.done.add('letter');
     this.restore({
@@ -547,10 +573,11 @@ export class Chapter2 {
       secretFloor: ['C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', 'C2_LEAVE'].includes(state) ? 0 : 1,
       part2: {
         transmitters: [0, 1, 2, 3].map(() => state !== 'C2_TRANSMITTERS'),
-        cured: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'].includes(state) ? ['Hank', 'Rhonda', 'Brad', 'Olu', 'Deb', 'Stan'] : [],
-        key: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'].includes(state),
+        cured: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT', ...LAUNCH_STATES].includes(state) ? ['Hank', 'Rhonda', 'Brad', 'Olu', 'Deb', 'Stan'] : [],
+        key: ['C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT', ...LAUNCH_STATES].includes(state),
         cleaned: !['C2_TRANSMITTERS', 'C2_CLEANUP'].includes(state),
-        evidence: ['C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT'].includes(state) ? [0, 1, 2, 3, 4, 5, 6, 7] : [],
+        evidence: ['C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT', ...LAUNCH_STATES].includes(state) ? [0, 1, 2, 3, 4, 5, 6, 7] : [],
+        launch: launchSkip(state),
       },
       prisoners: state === 'C2_LEAVE' ? this.prisoners.map((q, i) => ({ name: q.name, infected: false, freed: true, x: LOBBY_SPOTS[i].x, z: LOBBY_SPOTS[i].z })) : null,
     });

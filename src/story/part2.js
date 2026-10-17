@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Guard } from './guards.js';
 import { GoobExec } from './boss.js';
 import { FinalRun } from './finalRun.js';
+import { Launch, LAUNCH_STATES } from './launch.js';
 import { CURED_LINES } from '../npc/cast.js';
 import { difficulty } from '../core/settings.js';
 import { sfx } from '../core/sound.js';
@@ -24,7 +25,8 @@ import { sfx } from '../core/sound.js';
 //   C2_ROOF          ride the elevator up to the roof.
 //   C2_BOSS          Victoria, in a goob-powered executive suit, by the last
 //                    shuttle to Mars. Blast her, then spray her (three times).
-//   C2_FOUND         she's beaten: the end.
+//   C2_CHASE, C2_ESCORT  she runs; then lead the night shift out (finalRun.js)
+//   C2_DRIVE ... C2_FINAL  the launch site (launch.js)
 
 const CEO_OFFICE = { x0: 0, z0: 0, x1: 10, z1: 8, y: 8 };
 const TRANSMITTERS = [
@@ -65,14 +67,14 @@ const EVIDENCE = [
   { x: 20, y: 8, z: 16, what: 'a photo of the next rotation, with your face circled' },
 ];
 // Goob left when the cleanup counts as done (liters; a few stray drops are fine).
-const CLEAN_ENOUGH = 3;
+const CLEAN_ENOUGH = 10;
 const ROOF_LOCKED = 'The ROOF button won’t light. It needs a key. (Hank the janitor has one.)';
 const ROOF_ARRIVAL = { x: 16.5, y: 12, z: 11.6, yaw: Math.PI };
 const BOSS_START = { x: 7, z: 16 };
 
 const OBJECTIVES = {
   C2_TRANSMITTERS: (left) => `Smash Victoria’s suit-override transmitters (${4 - left.length}/4): ${left.join(', ')}. Avoid her night security (C to crouch).`,
-  C2_CLEANUP: (liters) => `The restarted vats flooded HQ. Vacuum up the goob and empty your tank into the yellow bins (${Math.ceil(liters)} L left). The HUD shows each floor.`,
+  C2_CLEANUP: (liters) => `The restarted vats flooded HQ. Vacuum up the goob and empty your tank into the yellow bins (${Math.max(0, Math.ceil(liters - CLEAN_ENOUGH))} L to go). The HUD shows each floor.`,
   C2_EVIDENCE: (found) => `She shredded her records on the way out. Find the scraps scattered around HQ (${found}/${EVIDENCE.length}) for the case against her.`,
   C2_NIGHTSHIFT: (cured) => `Cure the infected night shift (${cured}/${NIGHT_SHIFT.length}) with the antidote (F). Hank the janitor has the roof key.`,
   C2_ROOF: 'You have the roof key. Take the elevator up to the roof.',
@@ -180,6 +182,7 @@ export class Part2 {
 
     this.boss = new GoobExec(scene, ch2.ch1.victoria.def.look);
     this.finalRun = new FinalRun(this);
+    this.launch = new Launch(this, ctx);
     this.time = 0;
   }
 
@@ -198,7 +201,7 @@ export class Part2 {
   // Things the vacuum blast and the antidote can hit (guards and the boss).
   get targets() {
     if (!this.active) return [];
-    return [...this.guards.filter((g) => g.active), ...(this.boss.active ? [this.boss] : []), ...this.finalRun.targets];
+    return [...this.guards.filter((g) => g.active), ...(this.boss.active ? [this.boss] : []), ...this.finalRun.targets, ...this.launch.targets];
   }
 
   stop() {
@@ -207,6 +210,7 @@ export class Part2 {
     for (const e of this.evidence) e.group.visible = false;
     for (const g of this.guards) g.setVisible(false);
     this.boss.stop();
+    this.launch.stop();
     this.ch2.world.elevator.floorLocks = null;
   }
 
@@ -278,11 +282,12 @@ export class Part2 {
     if (!this.progress.cleaned) {
       for (const node of ch2.graph.nodes) {
         if (node.pos.y < -5 || node.pos.y > 10) continue;
-        if (node.kind === 'vent') goob.spawn(node, 2.2);
-        else if (node.kind === 'floor' && !this.ch1.world.areaAt(node.pos).startsWith('Out') && Math.random() < 0.08) goob.spawn(node, 1.6);
+        if (node.kind === 'vent') goob.spawn(node, 1.4);
+        else if (node.kind === 'floor' && node.pos.x < 40 && !this.ch1.world.areaAt(node.pos).startsWith('Out') && Math.random() < 0.03) goob.spawn(node, 1.2);
       }
     }
-    goob.spreading = !this.progress.cleaned;
+    // It doesn't spread (the vats are off again): what you see is all there is.
+    goob.spreading = false;
     ch2.world.elevator.floorLocks = this.progress.key ? null : { 4: ROOF_LOCKED };
     this.boss.stop();
     // Fresh duct tape everywhere (two rolls are on the roof, for the fight).
@@ -311,6 +316,7 @@ export class Part2 {
       ...this.progress,
       transmitters: this.transmitters.map((t) => t.destroyed),
       evidence: this.evidence.flatMap((e, i) => (e.found ? [i] : [])),
+      launch: this.launch.snapshot(),
     };
   }
 
@@ -321,7 +327,8 @@ export class Part2 {
     const ch1 = this.ch1;
     ch1.equipVacuum();
     ch1.equipAntidote();
-    if (c.state === 'C2_BOSS') this.startBoss(false);
+    if (LAUNCH_STATES.includes(c.state)) this.launch.restore(c.part2?.launch ?? null, c.state);
+    else if (c.state === 'C2_BOSS') this.startBoss(false);
     else if (c.state === 'C2_CHASE') this.finalRun.startChase(false);
     else if (c.state === 'C2_ESCORT') this.finalRun.startEscort(false);
     else ch1.setState(c.state, this.objectiveFor(c.state), false);
@@ -435,6 +442,7 @@ export class Part2 {
       return true;
     }
     if (this.finalRun.cureFollower(npc)) return true;
+    if (this.launch.cured(npc)) return true;
     const n = this.nightShift.find((q) => q.npc === npc);
     if (!n) return false;
     npc.cure(CURED_LINES[npc.name] ?? CURED_LINES.default);
@@ -562,7 +570,7 @@ export class Part2 {
       const s = g.update(dt, player, this.collision, this.ch2.sightIgnore);
       if (watching) suspicion = Math.max(suspicion, s);
     }
-    return suspicion;
+    return Math.max(suspicion, this.launch.update(dt));
   }
 
   globDamage() {

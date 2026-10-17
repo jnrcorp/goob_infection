@@ -71,6 +71,80 @@ const homeRooms = [
   },
 ];
 
+// ---------------------------------------------------------------- Launch site
+// Goob Co.'s launch site (the end of chapter 2), east of the loading yard: a
+// service road out through the yard's east gate to a staging lot with a
+// guard post, then the fenced site itself: the cargo hangar, the fuel depot,
+// the control bunker, and the launch pad, where Mars 7 stands beside its
+// gantry tower (a lift up to a platform level with the rocket's hatch).
+export const LAUNCH = {
+  site: { x0: 80, z0: -26, x1: 130, z1: 40 },
+  road: { x0: 50, z0: 6, x1: 66, z1: 12 },
+  staging: { x0: 66, z0: -2, x1: 80, z1: 20 },
+  gateZ: 9,
+  guardPost: { x0: 70, z0: 14, x1: 76, z1: 19 },
+  hangar: { x0: 84, z0: 24, x1: 104, z1: 38 },
+  depot: { x0: 112, z0: 24, x1: 126, z1: 38 },
+  bunker: { x0: 84, z0: -22, x1: 100, z1: -12 },
+  pad: { x0: 106, z0: -12, x1: 128, z1: 14 },
+  shaft: { x0: 110, z0: 0, x1: 113, z1: 3 },
+  top: { x0: 106, z0: -6, x1: 120.5, z1: 7, y: 12 },
+  rocket: { x: 123, z: 1, r: 2.4, h: 26 },
+};
+const L = LAUNCH;
+const SITE_OUT = { ...OUTDOOR, lightIntensity: 26 };
+const siteWalls = (r, h, openings = {}) => [
+  wall(r.x0, r.z0, r.x1, r.z0, { h, mat: 'concrete', openings: openings.s }),
+  wall(r.x0, r.z1, r.x1, r.z1, { h, mat: 'concrete', openings: openings.n }),
+  wall(r.x0, r.z0, r.x0, r.z1, { h, mat: 'concrete', openings: openings.w }),
+  wall(r.x1, r.z0, r.x1, r.z1, { h, mat: 'concrete', openings: openings.e }),
+];
+const launchWalls = [
+  // The road out of the yard, and the staging lot in front of the site gate.
+  fence(L.road.x0, L.road.z0, L.road.x1, L.road.z0),
+  fence(L.road.x0, L.road.z1, L.road.x1, L.road.z1),
+  fence(L.staging.x0, L.staging.z0, L.staging.x0, L.road.z0),
+  fence(L.staging.x0, L.road.z1, L.staging.x0, L.staging.z1),
+  fence(L.staging.x0, L.staging.z0, L.staging.x1, L.staging.z0),
+  fence(L.staging.x0, L.staging.z1, L.staging.x1, L.staging.z1),
+  // The site's perimeter, with its gate onto the staging lot.
+  fence(L.site.x0, L.site.z0, L.site.x0, L.site.z1, {
+    openings: [door(L.gateZ, 'launch site gate', { w: 4, mat: 'metal', locked: 'Locked. GATE CONTROL: GUARD POST.' })],
+  }),
+  fence(L.site.x0, L.site.z0, L.site.x1, L.site.z0),
+  fence(L.site.x0, L.site.z1, L.site.x1, L.site.z1),
+  fence(L.site.x1, L.site.z0, L.site.x1, L.site.z1),
+  ...siteWalls(L.guardPost, 3, {
+    s: [win(71.3, 1.4, 1, 2.2), door(73, 'guard post door', { mat: 'steel' }), win(74.7, 1.4, 1, 2.2)],
+    e: [win(16.5, 1.6, 1, 2.2)],
+  }),
+  ...siteWalls(L.hangar, 7, {
+    s: [shutter(88.5), door(94, 'hangar door', { w: 2, mat: 'steel', locked: 'Locked. A card reader blinks red: LAUNCH SITE KEYCARD REQUIRED.' }), shutter(99.5)],
+  }),
+  ...siteWalls(L.depot, 5, { w: [door(31, 'fuel depot door', { mat: 'steel' })] }),
+  ...siteWalls(L.bunker, 3.5, {
+    n: [win(87, 2, 1.5, 2.3), door(92, 'bunker door', { mat: 'steel', locked: 'Locked. The keypad wants a four-digit code.' }), win(97, 2, 1.5, 2.3)],
+  }),
+  // The gantry's lift shaft, 12 m up to the platform.
+  wall(L.shaft.x0, L.shaft.z0, L.shaft.x1, L.shaft.z0, { h: 12, mat: 'steel', openings: [lift(111.5)] }),
+  wall(L.shaft.x0, L.shaft.z0, L.shaft.x0, L.shaft.z1, { h: 12, mat: 'steel' }),
+  wall(L.shaft.x1, L.shaft.z0, L.shaft.x1, L.shaft.z1, { h: 12, mat: 'steel' }),
+  wall(L.shaft.x0, L.shaft.z1, L.shaft.x1, L.shaft.z1, { h: 12, mat: 'steel' }),
+];
+const launchRooms = [
+  { id: 'serviceRoad', name: 'Service Road', rect: L.road, ...OUTDOOR },
+  { id: 'staging', name: 'Staging Lot', rect: L.staging, ...OUTDOOR, minus: [L.guardPost] },
+  { id: 'guardPost', name: 'Guard Post', rect: L.guardPost, floor: 'linoleum', ceiling: 2.8 },
+  { id: 'site', name: 'Launch Site', rect: L.site, ...SITE_OUT, minus: [L.hangar, L.depot, L.bunker, L.pad] },
+  { id: 'pad', name: 'Launch Pad', rect: L.pad, ...SITE_OUT, floor: 'concrete', minus: [L.shaft] },
+  {
+    id: 'hangar', name: 'Cargo Hangar', rect: L.hangar, floor: 'concrete', ceiling: null, fixture: null,
+    lightY: 6.4, lightIntensity: 22, lightRange: 16, lightColor: 0xd8ffd0,
+  },
+  { id: 'depot', name: 'Fuel Depot', rect: L.depot, floor: 'concrete', ceiling: null, fixture: null, lightY: 4.5, lightIntensity: 14, lightRange: 12 },
+  { id: 'bunker', name: 'Control Bunker', rect: L.bunker, floor: 'tile', ceiling: 3.2, lightColor: 0xc8dcff },
+];
+
 // ---------------------------------------------------------------- B3
 // The hidden elevator's shaft, just north of the building's B1 basement.
 const SECRET_SHAFT = { x0: 7.6, x1: 10.4, z0: 24.1, z1: 26.9, doorAt: 9, doorW: 1.4, doorZ: 24 };
@@ -101,12 +175,20 @@ export const BUILDING = {
     { x0: 0, z0: 0, x1: 24, z1: 24, y: 11.7, minus: [{ x0: 15, z0: 13, x1: 18, z1: 16 }] },
     { x0: 14.9, z0: 12.9, x1: 18.1, z1: 16.1, y: 15.2 }, // elevator headhouse on the roof
     { x0: -60, z0: -26, x1: -48, z1: -16, y: 2.8 }, // your house
+    // The launch site's buildings, the gantry platform and its lift's headhouse.
+    { ...L.guardPost, y: 3 },
+    { ...L.hangar, y: 7 },
+    { ...L.depot, y: 5 },
+    { ...L.bunker, y: 3.5 },
+    { ...L.top, y: 11.7, minus: [L.shaft] },
+    { x0: L.shaft.x0 - 0.1, z0: L.shaft.z0 - 0.1, x1: L.shaft.x1 + 0.1, z1: L.shaft.z1 + 0.1, y: 15.2 },
   ],
   // Outdoor ground you can walk on (parking lot and loading yard).
   grounds: [
     { x0: -8, z0: -26, x1: 36, z1: 0 },
     HOME_GROUND,
     { x0: 36, z0: -16, x1: 50, z1: 28 },
+    L.road, L.staging, L.site,
   ],
 
   floors: [
@@ -244,7 +326,10 @@ export const BUILDING = {
         fence(-8, -26, 36, -26, {
           openings: [door(14, 'front gate', { w: 3, mat: 'metal', locked: "The gate's chained shut. Nobody leaves until the goob is sorted." })],
         }),
-        fence(50, -16, 50, 28),
+        fence(50, -16, 50, 28, {
+          openings: [door(L.gateZ, 'east gate', { w: 4, mat: 'metal', locked: 'Chained shut. A sign: GOOB CO. LAUNCH SITE. AUTHORIZED VEHICLES ONLY.' })],
+        }),
+        ...launchWalls,
         fence(36, 28, 50, 28),
         // (The gap is where the road from your house comes in.)
         fence(-8, -26, -8, 0, { openings: [gap((ROAD.z0 + ROAD.z1) / 2, LOT_ENTRANCE_W)] }),
@@ -281,6 +366,7 @@ export const BUILDING = {
         { id: 'lot', name: 'Parking Lot', rect: { x0: -8, z0: -26, x1: 36, z1: 0 }, ...OUTDOOR },
         { id: 'yard', name: 'Loading Yard', rect: { x0: 36, z0: -16, x1: 50, z1: 28 }, ...OUTDOOR },
         ...homeRooms,
+        ...launchRooms,
       ],
     },
     // ---------------------------------------------------------------- 2F
@@ -399,11 +485,24 @@ export const BUILDING = {
         wall(15, 13, 15, 16, { h: 3.2, mat: 'facade' }),
         wall(18, 13, 18, 16, { h: 3.2, mat: 'facade' }),
         wall(15, 16, 18, 16, { h: 3.2, mat: 'facade' }),
+        // The launch site's gantry platform: a railing, and the lift's headhouse.
+        wall(L.top.x0, L.top.z0, L.top.x1, L.top.z0, { showTop: true, mat: 'steel' }),
+        wall(L.top.x0, L.top.z1, L.top.x1, L.top.z1, { showTop: true, mat: 'steel' }),
+        wall(L.top.x0, L.top.z0, L.top.x0, L.top.z1, { showTop: true, mat: 'steel' }),
+        wall(L.top.x1, L.top.z0, L.top.x1, L.top.z1, { showTop: true, mat: 'steel' }),
+        wall(L.shaft.x0, L.shaft.z0, L.shaft.x1, L.shaft.z0, { h: 3.2, mat: 'steel', openings: [lift(111.5)] }),
+        wall(L.shaft.x0, L.shaft.z0, L.shaft.x0, L.shaft.z1, { h: 3.2, mat: 'steel' }),
+        wall(L.shaft.x1, L.shaft.z0, L.shaft.x1, L.shaft.z1, { h: 3.2, mat: 'steel' }),
+        wall(L.shaft.x0, L.shaft.z1, L.shaft.x1, L.shaft.z1, { h: 3.2, mat: 'steel' }),
       ],
       rooms: [
         {
           id: 'roof', name: 'Rooftop', rect: { x0: 0, z0: 0, x1: 24, z1: 24 }, ...OUTDOOR, noGoob: true, noFloor: true,
           lightY: 5, lightSpacing: 10, lightIntensity: 18, lightRange: 14, minus: [{ x0: 15, z0: 13, x1: 18, z1: 16 }],
+        },
+        {
+          id: 'gantryTop', name: 'Gantry Tower', rect: L.top, ...OUTDOOR, noGoob: true, noFloor: true,
+          lightY: 4, lightSpacing: 8, lightIntensity: 20, lightRange: 14, minus: [L.shaft],
         },
       ],
     },
@@ -424,6 +523,16 @@ export const BUILDING = {
     floors: [-12, -4],
     floorNames: ['B3', 'B1'],
     startFloor: 1,
+  },
+
+  // The launch site's gantry lift: from the pad up to the platform beside
+  // the rocket's hatch (locked until the end of chapter 2).
+  gantryElevator: {
+    x0: 110.1, x1: 112.9, z0: 0.1, z1: 2.9,
+    doorAt: 111.5, doorW: 1.4, doorZ: 0,
+    floors: [0, 12],
+    floorNames: ['Pad', 'Top'],
+    startFloor: 0,
   },
 
   elevator: {
@@ -511,6 +620,11 @@ export const BUILDING = {
     // Roof (chapter 2's boss fight): on two of the AC units.
     { x: 20.5, y: 13.3, z: 4 },
     { x: 3, y: 13.3, z: 20 },
+    // The launch site: the hangar, the bunker, and two on the gantry platform.
+    { x: 85.2, y: 0, z: 25.2 },
+    { x: 99.2, y: 0, z: -21.2 },
+    { x: 106.8, y: 12, z: -5.2 },
+    { x: 119.6, y: 12, z: 6.2 },
   ],
 
   // The antidote sprayer waits on the infirmary counter.

@@ -160,8 +160,10 @@ export class Morning {
 
     // Your car, in the driveway.
     this.car = new DrivableCar(ctx, { x: DRIVEWAY.x, z: DRIVEWAY.z, heading: DRIVEWAY.heading, paint: 'paintBlue' });
-    this.car.label = () => (this.stage === 'DRIVE' ? 'Get in and drive to work' : this.stage === 'CHORES' ? 'Your car (get ready first)' : 'Your car');
-    this.car.onUse = () => this.useCar();
+    this.car.label = () => this.carStory?.label ?? (this.stage === 'DRIVE' ? 'Get in and drive to work' : this.stage === 'CHORES' ? 'Your car (get ready first)' : 'Your car');
+    this.car.onUse = () => (this.carStory ? this.carStory.use() : this.useCar());
+    // A later story beat can borrow the car: { label, use() } (see launch.js).
+    this.carStory = null;
 
     // Lot gate (shut once you've arrived).
     const gateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.2, GATE.z1 - GATE.z0), m('metal'));
