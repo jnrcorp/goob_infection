@@ -64,6 +64,10 @@ The title screen has Continue (the autosave), Difficulty and Volume. Goob spread
   - `M` skips the morning at home and the drive, straight to your desk.
   - `P` saves a checkpoint (and the autosave) right now, once the outbreak has started.
   - `L` marks every file as found (during the investigation, it sends Victoria to the boardroom).
+  - `T` toggles god mode: your suit can't be hurt, and guards and cameras never catch you (the readout shows GOD).
+  - `U` patches your suit to 100% and empties the vacuum tank.
+  - `]` and `[` jump to the next or previous chapter 2 stage.
+  - `K` cures every infected person (in any objective, both chapters), and `H` also hits the launch site's final boss or finishes off Batch 8.
 - URL options:
   - `?debug` starts with the readout on.
   - `?at=x,y,z,yaw,pitch` starts at a position (degrees; yaw 0 = facing south / -z).

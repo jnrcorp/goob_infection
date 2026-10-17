@@ -841,7 +841,7 @@ export class Chapter1 {
 
   // An infected coworker's lunge landed.
   hurtPlayer(npc) {
-    if (!this.hostile) return;
+    if (!this.hostile || this.god) return; // (god: the debug cheat)
     const before = this.player.suit;
     this.player.suit = Math.max(0, before - INFECTED.damage);
     this.player.shakeFor(0.35);

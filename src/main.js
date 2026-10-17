@@ -288,6 +288,24 @@ document.getElementById('menu-continue').addEventListener('click', () => {
 });
 document.getElementById('pause-resume').addEventListener('click', () => beginPlay());
 
+// ---------- Debug: chapter 2's stages in order (for ] and [) ----------
+const CHAPTER2_STAGES = [
+  'C2_INFILTRATE', 'C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', 'C2_FUSES', 'C2_WING', 'C2_ISOLATION', 'C2_LEAVE',
+  'C2_AFTER', 'C2_FIND', 'C2_LOCKDOWN', 'C2_KIM', 'C2_DEFEND',
+  'C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_BLOB', 'C2_EVIDENCE', 'C2_HOSTAGES', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_BOSS', 'C2_CHASE', 'C2_ESCORT',
+  'C2_DRIVE', 'C2_GATE', 'C2_CARGO', 'C2_CODE', 'C2_ABORT', 'C2_VALVES', 'C2_GANTRY', 'C2_FINAL',
+];
+// In-between states count as the stage they belong to.
+const CHAPTER2_ALIASES = {
+  C2_HOME: 'C2_INFILTRATE', C2_RIDE: 'C2_INFILTRATE', C2_END: 'C2_LEAVE', C2_OVERRIDE: 'C2_AFTER', C2_COPS: 'C2_AFTER',
+  C2_MESSAGE: 'C2_FIND', C2_RADIO: 'C2_ESCORT',
+};
+function chapter2Stage(state, step) {
+  const at = CHAPTER2_STAGES.indexOf(CHAPTER2_ALIASES[state] ?? state);
+  if (at < 0) return step > 0 ? CHAPTER2_STAGES[0] : null;
+  return CHAPTER2_STAGES[at + step] ?? null;
+}
+
 // ---------- Controls: rebinding (from the title or pause menu), and the key guide ----------
 let controlsFrom = 'title';
 let waitingFor = null; // { id, button } while waiting for a key
@@ -973,8 +991,31 @@ function step(dt) {
     goob.blobs.clear();
     hud.toast('Debug: all goob removed', 1.5);
   }
-  if (active && debug && input.wasPressed('KeyK') && ['CURE', 'C2_CURE'].includes(chapter.state)) {
-    for (const npc of cast.all) if (npc.infected) chapter.cureNpc(npc);
+  if (active && debug && input.wasPressed('KeyK')) {
+    const infected = [...cast.all, ...chapter.ch2.targets].filter((n) => n.infected && n.person?.root.visible !== false && n !== chapter.ch2.part2.boss && n !== chapter.ch2.part2.launch.final);
+    for (const npc of infected) chapter.cureNpc(npc);
+    hud.toast(infected.length ? `Debug: cured ${infected.length}` : 'Debug: nobody to cure', 1.5);
+  }
+  // T: god mode (no suit damage; guards and cameras never catch you).
+  if (active && debug && input.wasPressed('KeyT')) {
+    chapter.god = !chapter.god;
+    if (chapter.god) player.suit = 100;
+    hud.toast(chapter.god ? 'Debug: god mode ON' : 'Debug: god mode off', 1.5);
+  }
+  // U: patch the suit to 100% and empty the vacuum tank.
+  if (active && debug && input.wasPressed('KeyU')) {
+    player.suit = 100;
+    vacuum.empty();
+    hud.toast('Debug: suit 100%, tank empty', 1.5);
+  }
+  // ] and [: the next or previous chapter 2 stage.
+  if (active && debug && (input.wasPressed('BracketRight') || input.wasPressed('BracketLeft')) && chapter.chapter === 2) {
+    const next = input.wasPressed('BracketRight');
+    const target = chapter2Stage(chapter.state, next ? 1 : -1);
+    if (target) {
+      chapter.skipTo(target);
+      hud.toast(`Debug: ${target}`, 1.5);
+    }
   }
   if (active && debug && input.wasPressed('KeyI')) {
     vacuum.infinite = !vacuum.infinite;
@@ -985,9 +1026,18 @@ function step(dt) {
     chapter.skipTo('INTRO');
     hud.toast('Debug: skipped the morning', 1.5);
   }
-  if (active && debug && input.wasPressed('KeyH') && chapter.ch2.part2.boss.active) {
-    chapter.ch2.part2.boss.stun();
-    chapter.ch2.part2.cured(chapter.ch2.part2.boss);
+  if (active && debug && input.wasPressed('KeyH')) {
+    const p2 = chapter.ch2.part2;
+    if (p2.boss.active) {
+      p2.boss.stun();
+      p2.cured(p2.boss);
+    } else if (p2.launch.final.active) {
+      p2.launch.final.stun();
+      p2.launch.cured(p2.launch.final);
+    } else if (p2.blob.active) {
+      p2.blob.volume = 0;
+      hud.toast('Debug: Batch 8 vacuumed up', 1.5);
+    }
   }
   if (active && debug && input.wasPressed('KeyP') && chapter.outbreak) {
     chapter.saveCheckpoint();
@@ -1039,7 +1089,7 @@ function step(dt) {
   if (debug) {
     fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
     const p = player.pos;
-    hud.setDebug(`${fps.toFixed(0)} fps · x ${p.x.toFixed(2)} y ${p.y.toFixed(2)} z ${p.z.toFixed(2)} · ${chapter.state}${player.noclip ? ' · noclip' : ''}`);
+    hud.setDebug(`${fps.toFixed(0)} fps · x ${p.x.toFixed(2)} y ${p.y.toFixed(2)} z ${p.z.toFixed(2)} · ${chapter.state}${player.noclip ? ' · noclip' : ''}${chapter.god ? ' · GOD' : ''}`);
   } else {
     hud.setDebug(null);
   }

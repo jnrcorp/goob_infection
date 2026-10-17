@@ -466,7 +466,7 @@ export class Chapter2 {
     suspicion = Math.max(suspicion, this.part2.update(dt));
     suspicion = Math.max(suspicion, this.wing.update(dt, this.player, this.collision, this.sightIgnore, watching));
     suspicion = Math.max(suspicion, this.lockdown.update(dt));
-    if (UNSEEN) suspicion = 0;
+    if (UNSEEN || this.ch1.god) suspicion = 0; // (god: the debug cheat)
     this.detectEl.hidden = suspicion <= 0.01;
     this.detectFill.style.width = `${Math.round(suspicion * 100)}%`;
     this.detectEl.classList.toggle('alert', suspicion >= 0.6);

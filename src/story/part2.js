@@ -594,7 +594,7 @@ export class Part2 {
   damage(amount) {
     const ch1 = this.ch1;
     const player = this.ch2.player;
-    if (ch1.busy || amount <= 0) return;
+    if (ch1.busy || amount <= 0 || ch1.god) return;
     player.suit = Math.max(0, player.suit - amount);
     player.shakeFor(0.3);
     ch1.fx.flash('#6cff4a', 0.4);
