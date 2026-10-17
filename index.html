@@ -101,10 +101,11 @@
       <button id="menu-difficulty" type="button" disabled>Difficulty: Normal</button>
       <button id="menu-quality" type="button" disabled>Graphics: Auto</button>
       <button id="menu-volume" type="button" disabled>Volume: 75%</button>
+      <button id="menu-controls" type="button" disabled>Controls</button>
       <button id="menu-quit" type="button" disabled>Quit</button>
     </nav>
     <p class="difficulty-note" id="difficulty-note"></p>
-    <p class="hint">WASD move (in the car: W/S gas and brake, A/D steer) · Mouse look · E interact · Shift run · Space jump · Esc pause<br>
+    <p class="hint" id="title-keys">WASD move (in the car: W/S gas and brake, A/D steer) · Mouse look · E interact · Shift run · Space jump · Esc pause<br>
       C crouch · Vacuum: left mouse suck · right mouse blast · F antidote · Q let go of a bin · J files</p>
   </section>
 
@@ -114,8 +115,10 @@
       <button id="pause-resume" type="button">Resume</button>
       <button id="pause-files" type="button">Files (0/12)</button>
       <button id="pause-quality" type="button">Graphics: Auto</button>
+      <button id="pause-controls" type="button">Controls</button>
       <button id="pause-title" type="button">Quit to title</button>
     </nav>
+    <div class="key-guide" id="pause-keys" aria-label="Keys"></div>
   </section>
 
   <section id="files" class="screen dim-screen files-screen" hidden>
@@ -130,6 +133,16 @@
     </div>
     <nav class="menu" aria-label="Files">
       <button id="files-back" type="button">Back to the game</button>
+    </nav>
+  </section>
+
+  <section id="controls" class="screen dim-screen controls-screen" hidden>
+    <h2>Controls</h2>
+    <p class="hint" id="controls-hint">Click an action, then press the key or mouse button you want for it. Esc cancels.</p>
+    <nav class="controls-list" id="controls-list" aria-label="Key bindings"></nav>
+    <nav class="menu" aria-label="Controls">
+      <button id="controls-reset" type="button">Reset to defaults</button>
+      <button id="controls-back" type="button">Back</button>
     </nav>
   </section>
 

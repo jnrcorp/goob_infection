@@ -17,6 +17,7 @@ import { Navigation } from './npc/navigation.js';
 import { Spill } from './story/spill.js';
 import { Chapter1 } from './story/chapter1.js';
 import { Input } from './core/input.js';
+import { ACTIONS, RESERVED, bind, resetBindings, keyName, keyOf } from './core/bindings.js';
 import { DIFFICULTIES, VOLUMES, settings, saveSettings, difficulty } from './core/settings.js';
 import { startAudio, setVolume, setMuted, setListener, setLoops, sfx } from './core/sound.js';
 import { saveGame, loadGame, clearSave } from './core/save.js';
@@ -34,6 +35,7 @@ const screens = {
   breached: document.getElementById('breached'),
   tbc: document.getElementById('tbc'),
   quit: document.getElementById('quit'),
+  controls: document.getElementById('controls'),
 };
 
 // ---------- Loading ----------
@@ -253,6 +255,7 @@ input.onLockChange = (locked) => {
   } else if (state === 'playing') {
     state = 'paused';
     updateFilesButton();
+    showKeyGuide();
     showScreen('pause');
   }
 };
@@ -284,6 +287,148 @@ document.getElementById('menu-continue').addEventListener('click', () => {
   beginPlay();
 });
 document.getElementById('pause-resume').addEventListener('click', () => beginPlay());
+
+// ---------- Controls: rebinding (from the title or pause menu), and the key guide ----------
+let controlsFrom = 'title';
+let waitingFor = null; // { id, button } while waiting for a key
+
+function renderControls() {
+  const list = document.getElementById('controls-list');
+  list.innerHTML = '';
+  for (const action of ACTIONS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = `bind-${action.id}`;
+    const label = document.createElement('span');
+    label.textContent = action.label;
+    const key = document.createElement('kbd');
+    key.textContent = keyOf(action.id);
+    button.append(label, key);
+    button.addEventListener('click', () => startWaiting(action.id, button, key));
+    list.appendChild(button);
+  }
+}
+
+function startWaiting(id, button, key) {
+  stopWaiting();
+  waitingFor = { id, button };
+  input.capturing = true;
+  button.classList.add('waiting');
+  key.textContent = 'Press a key…';
+}
+
+function stopWaiting() {
+  if (waitingFor) waitingFor.button.classList.remove('waiting');
+  waitingFor = null;
+  // (A tick later, so the key that finished it isn't read by the game.)
+  setTimeout(() => { input.capturing = false; }, 0);
+}
+
+function finishWaiting(code) {
+  const { id } = waitingFor;
+  const hint = document.getElementById('controls-hint');
+  if (RESERVED.has(code)) {
+    hint.textContent = `${keyName(code)} is kept for menus and debugging. Pick another key.`;
+    return;
+  }
+  const swapped = bind(id, code);
+  hint.textContent = swapped
+    ? `${keyName(code)} was ${swapped.label.toLowerCase()}; that's on ${keyOf(swapped.id)} now.`
+    : 'Saved. Click another action to change it, or go back.';
+  stopWaiting();
+  renderControls();
+  showKeyGuide();
+}
+
+window.addEventListener('keydown', (e) => {
+  if (!waitingFor) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.code === 'Escape') {
+    stopWaiting();
+    renderControls();
+    return;
+  }
+  finishWaiting(e.code);
+}, true);
+// A mouse button binds that button (and the click it makes doesn't press
+// whatever's under the pointer).
+let swallowClick = false;
+window.addEventListener('mousedown', (e) => {
+  if (!waitingFor) return;
+  e.preventDefault();
+  e.stopPropagation();
+  swallowClick = true;
+  finishWaiting(`Mouse${e.button}`);
+}, true);
+window.addEventListener('click', (e) => {
+  if (!swallowClick) return;
+  swallowClick = false;
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+window.addEventListener('contextmenu', (e) => { if (waitingFor || state === 'controls') e.preventDefault(); });
+
+function showControls(from) {
+  controlsFrom = from;
+  state = from === 'pause' ? 'paused' : state;
+  document.getElementById('controls-hint').textContent = 'Click an action, then press the key or mouse button you want for it. Esc cancels.';
+  renderControls();
+  showScreen('controls');
+}
+
+document.getElementById('menu-controls').addEventListener('click', () => showControls('title'));
+document.getElementById('pause-controls').addEventListener('click', () => showControls('pause'));
+document.getElementById('controls-back').addEventListener('click', () => {
+  stopWaiting();
+  showKeyGuide();
+  showScreen(controlsFrom);
+});
+document.getElementById('controls-reset').addEventListener('click', () => {
+  stopWaiting();
+  resetBindings();
+  document.getElementById('controls-hint').textContent = 'Back to the default keys.';
+  renderControls();
+  showKeyGuide();
+});
+
+// The keys that matter in the chapter you're playing, under the pause menu
+// (and the hint line on the title screen), with your bindings.
+function showKeyGuide() {
+  const k = keyOf;
+  const rows = [
+    ['Move', `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`],
+    ['Run / jump', `${k('run')} / ${k('jump')}`],
+    ['Interact, talk, doors', k('interact')],
+    ['Vacuum goob (hold)', k('vacuum')],
+    ['Air blast', k('blast')],
+    ['Antidote (hold)', k('antidote')],
+  ];
+  if (chapter.chapter === 2) {
+    rows.push(
+      ['Crouch: guards and cameras see you from half as far', k('crouch')],
+      ['Knock out a guard: air blast, up close', k('blast')],
+      ['Car: gas / brake, steer', `${k('forward')} / ${k('back')}, ${k('left')} ${k('right')}`],
+      ['Car: handbrake / get out', `${k('jump')} / ${k('interact')}`],
+    );
+  } else {
+    rows.push(['Crouch', k('crouch')], ['Let go of a bin', k('letGo')]);
+  }
+  rows.push(['Files', k('files')], ['Pause', 'Esc']);
+  const guide = document.getElementById('pause-keys');
+  guide.innerHTML = '';
+  for (const [what, key] of rows) {
+    const label = document.createElement('span');
+    label.textContent = what;
+    const kbd = document.createElement('kbd');
+    kbd.textContent = key;
+    guide.append(kbd, label);
+  }
+  document.getElementById('title-keys').innerHTML =
+    `${k('forward')}${k('left')}${k('back')}${k('right')} move (in the car: gas, brake, steer) · Mouse look · ${k('interact')} interact · ${k('run')} run · ${k('jump')} jump · Esc pause<br>`
+    + `${k('crouch')} crouch · Vacuum: ${k('vacuum').toLowerCase()} suck · ${k('blast').toLowerCase()} blast · ${k('antidote')} antidote · ${k('letGo')} let go of a bin · ${k('files')} files`;
+}
+showKeyGuide();
 
 // ---------- Files screen (J in game, or from the pause menu) ----------
 function showFiles() {

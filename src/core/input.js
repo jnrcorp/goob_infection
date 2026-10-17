@@ -1,4 +1,8 @@
-// Keyboard + pointer-lock mouse input, polled once per frame.
+import { translate } from './bindings.js';
+
+// Keyboard + pointer-lock mouse input, polled once per frame. Keys and
+// buttons arrive translated through your bindings (bindings.js), as the
+// default codes the game reads.
 const BLOCKED_WHILE_LOCKED = new Set(['Space', 'Tab', 'Backquote']);
 
 export class Input {
@@ -11,12 +15,20 @@ export class Input {
     this.locked = false;
     this.onLockChange = null;
 
+    // (While the controls screen is waiting for a key, it gets them instead.)
+    this.capturing = false;
     window.addEventListener('keydown', (e) => {
       if (this.locked && BLOCKED_WHILE_LOCKED.has(e.code)) e.preventDefault();
-      if (!this.keys.has(e.code)) this.pressed.add(e.code);
-      this.keys.add(e.code);
+      if (this.capturing) return;
+      const code = translate(e.code);
+      if (!code) return;
+      if (!this.keys.has(code)) this.pressed.add(code);
+      this.keys.add(code);
     });
-    window.addEventListener('keyup', (e) => this.keys.delete(e.code));
+    window.addEventListener('keyup', (e) => {
+      const code = translate(e.code);
+      if (code) this.keys.delete(code);
+    });
     window.addEventListener('blur', () => this.keys.clear());
 
     document.addEventListener('mousemove', (e) => {
@@ -26,12 +38,16 @@ export class Input {
     });
     // Mouse buttons are reported as 'Mouse0' (left), 'Mouse2' (right), etc.
     document.addEventListener('mousedown', (e) => {
-      if (!this.locked) return;
-      const code = `Mouse${e.button}`;
+      if (!this.locked || this.capturing) return;
+      const code = translate(`Mouse${e.button}`);
+      if (!code) return;
       this.pressed.add(code);
       this.keys.add(code);
     });
-    document.addEventListener('mouseup', (e) => this.keys.delete(`Mouse${e.button}`));
+    document.addEventListener('mouseup', (e) => {
+      const code = translate(`Mouse${e.button}`);
+      if (code) this.keys.delete(code);
+    });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
       if (!this.locked) this.keys.clear();

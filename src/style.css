@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --goob: #6cff4a;
   --text: #e8eadf;
   --shadow: #000;
@@ -337,6 +337,76 @@ html, body {
   font-size: 14px;
   opacity: 0.6;
   text-align: right;
+}
+
+/* Controls screen: one row per action, the key on the right */
+.controls-screen {
+  gap: 12px;
+}
+
+.controls-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  width: min(92vw, 640px);
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-color: var(--ink) transparent;
+}
+
+.controls-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font: inherit;
+  font-size: clamp(14px, 1.9vw, 18px);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 5px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.controls-list button kbd {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.controls-list button:hover,
+.controls-list button:focus-visible,
+.controls-list button.waiting {
+  outline: none;
+  color: var(--paper);
+  background: var(--ink);
+}
+
+/* The keys for the chapter you're in, under the pause menu */
+.key-guide {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 2px 12px;
+  max-width: min(94vw, 900px);
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.8;
+  text-align: left;
+}
+
+.key-guide kbd {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .key-guide { grid-template-columns: auto auto; }
+}
+
+@media (max-width: 480px) {
+  .key-guide { grid-template-columns: auto; }
+  .key-guide kbd { text-align: left; }
 }
 
 /* Files screen: list on the left, the selected file on the right */

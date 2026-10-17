@@ -1,3 +1,7 @@
+import { withKeys } from '../core/bindings.js';
+
+// HUD lines that can name keys.
+const KEYED = new Set(['prompt', 'objective', 'toast']);
 const FLY_SECONDS = 0.8; // a new objective sliding into place
 
 // DOM overlay: location, interaction prompt, toast messages and debug readout.
@@ -29,6 +33,7 @@ export class Hud {
   }
 
   setText(key, text) {
+    if (KEYED.has(key)) text = withKeys(text); // (your key bindings, not the defaults)
     if (this.cache[key] === text) return;
     this.cache[key] = text;
     const el = this.el[key];
@@ -58,7 +63,7 @@ export class Hud {
     el.objective.style.visibility = 'hidden';
 
     const fly = el.objectiveFly;
-    fly.textContent = text;
+    fly.textContent = withKeys(text);
     fly.hidden = false;
     fly.style.transition = 'none';
     fly.style.left = `${home.left - hud.left}px`;
