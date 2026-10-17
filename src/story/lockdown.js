@@ -135,6 +135,12 @@ export class Lockdown {
     return this.ch2.cast.all.find((n) => n.name === name);
   }
 
+  // Her night guards, for the vacuum blast (part2's guards; part 2 hasn't started yet).
+  get targets() {
+    if (!this.active || this.state === 'C2_DEFEND') return [];
+    return this.ch2.part2.guards.filter((g) => g.active);
+  }
+
   objectiveFor(state) {
     if (state === 'C2_LOCKDOWN') return OBJECTIVES.C2_LOCKDOWN(this.noteRead);
     if (state === 'C2_DEFEND') return OBJECTIVES.C2_DEFEND(Math.floor(100 * this.progress / this.needed));

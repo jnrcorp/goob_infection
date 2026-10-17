@@ -180,7 +180,7 @@ export class Chapter2 {
 
   // Everything ignored by the guards' line of sight: people and open doors.
   get targets() {
-    return this.active ? [...this.guards, ...this.part2.targets, ...this.wing.targets] : [];
+    return this.active ? [...this.guards, ...this.part2.targets, ...this.wing.targets, ...this.lockdown.targets] : [];
   }
 
   // Everyone there is to rescue: the holding cells and the isolation wing.
