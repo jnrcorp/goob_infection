@@ -851,6 +851,13 @@ async function runStartupSimulation() {
       byFloor[id] = Math.round(((byFloor[id] ?? 0) + blob.volume) * 10) / 10;
     }
     console.log(`[report] goob volume by area: ${JSON.stringify(byFloor)}`);
+    const outside = {};
+    for (const blob of goob.blobs.values()) {
+      if (chapter.areaOf(blob.node) !== 'Outside') continue;
+      const id = world.roomAt(blob.node.pos)?.id ?? '?';
+      outside[id] = (outside[id] ?? 0) + 1;
+    }
+    console.log(`[report] outside goob by room: ${JSON.stringify(outside)}`);
     const walking = cast.all.filter((n) => n.mode === 'returning');
     console.log(`[report] cured: ${cast.all.filter((n) => n.cured).length}, still walking home: ${walking.map((n) => `${n.name} (${n.pos.x.toFixed(1)}, ${n.pos.y.toFixed(1)}, ${n.pos.z.toFixed(1)})`).join(', ') || 'none'}`);
     // The closest two people standing on the same floor (should never overlap).

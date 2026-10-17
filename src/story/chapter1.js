@@ -51,6 +51,10 @@ const OUTBREAK_SEEDS = {
 };
 // Top to bottom, for the HUD's by-floor breakdown.
 const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
+// The only outdoor rooms you can get to during chapter 1 (every other gate is
+// locked): outside goob starts here. (The launch site and its road beyond the
+// yard's east gate count as Outside too.)
+const REACHABLE_OUTSIDE = new Set(['lot', 'yard']);
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
 const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE', 'C2_CURE', 'C2_ISOLATION', 'C2_DEFEND', 'C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_BLOB', 'C2_EVIDENCE', 'C2_HOSTAGES', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_ESCORT', 'C2_CARGO', 'C2_CODE', 'C2_ABORT', 'C2_VALVES', 'C2_GANTRY']);
 // Hard: how close (m) and how long (s) an infected has to stay against a
@@ -441,6 +445,7 @@ export class Chapter1 {
       const kind = area === 'Outside' ? 'floor' : 'vent';
       const spots = this.graph.nodes
         .filter((n) => n.kind === kind && this.areaOf(n) === area)
+        .filter((n) => area !== 'Outside' || REACHABLE_OUTSIDE.has(this.world.roomAt(n.pos)?.id))
         .sort(() => Math.random() - 0.5);
       for (const node of spots.slice(0, count)) this.goob.spawn(node, volume);
     }

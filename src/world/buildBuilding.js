@@ -284,6 +284,12 @@ export function buildBuilding(baseCtx) {
       return room?.outdoor ? 'Outside' : BUILDING.floors[floorIndex].id;
     },
 
+    // The room at a point (null if none).
+    roomAt(pos) {
+      const floorIndex = this.floorIndexAt(pos.y);
+      return rooms.find((r) => r.floorIndex === floorIndex && r.rects.some((rect) => inRect(rect, pos.x, pos.z))) ?? null;
+    },
+
     locationAt(pos) {
       const floorIndex = this.floorIndexAt(pos.y);
       const floorId = BUILDING.floors[floorIndex].id;
