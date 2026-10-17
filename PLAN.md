@@ -212,6 +212,11 @@ Each milestone ends in something you can play.
   - Her executive override takes over your hazard suit. It walks you, with no control, to the control room and presses CELL RELEASE while she talks over the suit radio.
   - She slips away up the hidden elevator.
   - Two officers catch you at the console, see the override blinking on your visor, and send you to find her.
+- **The lockdown (lockdown.js):** you step off the hidden elevator on B1 and Victoria locks HQ down over the PA: power cut, steel shutters behind every stairwell door, and Officer Kim stuck in the dead elevator.
+  1. **Breakers:** five breakers and MAIN in the B1 server room. Hank's note on the goob lab desk has the pattern (1, 3, 4 on; 2, 5 off). A wrong pattern sparks and costs 5% suit. Her night guards (B1 and 1F) are already out.
+  2. **Kim:** the power's back and the elevator comes down with Kim in it. Ride up to the lobby (the elevator only goes to B1 and 1F).
+  3. **Defend:** Kim lifts the lockdown from the reception desk (45, 60 or 75 seconds by difficulty) while six infected burst out of the 1F rooms. She stops working while any are on her: blast them back, cure them, or lead them away.
+  4. The stairs open, and you head for her office.
 - **The hunt (part 2):** her office on 3F is empty, apart from a recorded message: she's on the roof with the last shuttle to Mars, she has restarted the vats, and her security never went home.
   1. **Transmitters:** smash the four suit-override transmitters (B1 server room, 1F mail room, 2F IT closet, 3F records room).
      - A loyal guard patrols every floor.

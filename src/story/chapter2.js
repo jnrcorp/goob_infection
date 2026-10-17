@@ -5,6 +5,7 @@ import { AfterCredits } from './afterCredits.js';
 import { Part2 } from './part2.js';
 import { LAUNCH_STATES } from './launch.js';
 import { IsolationWing, WING_STATES } from './isolation.js';
+import { Lockdown, LOCKDOWN_STATES } from './lockdown.js';
 import { sfx } from '../core/sound.js';
 
 // Chapter 2: The True Facility.
@@ -109,6 +110,7 @@ export class Chapter2 {
     this.after = new AfterCredits({ ch2: this, scene });
     this.part2 = new Part2({ ch2: this, ctx });
     this.wing = new IsolationWing(this, ctx);
+    this.lockdown = new Lockdown(this, ctx);
     this.prisoners = PRISONERS.map((p) => ({ ...p, npc: cast.all.find((n) => n.name === p.name) }));
     this.cellDoors = CELL_X.map((_, i) => world.doorByLabel(`cell door ${i + 1}`));
     this.controlDoor = world.doorByLabel('control room door');
@@ -219,6 +221,8 @@ export class Chapter2 {
     this.after.reset();
     this.part2.stop();
     this.wing.stop();
+    this.lockdown.reset();
+    this.lockdown.seal(false);
     this.world.setNight(false, this.scene);
     this.tape.visible = false;
     for (const g of this.guards) g.setVisible(false);
@@ -254,6 +258,7 @@ export class Chapter2 {
       npc.frozen = true;
     }
     this.wing.hide();
+    this.lockdown.reset();
     for (const d of this.cellDoors) { d.reset(); d.locked = CELL_LOCKED; }
     this.controlDoor.reset();
     this.controlDoor.locked = null;
@@ -407,6 +412,7 @@ export class Chapter2 {
   cured(npc) {
     if (this.part2.cured(npc)) return;
     if (this.wing.cured(npc)) return;
+    if (this.lockdown.cured(npc)) return;
     const p = this.prisoners.find((q) => q.npc === npc);
     npc.person.setInfected(false);
     sfx.cure(npc.pos);
@@ -459,6 +465,7 @@ export class Chapter2 {
     }
     suspicion = Math.max(suspicion, this.part2.update(dt));
     suspicion = Math.max(suspicion, this.wing.update(dt, this.player, this.collision, this.sightIgnore, watching));
+    suspicion = Math.max(suspicion, this.lockdown.update(dt));
     if (UNSEEN) suspicion = 0;
     this.detectEl.hidden = suspicion <= 0.01;
     this.detectFill.style.width = `${Math.round(suspicion * 100)}%`;
@@ -491,6 +498,7 @@ export class Chapter2 {
       secretFloor: this.world.secretElevator.current,
       prisoners: this.everyone.map((q) => ({ name: q.name, infected: q.npc.infected, freed: q.freed, x: q.npc.pos.x, z: q.npc.pos.z })),
       wing: this.wing.snapshot(),
+      lockdown: this.lockdown.snapshot(),
       part2: this.part2.snapshot(),
     };
     this.ch1.onCheckpoint?.(this.ch1.checkpoint);
@@ -549,10 +557,21 @@ export class Chapter2 {
       this.setupAftermath();
       this.ch1.putOnSuit();
       this.after.beginFind(false);
+      if (c.lockdown?.done) {
+        this.lockdown.restore(c.lockdown, c.state);
+        this.ch1.hud.setObjective('The lockdown’s lifted. Victoria’s office is on 3F.');
+      }
+    }
+    if (LOCKDOWN_STATES.includes(c.state)) {
+      this.setupAftermath();
+      this.ch1.putOnSuit();
+      this.after.beginFind(false);
+      this.lockdown.restore(c.lockdown, c.state);
     }
     if (PART2_STATES.includes(c.state)) {
       this.setupAftermath();
       this.ch1.putOnSuit();
+      this.lockdown.finished();
       this.part2.restore(c);
     }
     this.ch1.checkpoint = c;
@@ -581,6 +600,9 @@ export class Chapter2 {
       C2_WING: { x: 10, y: B3_Y, z: 32.5, yaw: Math.PI },
       C2_ISOLATION: { x: 30, y: B3_Y, z: 46.5, yaw: 0 },
       C2_FIND: { x: 31.6, y: B3_Y, z: 21.4, yaw: Math.PI / 2 },
+      C2_LOCKDOWN: { x: 9, y: -4, z: 22.4, yaw: 0 },
+      C2_KIM: { x: 16.5, y: -4, z: 11.8, yaw: Math.PI },
+      C2_DEFEND: { x: 19, y: 0, z: 4.2, yaw: 0 },
       C2_TRANSMITTERS: { x: 5, y: 8, z: 5, yaw: Math.PI },
       C2_CLEANUP: { x: 12, y: 0, z: 11.5, yaw: Math.PI / 2 },
       C2_EVIDENCE: { x: 12, y: 0, z: 11.5, yaw: Math.PI / 2 },
@@ -602,6 +624,7 @@ export class Chapter2 {
       state: state === 'C2_HOME' ? 'C2_INFILTRATE' : state,
       player: spots[state] ?? spots.C2_INFILTRATE,
       secretUnlocked: state !== 'C2_INFILTRATE' && state !== 'C2_HOME',
+      lockdown: { done: PART2_STATES.includes(state), noteRead: ['C2_KIM', 'C2_DEFEND'].includes(state) },
       secretFloor: ['C2_KEYCARD', 'C2_CONTROL', 'C2_CURE', ...WING_STATES, 'C2_LEAVE'].includes(state) ? 0 : 1,
       wing: WING_STATES.includes(state) || state === 'C2_LEAVE'
         ? { fuses: [true, true, true].map(() => state !== 'C2_FUSES'), power: state !== 'C2_FUSES', released: ['C2_ISOLATION', 'C2_LEAVE'].includes(state) }
