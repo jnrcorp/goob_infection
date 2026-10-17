@@ -52,7 +52,7 @@ const OUTBREAK_SEEDS = {
 // Top to bottom, for the HUD's by-floor breakdown.
 const AREAS = ['3F', '2F', '1F', 'B1', 'Outside'];
 const TAPE_REPAIR = 35;          // suit percent per roll of duct tape
-const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE', 'C2_CURE', 'C2_ISOLATION', 'C2_DEFEND', 'C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_EVIDENCE', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_ESCORT', 'C2_CARGO', 'C2_CODE', 'C2_ABORT', 'C2_VALVES', 'C2_GANTRY']);
+const HOSTILE_STATES = new Set(['GET_VACUUM', 'CLEANUP', 'SECURE', 'LOCK_FREEZER', 'GET_ANTIDOTE', 'CURE', 'ESCAPE', 'C2_CURE', 'C2_ISOLATION', 'C2_DEFEND', 'C2_TRANSMITTERS', 'C2_CLEANUP', 'C2_BLOB', 'C2_EVIDENCE', 'C2_HOSTAGES', 'C2_NIGHTSHIFT', 'C2_ROOF', 'C2_ESCORT', 'C2_CARGO', 'C2_CODE', 'C2_ABORT', 'C2_VALVES', 'C2_GANTRY']);
 // Hard: how close (m) and how long (s) an infected has to stay against a
 // cured coworker to re-infect them.
 const REINFECT_RANGE = 0.8;

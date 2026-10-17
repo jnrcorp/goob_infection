@@ -222,16 +222,18 @@ Each milestone ends in something you can play.
      - A loyal guard patrols every floor.
      - After each smash, Victoria grabs your suit for a few seconds and walks you toward the nearest infected.
   2. **Cleanup:** the restarted vats flooded HQ (about 80 L; it doesn't spread). Vacuum it up, emptying the tank into the yellow bins, with the per-floor HUD. The last 10 L or so can be left.
-  3. **Evidence:** find the eight scraps of records she shredded as she fled, scattered across B1-3F.
-  4. **Night shift:** cure the six infected night-shift workers roaming HQ. Hank the janitor gives you the roof key.
-  5. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
-  6. **Boss:** Victoria in a goob-powered executive suit circles you and lobs globs of goob.
+  3. **Batch 8 (mini-boss, hqMissions.js):** the vats spit out a goob blob in the B1 goob lab (55, 70 or 85 L by difficulty; the tank holds 45). Vacuum it down, emptying the tank in the hall bin halfway. It creeps after you, lunges up close and spits from further off, and slops puddles onto the floor. A blast stuns it, and a stunned blob vacuums up faster. It hits half as hard on Easy.
+  4. **Evidence:** find the eight scraps of records she shredded as she fled, scattered across B1-3F.
+  5. **Hostages:** her security holds Officer Diaz (2F conference room), Leon the pizza guy (3F boardroom) and Marguerite the night cleaner (1F infirmary), each tied to a chair with a guard pacing the room. Sneak in (or knock the guard out) and untie them.
+  6. **Night shift:** cure the six infected night-shift workers roaming HQ. Hank the janitor gives you the roof key.
+  7. **Roof:** ride the elevator, which now goes to the roof, up to the new rooftop. It has a launch pad, the MARS 7 shuttle and a gantry.
+  8. **Boss:** Victoria in a goob-powered executive suit circles you and lobs globs of goob.
      - Blast her (right mouse) to stun her, then spray her (F) to strip a layer of goob armor.
      - Five layers and she's done. She dashes away when you get close, and throws three globs at once from layer three. The officers arrive.
-  7. **Chase:** her suit falls apart and she flees in the elevator. Take the stairs and catch her before she reaches the getaway truck in the loading yard.
+  9. **Chase:** her suit falls apart and she flees in the elevator. Take the stairs and catch her before she reaches the getaway truck in the loading yard.
      - She stops now and then to fling goob back at you, and a vacuum blast staggers her.
      - You have to sprint; walking lets her escape, and you retry the chase.
-  8. **Escort:** lead the six night-shift workers from the 1F break room, through the front doors, to the police line in the parking lot.
+  10. **Escort:** lead the six night-shift workers from the 1F break room, through the front doors, to the police line in the parking lot.
      - Six infected wait along the way. Any that catch a follower re-infect them, and you have to cure them.
      - All six safe, and then the officers' cruiser radio crackles: Victoria slipped her cuffs.
 - **The launch site (part 3):** Goob Co.'s launch site east of the loading yard, where Mars 7 is fueled and loaded with "input": the next rotation, sealed in cargo pods.

@@ -704,6 +704,9 @@ async function runStartupSimulation() {
     const fr = chapter.ch2.part2.finalRun;
     if (fr.followers && chapter.state === 'C2_ESCORT') console.log(`[report] escort: ${fr.followers.map((n) => `${n.name}${n.safe ? ' SAFE' : n.infected ? ' INFECTED' : ''}@${n.pos.x.toFixed(1)},${n.pos.z.toFixed(1)}`).join(' ')}`);
     if (chapter.ch2.part2.active) console.log(`[report] part 2: ${JSON.stringify(chapter.ch2.part2.snapshot())}; roof locked ${!!world.elevator.floorLocks}`);
+    const p2 = chapter.ch2.part2;
+    if (p2.blob.active) console.log(`[report] blob: ${p2.blob.volume.toFixed(1)} L at ${p2.blob.pos.x.toFixed(1)},${p2.blob.pos.z.toFixed(1)}; tank ${vacuum.tank.toFixed(1)}`);
+    if (p2.hostages.active) console.log(`[report] hostages: ${p2.hostages.list.map((h) => `${h.name}${h.freed ? ' FREE' : ''}`).join(', ')}`);
     const ld = chapter.ch2.lockdown;
     if (ld.active || ld.done) console.log(`[report] lockdown: done ${ld.done}; breakers ${ld.switches.map((s) => (s.on ? 1 : 0)).join('')}; elevator ${world.elevator.lockedMessage ? 'dead' : 'on'} at ${world.elevator.current} ${world.elevator.phase}; kim ${ld.kim.root.visible ? `${ld.kim.root.position.x.toFixed(1)},${ld.kim.root.position.y.toFixed(1)},${ld.kim.root.position.z.toFixed(1)}` : 'hidden'}; defend ${ld.progress?.toFixed(1)}/${ld.needed}; threats ${(ld.threats ?? []).map((n) => `${n.name}${n.infected ? '' : ' cured'}`).join(' ')}`);
     const wing = chapter.ch2.wing;
